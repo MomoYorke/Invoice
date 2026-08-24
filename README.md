@@ -34,6 +34,21 @@ niente — **tranne quando il programma è stato aggiornato**: in quel caso la
 riavvia da sola, perché le pagine restano in memoria da quando è partita e
 altrimenti continueresti a vedere la versione vecchia.
 
+## Quando esce una versione nuova
+Se hai ricevuto l'app da un repository, l'avviatore controlla da solo se ne è
+uscita una versione più recente — non più di una volta ogni sei ore, e senza
+bloccare l'avvio se la rete non c'è. Quando ne trova una **mostra cos'è
+cambiato e chiede il permesso**: non aggiorna mai di nascosto.
+
+Dicendo di sì, prima fa una copia di sicurezza dei dati, poi sostituisce i file
+del programma, e se servono librerie nuove le installa. **I tuoi dati non
+vengono toccati**: database, fatture, estratti conto, backup e logo stanno
+fuori dal repository, quindi l'aggiornamento non li vede nemmeno.
+
+Per tornare alla versione precedente, il numero è in `data/.versione-precedente`:
+
+    git reset --hard $(cat data/.versione-precedente)
+
 La finestra del Terminale resta quasi vuota: due righe all'avvio e basta.
 Non scorre niente mentre usi l'app, e non c'è nessun avviso rosso da
 interpretare. Se qualcosa va storto lo dice la pagina, e la traccia completa
