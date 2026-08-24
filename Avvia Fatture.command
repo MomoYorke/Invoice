@@ -9,17 +9,24 @@ URL="http://127.0.0.1:$PORT"
 export FATTURE_PORT="$PORT"
 
 # --- 1. ambiente Python: verifica che sia sano, altrimenti lo (ri)creo ---
+# L'elenco delle librerie sta in requirements.txt e basta: se ne aggiungi una,
+# venv/.requisiti non combacia piu' e l'ambiente si rifa' da solo. Prima
+# l'elenco era scritto due volte, e la copia nel controllo si sarebbe scordata.
 venv_ok() {
   [ -x "venv/bin/python" ] || return 1
+  [ -f "venv/.requisiti" ] || return 1
+  [ "$(shasum requirements.txt | cut -d' ' -f1)" = "$(cat venv/.requisiti)" ] || return 1
   ./venv/bin/python -c "import flask, docx, openpyxl, dateutil, reportlab, pypdf, PIL" >/dev/null 2>&1
 }
-if ! venv_ok; then
+prepara_ambiente() {
   echo "Preparo l'ambiente (serve internet, 1-2 minuti)..."
   rm -rf venv
-  python3 -m venv venv
+  python3 -m venv venv || return 1
   ./venv/bin/pip install --quiet --upgrade pip
-  ./venv/bin/pip install --quiet flask python-docx openpyxl python-dateutil reportlab pypdf pillow
-fi
+  ./venv/bin/pip install --quiet -r requirements.txt || return 1
+  shasum requirements.txt | cut -d' ' -f1 > venv/.requisiti
+}
+venv_ok || prepara_ambiente
 
 # --- 1bis. c'è una versione nuova del programma? ---
 # Funziona solo se questa copia arriva da un repository: chi ha ricevuto la
@@ -58,7 +65,12 @@ cerca_aggiornamenti() {
 
   # GIT_TERMINAL_PROMPT=0: se il repository chiedesse una password, git
   # fallisce subito invece di bloccare l'avvio aspettando che qualcuno scriva
-  GIT_TERMINAL_PROMPT=0 con_scadenza 15 git fetch --quiet origin 2>/dev/null || return
+  echo -n "  Controllo se c'e' una versione nuova... "
+  if ! GIT_TERMINAL_PROMPT=0 con_scadenza 10 git fetch --quiet origin 2>/dev/null; then
+    echo "non raggiungibile, pazienza."
+    return
+  fi
+  echo 
   mkdir -p data && touch "$SEGNA_CONTROLLO"
 
   local qui la_fuori
@@ -99,13 +111,7 @@ cerca_aggiornamenti() {
   if git reset --hard --quiet "$la_fuori" 2>/dev/null; then
     echo "  Aggiornata."
     # se sono cambiate le librerie, l'ambiente si rifà da solo qui sotto
-    if ! venv_ok; then
-      echo "  Servono librerie nuove: le installo (1-2 minuti)..."
-      rm -rf venv
-      python3 -m venv venv
-      ./venv/bin/pip install --quiet --upgrade pip
-      ./venv/bin/pip install --quiet -r requirements.txt
-    fi
+    venv_ok || { echo "  Servono librerie nuove:"; prepara_ambiente; }
   else
     echo "  L'aggiornamento non è riuscito: avvio la versione che hai già."
   fi
