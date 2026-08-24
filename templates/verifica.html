@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Verifica{% endblock %}
+{% block content %}
+<h1>Verifica calcoli</h1>
+<p class="sub">Controllo completo del motore matematico e riconciliazione di tutte le fatture create con l'app.</p>
+
+{% if all_ok and not rec.anomalies %}
+  <div class="flash ok" style="font-size:15px">
+    {{ icona('spunta', 'ic-mini') }} <strong>Tutto corretto.</strong> {{ n_ok }}/{{ n_total }} test di calcolo superati
+    e {{ rec.checked }} fatture riconciliate senza anomalie.
+  </div>
+{% else %}
+  <div class="flash error" style="font-size:15px">
+    {{ icona('avviso', 'ic-mini') }} <strong>Attenzione:</strong> ci sono controlli non superati. Guarda i dettagli qui sotto in rosso.
+  </div>
+{% endif %}
+
+<div class="grid2">
+  <div>
+    <div class="panel">
+      <h2>Test del motore di calcolo</h2>
+      <p class="muted" style="margin-top:-6px">
+        {{ n_ok }} su {{ n_total }} superati — moltiplicazioni, arrotondamenti, formati importi, andata e ritorno.</p>
+      {% for cat, tests in by_cat.items() %}
+        {% set cat_ok = tests | selectattr(1) | list | length %}
+        <details {{ 'open' if cat_ok != tests|length }}>
+          <summary style="cursor:pointer;padding:6px 0">
+            {{ icona('spunta', 'ic-mini') if cat_ok == tests|length else icona('croce', 'ic-mini') }}
+            <strong>{{ cat }}</strong>
+            <span class="muted">({{ cat_ok }}/{{ tests|length }})</span>
+          </summary>
+          <table style="margin:6px 0 14px">
+            {% for desc, ok, detail in tests %}
+            <tr>
+              <td style="width:24px">{{ '✓' if ok else '✗' }}</td>
+              <td class="{{ '' if ok else 'right' }}" style="{{ 'color:var(--danger)' if not ok }}">
+                {{ desc }}{% if not ok %} — {{ detail }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </details>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Riconciliazione fatture</h2>
+      <p class="muted" style="margin-top:-6px">
+        Per ogni fattura creata con l'app: <em>somma delle righe = totale salvato = importo sul PDF</em>.</p>
+      {% if not rec.pdf_reads %}
+        <p class="issue">Nota: la lettura del PDF non è disponibile; verifico comunque righe e totale salvato.</p>
+      {% endif %}
+      {% if rec.anomalies %}
+        {% for a in rec.anomalies %}
+        <div class="issue duplicato">
+          {{ pallino('rosso') }} <strong>Fattura #{{ a.number or '—' }}</strong> ({{ a.client }}):
+          {{ a.problems | join('; ') }}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="flash ok">{{ icona('spunta', 'ic-mini') }} {{ rec.checked }} fatture controllate, tutti gli importi coincidono al centesimo.</div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Cosa garantisce tutto questo</h2>
+      <ul class="muted" style="font-size:13.5px;line-height:1.7">
+        <li>I calcoli usano <strong>centesimi interi</strong>: niente errori di arrotondamento.</li>
+        <li>Ogni fattura, appena creata, viene <strong>riletta dal file vero</strong> e confermata al centesimo prima di essere salvata.</li>
+        <li>Se un importo non coincidesse, la fattura <strong>non verrebbe salvata</strong> e ti verrebbe detto perché.</li>
+      </ul>
+      <button class="btn secondary small" onclick="location.reload()">↻ Rilancia la verifica</button>
+    </div>
+  </div>
+</div>
+{% endblock %}

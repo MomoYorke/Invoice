@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Clienti{% endblock %}
+{% block content %}
+<h1>Clienti</h1>
+<p class="sub">Il registro clienti dell'app. Le modifiche valgono per le prossime fatture.</p>
+
+<div class="panel">
+  <table>
+    <tr><th>Cliente</th><th>Email</th><th>Indirizzo</th><th class="num">Fatturato tot.</th><th class="num">Fatture</th><th>Ultima</th><th></th></tr>
+    {% for c in rows %}
+    {% set s = stats_c.get(c.id) %}
+    <tr {% if c.archived %}style="opacity:.5"{% endif %}>
+      <td><strong>{{ c.name }}</strong>{% if c.archived %} <span class="muted">(archiviato)</span>{% endif %}
+        {% if c.notes %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ c.notes }}</div>{% endif %}</td>
+      <td class="muted no-blur" style="font-size:13px">{{ c.email or '—' }}
+        {% if c.abbonamento %}<div style="font-size:11px">abbonamento mensile</div>{% endif %}
+        {% if c.intestatario %}<div style="font-size:11px">fattura a {{ c.intestatario }}</div>{% endif %}</td>
+      <td class="muted" style="font-size:13px">{{ c.address1 }}{% if c.address2 %}, {{ c.address2.replace('\n', ', ') }}{% endif %}</td>
+      <td class="num">{{ s.t | chf(false) if s and s.t else '—' }}</td>
+      <td class="num no-blur">{{ s.n if s else 0 }}</td>
+      <td class="muted">{{ s.last | dateit if s and s.last else '—' }}</td>
+      <td>
+        <details class="client-edit">
+          <summary>modifica</summary>
+          <form method="post" action="{{ url_for('cliente_salva', cid=c.id) }}">
+            <label>Nome</label><input type="text" name="name" value="{{ c.name }}">
+            <label>Indirizzo riga 1</label><input type="text" name="address1" value="{{ c.address1 }}">
+            <label>Indirizzo riga 2</label><input type="text" name="address2" value="{{ c.address2 }}">
+            <label>Etichetta nome file</label><input type="text" name="file_label" value="{{ c.file_label }}">
+            <label>Email</label><input type="email" name="email" value="{{ c.email }}" placeholder="nome@esempio.ch">
+            <label>Come ti firmi con lui/lei</label>
+            <select name="tono">
+              <option value="informale" {{ 'selected' if c.tono != 'formale' }}>Informale — «{{ saluti.informale }}»</option>
+              <option value="formale" {{ 'selected' if c.tono == 'formale' }}>Formale — «{{ saluti.formale }}»</option>
+            </select>
+            <label style="font-weight:400"><input type="checkbox" name="abbonamento" value="1"
+              {{ 'checked' if c.abbonamento }} style="width:auto"> Abbonamento mensile (ordine permanente)</label>
+            <label>Intesta la fattura a</label>
+            <input type="text" name="intestatario" value="{{ c.intestatario }}"
+                   placeholder="lascia vuoto: la fattura va intestata a {{ c.name }}">
+            <span class="muted" style="font-size:11.5px">Quando chi si allena e chi riceve la
+              fattura sono due persone diverse. Il documento e il registro portano questo nome;
+              il nome del file resta «{{ c.file_label or c.name }}».</span>
+            <label>Sull'estratto conto paga come</label>
+            <input type="text" name="paga_come" value="{{ c.paga_come }}"
+                   placeholder="lascia vuoto se paga col suo nome">
+            <span class="muted" style="font-size:11.5px">Serve alla pagina Banca quando i soldi
+              arrivano da un'altra persona (marito, moglie, azienda). Più nomi separati da
+              punto e virgola.</span>
+            <label>Note</label><input type="text" name="notes" value="{{ c.notes }}">
+            <label><input type="checkbox" name="archived" value="1" {{ 'checked' if c.archived }} style="width:auto"> Archiviato</label>
+            <button class="btn small mt">Salva</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="panel" style="max-width:520px">
+  <h2>Aggiungi cliente</h2>
+  <form method="post" action="{{ url_for('cliente_nuovo') }}">
+    <label>Nome e cognome</label><input type="text" name="name" required>
+    <label>Indirizzo — via e numero</label><input type="text" name="address1">
+    <label>Indirizzo — CAP e città</label><input type="text" name="address2">
+    <label>Email</label><input type="email" name="email" placeholder="nome@esempio.ch">
+    <button class="btn mt">Aggiungi</button>
+  </form>
+</div>
+{% endblock %}

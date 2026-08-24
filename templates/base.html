@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Fatture{% endblock %} — {{ attivita }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" href="{{ url_for('logo') }}?v={{ logo_versione }}">
+<script>
+  /* applicato prima del disegno: gli importi non compaiono neanche per un istante */
+  try { if (localStorage.getItem('em-privacy') === '1')
+          document.documentElement.classList.add('privacy'); } catch (e) {}
+  function _aggiornaOcchi(on) {
+    var t = on ? 'Importi nascosti — clicca per mostrarli'
+               : 'Nascondi gli importi (screenshot, luogo pubblico)';
+    document.querySelectorAll('.privacy-toggle').forEach(function (el) {
+      el.setAttribute('title', t);
+      el.setAttribute('aria-label', t);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function toggleRiservato() {
+    var on = document.documentElement.classList.toggle('privacy');
+    try { localStorage.setItem('em-privacy', on ? '1' : '0'); } catch (e) {}
+    _aggiornaOcchi(on);
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    _aggiornaOcchi(document.documentElement.classList.contains('privacy'));
+  });
+</script>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <img src="{{ url_for('logo') }}?v={{ logo_versione }}" alt="">
+    <div>
+      <strong>{{ marchio_riga1 }}</strong>
+      {% if marchio_riga2 %}<span>{{ marchio_riga2 }}</span>{% endif %}
+    </div>
+  </div>
+  <nav>
+    {% if primi_passi_restano %}
+      <a href="{{ url_for('benvenuto') }}" class="primi {{ 'active' if request.endpoint == 'benvenuto' }}"
+         title="Primi passi — {{ primi_passi_restano }} da fare">
+        {{ icona('bussola') }}<span>Primi passi</span>
+        <em class="conta">{{ primi_passi_restano }}</em>
+      </a>
+    {% endif %}
+    {% for titolo, voci in menu_gruppi %}
+      {% if titolo %}<h3>{{ titolo }}</h3>{% endif %}
+      {% for endpoint, etichetta, disegno, attivo in voci %}
+        <a href="{{ url_for(endpoint) }}" title="{{ etichetta }}"
+           class="{{ 'active' if request.endpoint in attivo }}">
+          {{ icona(disegno) }}<span>{{ etichetta }}</span>
+        </a>
+      {% endfor %}
+    {% endfor %}
+  </nav>
+  <button type="button" class="privacy-mini privacy-toggle no-blur" onclick="toggleRiservato()"
+          aria-pressed="false" title="Nascondi gli importi (screenshot, luogo pubblico)">
+    {% include '_occhio.html' %}
+  </button>
+  <div class="sidebar-foot">App locale · dati sul tuo Mac</div>
+</aside>
+<main>
+  <button type="button" id="indietro" class="indietro no-blur" hidden
+          onclick="history.back()" title="Torna alla schermata precedente">
+    <span aria-hidden="true">←</span> Indietro
+  </button>
+  <script>
+    /* il tasto compare solo se c'è davvero una schermata dell'app a cui tornare:
+       così non porta mai fuori dall'app né resta lì inerte */
+    (function () {
+      var b = document.getElementById('indietro');
+      var da = document.referrer || '';
+      var interno = da.indexOf(window.location.origin + '/') === 0;
+      var stessa = da.split('#')[0] === window.location.href.split('#')[0];
+      if (interno && !stessa && history.length > 1) b.hidden = false;
+    })();
+  </script>
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}
+      <div class="flash {{ cat }}">{{ m }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

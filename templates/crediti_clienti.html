@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% block title %}Clienti a crediti{% endblock %}
+{% block content %}
+<h1>Clienti a crediti</h1>
+<p class="sub">Chi compra un pacchetto di sessioni prepagate. Per ognuno l'app sa quale
+   parola cercare nei titoli del calendario, quante sessioni vale un pacchetto e a che
+   prezzo lo riconosce sulle fatture. <a href="{{ url_for('crediti') }}">Torna ai crediti</a></p>
+
+{% if not righe %}
+<div class="panel">
+  <h2 style="margin-top:0">Non c'è ancora nessuno</h2>
+  <p>Finché questo elenco è vuoto, la pagina Crediti resta vuota anche lei: l'app non sa
+     quali nomi cercare nel calendario. Aggiungi qui sotto il primo cliente che lavora
+     a pacchetto.</p>
+  <p class="muted">Chi paga a sessione singola o a fattura mensile non va messo qui:
+     questa pagina serve solo ai pacchetti prepagati.</p>
+</div>
+{% else %}
+<div class="panel">
+  <table>
+    <tr><th>Cliente</th><th>Nel calendario</th><th class="num">Crediti</th>
+        <th>Pacchetti</th><th>Prezzo</th><th></th></tr>
+    {% for r in righe %}
+    <tr {% if not r.attivo %}style="opacity:.55"{% endif %}>
+      <td><strong>{{ r.nome }}</strong>
+        {% if not r.attivo %} <span class="muted">(archiviato)</span>{% endif %}
+        {% if r.fattura_a %}<div class="muted" style="font-size:12px">fattura a <strong>{{ r.fattura_a }}</strong></div>{% endif %}
+        {% if r.compagno %}<div class="muted" style="font-size:12px">supplemento di {{ nomi.get(r.compagno, r.compagno) }}</div>{% endif %}
+      </td>
+      <td><code>{{ r.chiave }}</code></td>
+      <td class="num no-blur">{{ r.crediti }}</td>
+      <td class="muted">{{ r.prefisso }}-01…{% if r.pacchetti %} <span style="font-size:12px">({{ r.pacchetti }} nel registro)</span>{% endif %}</td>
+      <td class="money">{{ r.prezzi_leggibili or '—' }}</td>
+      <td>
+        <details class="client-edit">
+          <summary>modifica</summary>
+          <form method="post" action="{{ url_for('crediti_cliente_salva') }}">
+            <input type="hidden" name="chiave" value="{{ r.chiave }}">
+            <label>Nome</label><input type="text" name="nome" value="{{ r.nome }}" required>
+            <label>Sessioni per pacchetto</label>
+            <input type="number" name="crediti" value="{{ r.crediti }}" min="0" max="200">
+            <label>Sigla del pacchetto</label>
+            <input type="text" name="prefisso" value="{{ r.prefisso }}" maxlength="6">
+            <span class="muted" style="font-size:11.5px">I pacchetti si chiamano
+              {{ r.prefisso or 'XXX' }}-01, {{ r.prefisso or 'XXX' }}-02 e così via.</span>
+            <label>Prezzo del pacchetto</label>
+            <input type="text" name="prezzi" value="{{ r.prezzi_leggibili }}"
+                   placeholder="1'800">
+            <span class="muted" style="font-size:11.5px">Quando emetti una fattura di
+              questo importo, l'app capisce da sola che ha comprato un pacchetto e gli
+              ridà i crediti. Più prezzi separati da virgola, se ne hai più di uno.</span>
+            <label>Intesta la fattura a</label>
+            <input type="text" name="fattura_a" value="{{ r.fattura_a }}"
+                   placeholder="lascia vuoto: la fattura va a {{ r.nome }}">
+            <label>È il supplemento di</label>
+            <input type="text" name="compagno" value="{{ r.compagno }}"
+                   placeholder="lascia vuoto quasi sempre">
+            <span class="muted" style="font-size:11.5px">Solo per chi si allena in coppia
+              e paga un pacchetto ridotto in aggiunta a quello dell'altro. Scrivi qui la
+              parola-calendario dell'altro. Nei giorni in cui l'altro non c'è, la sessione
+              è piena e scala dal pacchetto dell'altro.</span>
+            <label style="font-weight:400"><input type="checkbox" name="archiviato" value="1"
+              {{ 'checked' if not r.attivo }} style="width:auto"> Archiviato — non è più
+              cliente, ma il suo nome si riconosce ancora nei titoli</label>
+            <button class="btn small mt">Salva</button>
+          </form>
+          <form method="post" action="{{ url_for('crediti_cliente_elimina', chiave=r.chiave) }}"
+                onsubmit="return confirm('Tolgo {{ r.nome }} dai clienti a crediti?')"
+                style="margin-top:8px">
+            <button class="btn small secondary">Togli dall'elenco</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel" style="max-width:560px">
+  <h2 style="margin-top:0">Aggiungi un cliente a crediti</h2>
+  <form method="post" action="{{ url_for('crediti_cliente_salva') }}">
+    <label>Nome</label><input type="text" name="nome" required placeholder="Anna">
+    <label>Parola da cercare nei titoli del calendario</label>
+    <input type="text" name="chiave" placeholder="lascia vuoto: usa il nome">
+    <span class="muted" style="font-size:11.5px">Un evento che si chiama «Anna», «anna pt»
+      o «Anna - cancelled» conta come una sua sessione. Scegli una parola che non compaia
+      per caso in altri appuntamenti.</span>
+    <label>Sessioni per pacchetto</label>
+    <input type="number" name="crediti" value="10" min="1" max="200">
+    <label>Sigla del pacchetto</label>
+    <input type="text" name="prefisso" maxlength="6" placeholder="lascia vuoto: le prime tre lettere">
+    <label>Prezzo del pacchetto</label>
+    <input type="text" name="prezzi" placeholder="1'800">
+    <button class="btn mt">Aggiungi</button>
+  </form>
+</div>
+{% endblock %}

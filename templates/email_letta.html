@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Email del {{ e.sent_at[:10] | dateit }}{% endblock %}
+{% block content %}
+<h1>La mail come è partita</h1>
+<p class="sub">{{ e.sent_at[:10] | dateit }} alle {{ e.sent_at[11:16] }}
+   {% if e.prova %}· prova su di te{% endif %}
+   {% if e.esito != 'ok' %}· <strong>non è partita</strong>{% endif %}</p>
+
+{% if e.motivo %}
+<div class="panel" style="border-color:#f59e0b;background:#fffbeb;max-width:760px">
+  <p style="margin:0">{{ icona('avviso', 'ic-mini') }} {{ e.motivo }}</p>
+</div>
+{% endif %}
+
+<div class="panel" style="max-width:760px">
+  <table style="margin:0">
+    <tr><td class="muted" style="width:90px">Da</td><td>{{ e.mittente or '—' }}</td></tr>
+    <tr><td class="muted">A</td><td><strong>{{ e.destinatario or '—' }}</strong></td></tr>
+    {% if e.ccn %}
+    <tr><td class="muted">Ccn</td><td>{{ e.ccn }}
+        <span class="muted" style="font-size:12px">— la copia nascosta a te, il cliente non l'ha vista</span></td></tr>
+    {% endif %}
+    <tr><td class="muted">Oggetto</td><td>{{ e.oggetto or '—' }}</td></tr>
+    <tr><td class="muted">Allegati</td><td>
+      {% if e.allegati %}{{ icona('graffetta', 'ic-mini') }} {{ e.allegati }}{% else %}—{% endif %}</td></tr>
+    <tr><td class="muted">Copia in</td><td>
+      {% if e.cartella %}«{{ e.cartella }}» sul server{% else %}—{% endif %}</td></tr>
+  </table>
+</div>
+
+<div class="panel" style="max-width:760px">
+  <label style="margin-bottom:8px">Testo</label>
+  {% if e.corpo %}
+  <pre style="white-space:pre-wrap;word-wrap:break-word;margin:0;font-family:ui-monospace,Menlo,monospace;font-size:13px;line-height:1.55">{{ e.corpo }}</pre>
+  {% else %}
+  <p class="muted" style="margin:0">Di questa mail il testo non è stato registrato: è stata
+     spedita prima che l'app cominciasse a tenerne copia.</p>
+  {% endif %}
+</div>
+
+<div class="mt">
+  <a class="btn small secondary" href="{{ url_for('email_inviate') }}">← Tutte le email</a>
+  {% if inv %}
+  <a class="btn small secondary" href="{{ url_for('fattura', inv_id=inv.id) }}">Fattura #{{ inv.number }}</a>
+  {% if inv.pdf_path %}
+  <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='pdf') }}" target="_blank">Apri il PDF allegato</a>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

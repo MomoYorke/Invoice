@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Controlli{% endblock %}
+{% block content %}
+<h1>Controlli</h1>
+<p class="sub">Verifiche su numerazione e dati delle fatture. Il controllo viene rifatto da zero
+   ogni volta che apri o ricarichi questa pagina.</p>
+
+{% if issues %}
+  <p class="muted" style="margin-top:-10px">
+    {{ issues | length }} anomali{{ 'a' if issues|length == 1 else 'e' }} da sistemare.
+    Correggi i dati mancanti, oppure archivia con “So già” quelle che sono fatti storici.</p>
+
+  {% for i in issues %}
+  <div class="issue {{ i.kind }}">
+    <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start">
+      <div>
+        {% if i.kind == 'duplicato' %}{{ pallino('rosso', 'numero doppio') }}
+        {%- elif i.kind == 'buco' %}{{ pallino('arancio', 'numero saltato') }}
+        {%- else %}{{ pallino('giallo', 'dato mancante') }}{% endif %}
+        <strong>{{ i.msg }}</strong>
+        {% if i.detail %}<div class="muted" style="font-size:12px;margin-top:2px">{{ i.detail }}</div>{% endif %}
+      </div>
+      <div style="white-space:nowrap">
+        {% if i.fixable %}
+          <button class="btn small" type="button"
+                  onclick="document.getElementById('fix-{{ loop.index }}').style.display =
+                           (document.getElementById('fix-{{ loop.index }}').style.display === 'block' ? 'none' : 'block')">
+            {{ icona('matita', 'ic-mini') }}Correggi
+          </button>
+        {% endif %}
+        <button class="btn small secondary" type="button"
+                onclick="document.getElementById('ack-{{ loop.index }}').style.display =
+                         (document.getElementById('ack-{{ loop.index }}').style.display === 'block' ? 'none' : 'block')">
+          So già
+        </button>
+      </div>
+    </div>
+
+    {% if i.fixable %}
+    <div id="fix-{{ loop.index }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
+      <form method="post" action="{{ url_for('controlli_correggi') }}">
+        <input type="hidden" name="inv_id" value="{{ i.inv_id }}">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+          {% if i.missing_amount %}
+          <div style="flex:1;min-width:150px">
+            <label style="margin-top:0">Importo della fattura</label>
+            <input type="text" name="importo" placeholder="es. 110.- oppure 1'800.00" autocomplete="off">
+          </div>
+          {% endif %}
+          {% if i.missing_date %}
+          <div style="flex:1;min-width:150px">
+            <label style="margin-top:0">Data della fattura</label>
+            <input type="date" name="data">
+          </div>
+          {% endif %}
+          <div style="flex:2;min-width:180px">
+            <label style="margin-top:0">Nota (facoltativa)</label>
+            <input type="text" name="nota" placeholder="es. importo preso dal PDF cartaceo">
+          </div>
+          <button class="btn small">Salva correzione</button>
+        </div>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">
+          La correzione viene salvata a parte e <strong>resta anche se premi “Reimporta”</strong>.
+          Il file originale nella cartella storica non viene toccato.</p>
+      </form>
+    </div>
+    {% endif %}
+
+    <div id="ack-{{ loop.index }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
+      <form method="post" action="{{ url_for('controlli_archivia') }}"
+            style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <input type="hidden" name="key" value="{{ i.key }}">
+        <input type="hidden" name="kind" value="{{ i.kind }}">
+        <input type="hidden" name="msg" value="{{ i.msg }}">
+        <div style="flex:1;min-width:220px">
+          <label style="margin-top:0">Perché va bene così? (facoltativo)</label>
+          <input type="text" name="nota" placeholder="es. fattura mai emessa / numero saltato per errore nel 2025">
+        </div>
+        <button class="btn small secondary">Archivia anomalia</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="flash ok">{{ icona('spunta', 'ic-mini') }} Nessun problema: numerazione e dati delle fatture sono in ordine.</div>
+{% endif %}
+
+{% if n_corr %}
+<div class="panel mt">
+  <h2>Correzioni manuali attive ({{ n_corr }})</h2>
+  <p class="muted" style="margin-top:-6px">Dati che hai inserito tu. Vengono ri-applicati automaticamente dopo ogni Reimporta.</p>
+  <table>
+    {% for key, c in corr.items() %}
+    <tr>
+      <td>
+        <strong>{{ key }}</strong>
+        {% if c.note %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ c.note }}</div>{% endif %}
+      </td>
+      <td class="num">{{ c.total_cents | chf(false) if c.total_cents is not none else '' }}</td>
+      <td class="muted">{{ c.date | dateit if c.date else '' }}</td>
+      <td class="muted">{{ ('numero → #' ~ c.number) if c.number is not none else '' }}</td>
+      <td class="right">
+        <form method="post" action="{{ url_for('controlli_annulla_correzione') }}"
+              onsubmit="return confirm('Annullare questa correzione? Il dato tornerà come nel file originale.')">
+          <input type="hidden" name="key" value="{{ key }}">
+          <button class="btn small secondary">Annulla</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if archived %}
+<div class="panel mt">
+  <h2>Anomalie archiviate ({{ archived | length }})</h2>
+  <p class="muted" style="margin-top:-6px">Le hai marcate come “so già”. Non compaiono più nei controlli.</p>
+  <table>
+    {% for a in archived %}
+    <tr>
+      <td>{{ a.msg }}
+        {% if a.note %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ a.note }}</div>{% endif %}
+      </td>
+      <td class="right">
+        <form method="post" action="{{ url_for('controlli_ripristina') }}">
+          <input type="hidden" name="key" value="{{ a.key }}">
+          <button class="btn small secondary">Ripristina</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel mt" style="max-width:620px">
+  <h2>Reimporta lo storico</h2>
+  <p class="muted">Rilegge la cartella dello storico (solo lettura) e aggiorna i dati importati.
+     Le fatture create con l'app e le tue correzioni manuali non vengono toccate.</p>
+  <form method="post" action="{{ url_for('reimporta') }}">
+    <button class="btn secondary">Reimporta adesso</button>
+  </form>
+</div>
+{% endblock %}

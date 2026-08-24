@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Email fattura #{{ inv.number }}{% endblock %}
+{% block content %}
+<h1>Manda la fattura #{{ inv.number }}</h1>
+<p class="sub">{{ inv.client_name }} — {{ inv.date | dateit }} — <span class="money">{{ inv.total_cents | chf }}</span></p>
+
+{% if msg.problemi %}
+<div class="panel" style="border-color:#f59e0b;background:#fffbeb;max-width:760px">
+  {% for p in msg.problemi %}<p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }} {{ p }}</p>{% endfor %}
+  <p class="muted" style="font-size:13px;margin-bottom:0">
+    Gli indirizzi si aggiungono dalla <a href="{{ url_for('clienti') }}">pagina Clienti</a>.</p>
+</div>
+{% endif %}
+
+{% if inv.sent_at %}
+<div class="panel" style="border-color:#065f46;background:#ecfdf5;max-width:760px">
+  Questa fattura risulta <strong>già inviata</strong> il {{ inv.sent_at[:10] | dateit
+  }}{% if inv.sent_at|length > 10 %} alle {{ inv.sent_at[11:16] }}{% endif %}.
+  Puoi rimandarla, ma controlla di non fare un doppione.
+</div>
+{% endif %}
+
+<form method="post" class="panel" style="max-width:760px">
+  <div class="form-grid">
+    <div>
+      <label>A</label>
+      <input type="text" value="{{ msg.to or '—' }}" disabled>
+    </div>
+    <div>
+      <label>Da</label>
+      <input type="text" value="{{ settings.email_from }}" disabled>
+    </div>
+  </div>
+
+  <label>Oggetto</label>
+  <input type="text" name="subject" id="oggetto" value="{{ msg.subject }}">
+  <p class="muted" id="nota-mese" style="font-size:12px;margin:4px 0 0"
+     {{ '' if msg.usa_mese else 'hidden' }}>
+    {% if msg.mese %}Mese <strong>{{ msg.mese }}</strong>, dedotto dalla fattura.
+    {% else %}{{ icona('avviso', 'ic-mini') }} Il mese non l'ho dedotto: sulla fattura non c'è scritto il periodo e non
+    c'è una mail precedente da cui ripartire. Scrivilo tu al posto di
+    <code>[{{ segnaposto_mese }}]</code> — la prossima volta lo saprò da solo.{% endif %}</p>
+
+  <div class="mt" style="background:var(--soft,#f8fafc);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
+    <label style="margin-bottom:6px">Modello</label>
+    {% for chiave, nome in modelli %}
+    <label style="font-weight:400;display:inline-block;margin-right:16px">
+      <input type="radio" name="modello" value="{{ chiave }}" style="width:auto"
+             data-oggetto="{{ oggetti[chiave].subject }}"
+             data-mese="{{ '1' if oggetti[chiave].usa_mese else '' }}"
+             {{ 'checked' if msg.modello == chiave }}> {{ nome }}
+    </label>
+    {% endfor %}
+    <button class="btn small secondary" name="azione" value="rigenera" type="submit">
+      Riscrivi con questo modello
+    </button>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">
+      Scelto da solo dalle righe della fattura. Cambiando servizio <strong>l'oggetto
+      cambia subito</strong>; il testo invece resta finché non premi «Riscrivi», che
+      perde le modifiche fatte qui sotto. Oggetti e testi si cambiano in
+      <a href="{{ url_for('impostazioni') }}">Impostazioni</a>.</p>
+  </div>
+  <script>
+    /* l'oggetto segue il servizio scelto: i due sono gia' pronti qui sopra,
+       quindi non serve tornare al server e il testo non viene toccato */
+    (function () {
+      var campo = document.getElementById('oggetto');
+      var nota = document.getElementById('nota-mese');
+      document.querySelectorAll('input[name="modello"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          if (!r.checked) return;
+          if (r.dataset.oggetto) campo.value = r.dataset.oggetto;
+          nota.hidden = !r.dataset.mese;   /* il pacchetto il mese non lo nomina */
+        });
+      });
+    })();
+  </script>
+
+  <label>Testo — quello che il cliente leggerà, riscrivilo pure</label>
+  <textarea name="body" rows="18" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{ msg.body }}</textarea>
+
+  {% if settings.email_copia_a_me == '1' %}
+  <p class="muted" style="font-size:12px;margin:6px 0 0">
+    {{ icona('giu', 'ic-mini') }} Ne arriva una copia anche a te, in <strong>{{ settings.smtp_user }}</strong>, in copia
+    nascosta: il cliente non la vede. Si disattiva in Impostazioni.</p>
+  {% endif %}
+  <p class="muted" style="font-size:12px;margin:6px 0 0">
+    Allegati: {% for a in msg.allegati %}<strong>{{ a.split('/')|last }}</strong>{% if not loop.last %}, {% endif %}{% else %}<em>nessuno</em>{% endfor %}
+  </p>
+
+  {% if altre %}
+  <div class="mt" style="border-top:1px solid var(--line);padding-top:12px">
+    <label style="margin-bottom:6px">Nella stessa mail vuoi allegare anche un'altra fattura recente?</label>
+    {% for a in altre %}
+    <label style="display:block;font-weight:400">
+      <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
+             {{ 'checked' if a.id in scelte }}>
+      #{{ a.number }} — {{ a.client_name }} — <span class="money">{{ a.total_cents | chf(false) }}</span>
+      <span class="muted">({{ a.date | dateit }})</span>
+    </label>
+    {% endfor %}
+    <button class="btn small secondary mt" name="azione" value="rigenera" type="submit">
+      Aggiorna allegati e riscrivi il testo
+    </button>
+    <p class="muted" style="font-size:12px">
+      Attenzione: <em>Aggiorna</em> ricostruisce il testo da capo e perde le modifiche che hai fatto qui sopra.
+      Prima gli allegati, poi il testo.</p>
+  </div>
+  {% endif %}
+
+  <div class="mt" style="border-top:1px solid var(--line);padding-top:14px">
+    <button class="btn secondary" name="azione" value="prova" type="submit">
+      Prova su di me ({{ settings.email_test_to }})
+    </button>
+    <button class="btn" name="azione" value="invia" type="submit"
+            onclick="return confirm('Mandare davvero a {{ msg.to }}?')"
+            {{ 'disabled' if msg.problemi }}>
+      Invia a {{ cli.name if cli else inv.client_name }}
+    </button>
+    <a class="btn small secondary" href="{{ url_for('fattura', inv_id=inv.id) }}">Torna alla fattura</a>
+  </div>
+</form>
+{% endblock %}

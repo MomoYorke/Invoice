@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}Impostazioni{% endblock %}
+{% block content %}
+<h1>Impostazioni</h1>
+<p class="sub">Questi dati finiscono sulle fatture e negli esporti. Cambiali solo se cambia qualcosa davvero.</p>
+
+<form method="post" class="panel" style="max-width:640px">
+  <div class="form-grid">
+    <div>
+      <label>Nome attività</label><input type="text" name="business_name" value="{{ settings.business_name }}">
+      <label>UID / IDI</label><input type="text" name="business_uid" value="{{ settings.business_uid }}">
+      <label>Indirizzo — riga 1</label><input type="text" name="business_addr1" value="{{ settings.business_addr1 }}">
+      <label>Indirizzo — riga 2</label><input type="text" name="business_addr2" value="{{ settings.business_addr2 }}">
+      <label>Telefono</label><input type="text" name="business_phone" value="{{ settings.business_phone }}">
+    </div>
+    <div>
+      <label>Sito</label><input type="text" name="business_web" value="{{ settings.business_web }}">
+      <label>IBAN</label><input type="text" name="business_iban" value="{{ settings.business_iban }}">
+      <label>Termini di pagamento</label><input type="text" name="terms" value="{{ settings.terms }}">
+      <label>Commercialista</label><input type="text" name="accountant_name" value="{{ settings.accountant_name }}">
+      <label>Città commercialista</label><input type="text" name="accountant_city" value="{{ settings.accountant_city }}">
+    </div>
+  </div>
+  <label>Servizi proposti sulla nuova fattura</label>
+  <textarea name="servizi" rows="4"
+            style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
+            placeholder="uno per riga, per esempio:&#10;10 Sessions Pack – Personal Training at Home&#10;Abbonamento mensile">{{ settings.servizi }}</textarea>
+  <span class="muted" style="font-size:11.5px">Diventano i pulsanti sopra le righe della
+    fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più.
+    Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende
+    l'ultima fattura di quel cliente e sposta il periodo avanti di un mese.</span>
+  <label>Cartella storico (solo lettura)</label>
+  <input type="text" name="source_folder" value="{{ settings.source_folder }}"
+         placeholder="vuoto: nessuno storico da importare">
+  <label>Cartella della copia di sicurezza (fuori dal Mac)</label>
+  <input type="text" name="backup_dir" value="{{ settings.backup_dir }}">
+  <button class="btn mt">Salva</button>
+</form>
+
+<div class="panel mt" style="max-width:640px">
+  <h2 style="margin-top:0">Logo</h2>
+  <p class="sub">Va sulle fatture — in PDF e in Word — e qui nell'app, in alto a sinistra.
+     Meglio un PNG con lo sfondo trasparente. Se è di un'altra forma non viene stirato:
+     lo centriamo nello spazio che c'è.</p>
+  <div class="logo-riquadro">
+    <img src="{{ url_for('logo') }}?v={{ logo_versione }}" alt="Il tuo logo">
+    <div>
+      {% if logo_suo %}
+        <p class="sub" style="margin-top:0">Questo è il tuo logo.</p>
+      {% else %}
+        <p class="sub" style="margin-top:0">Non hai ancora caricato un logo: sulle fatture
+           compare questo segnaposto.</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('impostazioni_logo') }}"
+            enctype="multipart/form-data" style="display:inline">
+        <input type="file" name="logo" accept="image/*" required>
+        <button class="btn">Carica</button>
+      </form>
+      {% if logo_suo %}
+        <form method="post" action="{{ url_for('impostazioni_logo_rimuovi') }}"
+              style="display:inline"
+              onsubmit="return confirm('Tolgo il logo? Sulle fatture torna il segnaposto.')">
+          <button class="btn secondary">Togli</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="panel mt" style="max-width:760px">
+  <h2 style="margin-top:0">Calendario — sessioni automatiche</h2>
+  <p class="sub">Su Google Calendar: il calendario delle sessioni → Impostazioni del calendario →
+     <em>Indirizzo segreto in formato iCal</em>. Copia quell'indirizzo e incollalo qui.
+     L'app leggerà le sessioni da sola ogni volta che apri la pagina Crediti.
+     Un eventuale calendario storico <strong>non va mai messo qui sotto</strong>: raddoppierebbe i crediti.</p>
+  <form method="post">
+    <label>Indirizzo iCal segreto del calendario delle sessioni</label>
+    <input type="text" name="calendario_ics" value="{{ settings.calendario_ics }}"
+           placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
+    <p class="muted" style="font-size:12px">
+      {% if settings.calendario_ultimo %}Ultima lettura riuscita:
+        {{ settings.calendario_ultimo[8:10] }}.{{ settings.calendario_ultimo[5:7] }}.{{ settings.calendario_ultimo[:4] }}
+        alle {{ settings.calendario_ultimo[11:16] }}.{% else %}Non ancora collegato.{% endif %}
+      Chi ha questo indirizzo può leggere il calendario: trattalo come una password.</p>
+
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label>Indirizzo iCal del calendario storico — facoltativo</label>
+      <input type="text" name="calendario_storico_ics" value="{{ settings.calendario_storico_ics }}"
+             placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
+      <p class="muted" style="font-size:12px">
+        Serve <strong>solo all'Agenda</strong>, per sapere a che ora sono stati fatti gli
+        allenamenti vecchi: da qui i crediti non passano mai, quindi non c'è modo che
+        vengano contati due volte. Senza questo indirizzo l'Agenda funziona lo stesso, ma
+        delle sessioni più vecchie mostra il giorno e non l'ora.</p>
+    </div>
+    <button class="btn mt">Salva</button>
+  </form>
+</div>
+
+<div class="panel mt" style="max-width:760px">
+  <h2 style="margin-top:0">Posta — invio delle fatture</h2>
+  <p class="sub">Le mail partono dal tuo server, non da Gmail: se il tuo dominio autorizza
+     solo il proprio server a spedire a suo nome (SPF <code>-all</code>), quelle mandate da
+     Gmail finiscono in spam. Attenzione al nome del server: spesso il certificato copre
+     <code>tuodominio.ch</code> ma non <code>mail.tuodominio.ch</code>, e allora va scritto
+     il primo.</p>
+
+  <form method="post">
+    <div class="form-grid">
+      <div>
+        <label>Server SMTP</label><input type="text" name="smtp_host" value="{{ settings.smtp_host }}">
+        <label>Porta</label><input type="text" name="smtp_port" value="{{ settings.smtp_port }}">
+        <label>Casella</label><input type="text" name="smtp_user" value="{{ settings.smtp_user }}">
+      </div>
+      <div>
+        <label>Password della casella</label>
+        <input type="password" name="smtp_pass" autocomplete="new-password"
+               placeholder="{{ '•••••••• (già salvata) — lascia vuoto per non cambiarla' if settings.smtp_pass else 'non ancora inserita' }}">
+        {% if settings.smtp_pass %}
+        <p class="muted" style="font-size:12px;margin:-6px 0 8px">
+          salvata: {{ settings.smtp_pass | length }} caratteri{% if pausa %} ·
+          <span style="color:#92400e">{{ pausa }}</span>{% endif %}</p>
+        {% endif %}
+        <label>Mittente</label><input type="text" name="email_from" value="{{ settings.email_from }}">
+        <label>Indirizzo per le prove</label><input type="text" name="email_test_to" value="{{ settings.email_test_to }}">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div>
+        <label>Server IMAP (per la copia in Inviata)</label>
+        <input type="text" name="imap_host" value="{{ settings.imap_host }}">
+      </div>
+      <div>
+        <label>Cartella Inviata</label>
+        <input type="text" name="imap_cartella" value="{{ settings.imap_cartella }}"
+               placeholder="vuoto = la cerca da sola sul server">
+      </div>
+    </div>
+    <label style="font-weight:400"><input type="checkbox" name="email_copia_a_me" value="1"
+      {{ 'checked' if settings.email_copia_a_me == '1' }} style="width:auto">
+      Mandane una copia nascosta anche a me (arriva nella posta in arrivo, il cliente non la vede)</label>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">I due oggetti</label>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">
+        Uno per servizio, scelto insieme al modello del testo. Nel coaching
+        <code>{mese}</code> diventa il mese coperto dall'abbonamento
+        (<code>Aug/Sept</code> se il periodo sta a cavallo di due mesi, <code>Aug</code> se
+        no): l'app lo legge dal periodo scritto sulla fattura, e se manca riparte
+        dall'ultima mail mandata a quella persona avanzando di un mese.</p>
+      <label style="font-size:13px">Running / Online coaching</label>
+      <input type="text" name="email_oggetto_coaching" value="{{ settings.email_oggetto_coaching }}">
+      <label style="font-size:13px">Personal training</label>
+      <input type="text" name="email_oggetto_pt" value="{{ settings.email_oggetto_pt }}">
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">I due modelli della frase centrale</label>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">
+        L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima
+        puoi passare all'altro con un click. Il resto della mail (apertura, frase
+        sull'ordine permanente, firma) resta automatico.</p>
+      <label style="font-size:13px">Running / Online coaching — abbonamento mensile</label>
+      <textarea name="email_corpo_coaching" rows="3"
+                style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_coaching }}</textarea>
+      <label style="font-size:13px">Personal training — sessioni a domicilio</label>
+      <textarea name="email_corpo_pt" rows="3"
+                style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_pt }}</textarea>
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">Come chiudi la mail</label>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">
+        Due versioni: nella scheda di ogni cliente scegli quale usare. Vanno al posto di
+        <code>{saluto}</code> nel modello qui sotto. Gli a capo contano.</p>
+      <div class="form-grid">
+        <div>
+          <label style="font-size:13px">Con chi ci si dà del tu</label>
+          <textarea name="email_saluto_informale" rows="4"
+                    style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_saluto_informale }}</textarea>
+        </div>
+        <div>
+          <label style="font-size:13px">Con tutti gli altri</label>
+          <textarea name="email_saluto_formale" rows="4"
+                    style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_saluto_formale }}</textarea>
+        </div>
+      </div>
+    </div>
+    <label>Modello del testo</label>
+    <p class="muted" style="font-size:12px;margin:0 0 8px">Sotto <code>{saluto}</code> va la
+       tua firma: scrivila qui com'è in fondo alle mail che mandi davvero.</p>
+    <textarea name="email_body" rows="14" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_body }}</textarea>
+    <p class="muted" style="font-size:12px">Segnaposti: <code>{mese}</code> <code>{nome}</code> <code>{numero}</code>
+       <code>{totale}</code> <code>{servizio}</code> <code>{apertura}</code>
+       <code>{riga_abbonamento}</code> <code>{corpo}</code> <code>{saluto}</code></p>
+    <button class="btn mt">Salva</button>
+  </form>
+</div>
+
+<div class="panel mt" style="max-width:760px">
+  <h2 style="margin-top:0">Banca — collegamento automatico</h2>
+  <p class="sub">Quando metti un estratto nuovo nella cartella <code>Estratti conto</code>,
+     l'app può collegare da sola i versamenti su cui non c'è niente da decidere: importo
+     esatto, un solo candidato, e il nome (o la data della fattura) nella causale. Tutto il
+     resto continua a chiederlo a te.</p>
+  <form method="post">
+    <input type="hidden" name="banca_marcatore" value="1">
+    <label style="font-weight:400"><input type="checkbox" name="banca_auto" value="1"
+      {{ 'checked' if settings.banca_auto == '1' }} style="width:auto">
+      Collega da solo i versamenti senza dubbi</label>
+    <p class="muted" style="font-size:12px">
+      Provato sui tuoi 18 mesi di estratti: <strong>30 collegamenti automatici, 30 corretti,
+      nessuno sbagliato</strong>; i 19 dubbi sono rimasti dubbi. Ogni riga decisa dall'app
+      resta marcata «dall'app» nella pagina Banca e si annulla con un click.</p>
+    <button class="btn mt">Salva</button>
+  </form>
+</div>
+
+<div class="panel mt" style="max-width:640px">
+  <h2 style="margin-top:0">Copia di sicurezza fuori dal Mac</h2>
+  <p class="sub">Uno zip con database, registro delle sessioni e tutti i PDF delle fatture.
+     Viene creato all'avvio (una volta al giorno) e dopo ogni fattura nuova. Appena
+     scritto viene riaperto e controllato: se il database dentro non è integro,
+     l'archivio viene buttato e qui lo vedi scritto.</p>
+
+  {% if ultimo %}
+    <p>Ultima copia: <strong>{{ ultimo.when.strftime('%d.%m.%Y alle %H:%M') }}</strong>
+       — {{ (ultimo.size / 1024) | round | int }} KB</p>
+  {% else %}
+    <p class="muted">Nessuna copia ancora presente in questa cartella.</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('backup_ora') }}" style="display:inline">
+    <button class="btn">Fai una copia adesso</button>
+  </form>
+  <form method="post" action="{{ url_for('apri_cartella') }}" style="display:inline">
+    <input type="hidden" name="path" value="{{ settings.backup_dir }}">
+    <button class="btn secondary" type="submit">Apri la cartella</button>
+  </form>
+
+  {% if copie %}
+  <table class="mt">
+    <thead><tr><th>Quando</th><th class="num">Dimensione</th></tr></thead>
+    <tbody>
+      {% for c in copie %}
+      <tr>
+        <td>{{ c.when.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td class="num no-blur">{{ (c.size / 1024) | round | int }} KB</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

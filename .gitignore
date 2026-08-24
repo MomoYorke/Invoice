@@ -1,0 +1,33 @@
+# ------------------------------------------------------------------
+# Qui dentro NON entrano dati: né i tuoi, né quelli dei tuoi clienti.
+# Il repository contiene solo il programma. Il database, le fatture,
+# gli estratti conto e i backup restano sul tuo Mac e basta.
+# Nomi, indirizzi ed email dei clienti sono dati di terzi: distribuirli
+# non è una svista, è un problema legale (LPD in Svizzera, GDPR in UE).
+# ------------------------------------------------------------------
+
+# --- ambiente Python (si ricrea da solo al primo avvio) ---
+venv/
+__pycache__/
+*.py[cod]
+
+# --- roba di macOS ---
+.DS_Store
+
+# --- i DATI: database, registro sessioni, cache, log, backup ---
+data/
+sessions.json
+sessions_seed.json
+
+# --- i DOCUMENTI: fatture, esporti, estratti conto, cestino ---
+Fatture/
+Esporti/
+Cestino/
+Estratti conto/*
+!Estratti conto/LEGGIMI.txt
+
+# --- gli APPUNTI di lavorazione: sono verbali di decisioni prese sui dati
+# veri, pieni di nomi di clienti e di importi. Servono a chi ha costruito
+# quest'app, non a chi la usa: la documentazione per chi la usa è il README.
+SPEC-crediti.md
+docs/

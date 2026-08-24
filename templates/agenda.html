@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Agenda{% endblock %}
+{% block content %}
+<h1>Agenda</h1>
+<p class="sub">Gli allenamenti davvero svolti: uno per credito consumato. Gli appuntamenti
+   ancora da fare non compaiono.</p>
+
+<div class="panel" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+  <div><strong style="font-size:22px">{{ r.totale }}</strong>
+       <span class="muted">sessioni{{ ' nel ' ~ anno if anno }}</span></div>
+  <div class="muted">di cui con orario: <strong>{{ r.con_ora }}</strong></div>
+  {% if r.cancellate %}<div class="muted">annullate (credito consumato): <strong>{{ r.cancellate }}</strong></div>{% endif %}
+  <form method="post" action="{{ url_for('agenda_orari') }}" style="margin-left:auto">
+    <button class="btn small secondary">Aggiorna gli orari dal calendario</button>
+  </form>
+</div>
+
+<form method="get" class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+  <div>
+    <label>Cliente</label>
+    <select name="cliente" onchange="this.form.submit()">
+      <option value="">tutti</option>
+      {% for c in clienti %}
+      <option value="{{ c }}" {{ 'selected' if c == cliente }}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Anno</label>
+    <select name="anno" onchange="this.form.submit()">
+      <option value="">tutti</option>
+      {% for y in anni %}
+      <option value="{{ y }}" {{ 'selected' if y == anno }}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <noscript><button class="btn small">Filtra</button></noscript>
+  {% if cliente or anno %}<a class="btn small secondary" href="{{ url_for('agenda') }}">Azzera</a>{% endif %}
+</form>
+
+{% if senza_ora %}
+<div class="panel" style="border-color:#f59e0b;background:#fffbeb">
+  <p style="margin:0">⏱️ Di <strong>{{ senza_ora }}</strong> sessioni non conosco l'ora.
+     Sono quelle dei calendari vecchi, che <em>{{ calendario_nome }}</em> non contiene più.
+     Se incolli in <a href="{{ url_for('impostazioni') }}">Impostazioni</a> anche l'indirizzo
+     iCal del calendario storico, si riempiono da sole.</p>
+</div>
+{% endif %}
+
+<div class="panel">
+<table>
+  <tr><th>Giorno</th><th>Ora</th><th>Cliente</th><th>Sul calendario</th>
+      <th>Pacchetto</th><th>Credito</th><th>Fattura</th></tr>
+  {% for s in righe %}
+  <tr {{ 'style=opacity:.55' if s.cancellata }}>
+    <td><strong>{{ s.data | dateit }}</strong>
+        <span class="muted" style="font-size:11px">{{ s.data | giorno_settimana }}</span></td>
+    <td class="muted">{{ s.ora or '—' }}</td>
+    <td>{{ s.cliente }}{% if s.cancellata %} <span class="badge">annullata</span>{% endif %}</td>
+    <td class="muted">{{ s.titolo }}</td>
+    <td><a href="{{ url_for('crediti_pacchetto', pid=s.pacchetto) }}">{{ s.pacchetto }}</a></td>
+    <td class="muted">{{ s.n }}/{{ s.crediti }}</td>
+    <td class="muted">{% if s.fattura %}#{{ s.fattura }}{% else %}—{% endif %}</td>
+  </tr>
+  {% if s.nota %}
+  <tr><td></td><td colspan="6" class="muted" style="font-size:12px;padding-top:0">↳ {{ s.nota }}</td></tr>
+  {% endif %}
+  {% else %}
+  <tr><td colspan="7" class="muted">Nessuna sessione con questi filtri.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

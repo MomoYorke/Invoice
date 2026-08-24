@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Pacchetto {{ p.id }}{% endblock %}
+{% block content %}
+<h1>Pacchetto {{ p.id }} <span class="muted">— {{ p.cliente }}</span></h1>
+<p class="sub">
+  {{ p.sessioni | length }} sessioni su {{ p.crediti }} crediti ·
+  dal {{ p.inizio | dateit }}{% if p.fine %} al {{ p.fine | dateit }}{% else %} (aperto){% endif %} ·
+  fatturato: <strong>{{ p.fatturato or 'no' }}</strong>{% if fattura_stato %} · {{ '✓ incassata' if fattura_stato == 'pagata' else 'da incassare' }}{% endif %}
+</p>
+{% if p.nota %}<div class="issue">{{ icona('nota', 'ic-mini') }} {{ p.nota }}</div>{% endif %}
+
+<div class="panel" style="max-width:720px">
+  <table>
+    <tr><th>#</th><th>Data</th><th>Titolo sul calendario</th><th>Note</th></tr>
+    {% for s in p.sessioni %}
+    <tr>
+      <td>{{ s.n }}</td>
+      <td>{{ s.data | dateit }}</td>
+      <td>{{ s.titolo }}</td>
+      <td class="muted" style="font-size:12.5px">
+        {% if s.cancellata %}<span class="badge emessa">cancellata — credito consumato</span>{% endif %}
+        {% if s.fattura %} fatt. #{{ s.fattura }}{% endif %}
+        {% if s.event_id %}<span title="{{ s.event_id }}"> · da calendario</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <a class="btn small secondary mt" href="{{ url_for('crediti') }}">← Torna ai crediti</a>
+</div>
+{% endblock %}
