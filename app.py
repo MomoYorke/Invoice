@@ -196,7 +196,8 @@ def dashboard():
         registro = None
     cose = cruscotto.da_fare(con, settings, registro)
     try:
-        novita = cruscotto.attivita(con, registro if registro is not None else {})
+        novita = cruscotto.attivita(con, registro if registro is not None else {},
+                                    lingua=settings.get('lingua'))
     except Exception as e:
         err_logger.error('Attività non costruita: %s', e)
         novita = []

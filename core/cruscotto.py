@@ -13,6 +13,7 @@ import datetime
 
 from . import backup
 from . import agenda
+from . import lingua as L
 
 VERDE, GIALLO, ROSSO = 'ok', 'attenzione', 'guai'
 GIORNI_BACKUP_VECCHIO = 3        # oltre, il riquadro diventa giallo
@@ -213,26 +214,30 @@ def _spazio(con):
 
 
 # ---------------------------------------------------------------- attivita
-def attivita(con, reg, quante=12):
+def attivita(con, reg, quante=12, lingua=None):
     """Le ultime cose successe, da fonti diverse, in una lista sola."""
+    lg = L.normalizza(lingua)
     voci = []
 
     for r in con.execute('SELECT id, number, client_name, created_at, total_cents '
                          'FROM invoices WHERE deleted_at IS NULL AND created_at IS NOT NULL '
                          'ORDER BY created_at DESC LIMIT ?', (quante,)):
         voci.append({'quando': r['created_at'], 'ora_nota': True, 'tipo': 'fattura',
-                     'testo': f"Fattura #{r['number']} a {r['client_name']}",
+                     'testo': L.t('Fattura #{n} a {cliente}', lg).format(
+                         n=r['number'], cliente=r['client_name']),
                      'link': ('fattura', {'inv_id': r['id']})})
 
     for r in con.execute('SELECT id, invoice_id, sent_at, destinatario, fatture, esito, prova '
                          'FROM email_log ORDER BY sent_at DESC LIMIT ?', (quante,)):
         if r['prova']:
-            testo = f"Prova su di te{' — non è partita' if r['esito'] != 'ok' else ''}"
+            testo = L.t('Prova su di te', lg) + (
+                L.t(' — non è partita', lg) if r['esito'] != 'ok' else '')
         elif r['esito'] != 'ok':
-            testo = f"Invio fallito della #{r['fatture']}"
+            testo = L.t('Invio fallito della #{n}', lg).format(n=r['fatture'])
         else:
-            a_chi = f" a {r['destinatario']}" if r['destinatario'] else ''
-            testo = f"Fattura #{r['fatture']} spedita{a_chi}"
+            testo = (L.t('Fattura #{n} spedita a {a}', lg).format(
+                         n=r['fatture'], a=r['destinatario']) if r['destinatario']
+                     else L.t('Fattura #{n} spedita', lg).format(n=r['fatture']))
         voci.append({'quando': r['sent_at'], 'ora_nota': True,
                      'tipo': 'errore' if r['esito'] != 'ok' else 'email',
                      'testo': testo, 'link': ('email_letta', {'log_id': r['id']})})
@@ -242,14 +247,15 @@ def attivita(con, reg, quante=12):
     for s in agenda.elenco(reg)[:quante]:
         voci.append({'quando': f"{s['data']}T{s['ora'] or ''}",
                      'ora_nota': bool(s['ora']), 'tipo': 'sessione',
-                     'testo': f"Sessione di {s['cliente']}"
-                              + (' (annullata)' if s['cancellata'] else ''),
+                     'testo': L.t('Sessione di {cliente}', lg).format(cliente=s['cliente'])
+                              + (L.t(' (annullata)', lg) if s['cancellata'] else ''),
                      'link': ('agenda', {})})
 
     for p in reg.get('pacchetti', []):
         if p.get('rimasti') == 0 and p.get('fine'):
             voci.append({'quando': f"{p['fine']}T23:59", 'ora_nota': False, 'tipo': 'crediti',
-                         'testo': f"Crediti finiti: {p['id']} ({p.get('cliente', '')})",
+                         'testo': L.t('Crediti finiti: {pacchetto} ({cliente})', lg).format(
+                             pacchetto=p['id'], cliente=p.get('cliente', '')),
                          'link': ('crediti', {})})
 
     voci.sort(key=lambda v: v['quando'] or '', reverse=True)
@@ -276,6 +282,7 @@ def da_fare(con, settings, registro=None):
     posto una cosa che costa una lettura sola e dice la stessa cosa, cioe' da
     quanto l'app non sa piu' chi ti ha pagato.
     """
+    lg = L.normalizza((settings or {}).get('lingua'))
     voci = []
 
     # Le fatture ancora aperte secondo il loro stato, non secondo la banca: il
@@ -290,12 +297,13 @@ def da_fare(con, settings, registro=None):
         tardi = sum(1 for r in aperte if r['id'] in in_ritardo)
         voci.append({
             'chiave': 'incassare', 'icona': 'soldi',
-            'titolo': 'Da incassare',
+            'titolo': L.t('Da incassare', lg),
             'quante': len(aperte),
-            'unita': 'fatture' if len(aperte) != 1 else 'fattura',
+            'unita': L.t('fatture' if len(aperte) != 1 else 'fattura', lg),
             'importo': sum(r['total_cents'] or 0 for r in aperte),
-            'dettaglio': (f'{tardi} ferme da oltre {GIORNI_PAZIENZA} giorni'
-                          if tardi else 'nessuna in ritardo, sono tutte recenti'),
+            'dettaglio': (L.t('{tardi} ferme da oltre {giorni} giorni', lg)
+                          .format(tardi=tardi, giorni=GIORNI_PAZIENZA) if tardi
+                          else L.t('nessuna in ritardo, sono tutte recenti', lg)),
             'urgenza': RITARDO if tardi else ATTESA,
             'link': ('fatture', {'stato': 'emessa', 'anno': ''}),
         })
@@ -304,11 +312,11 @@ def da_fare(con, settings, registro=None):
     if stato['da_mandare']:
         voci.append({
             'chiave': 'spedire', 'icona': 'email',
-            'titolo': 'Fatte e non ancora spedite',
+            'titolo': L.t('Fatte e non ancora spedite', lg),
             'quante': stato['da_mandare'],
-            'unita': 'fatture' if stato['da_mandare'] != 1 else 'fattura',
+            'unita': L.t('fatture' if stato['da_mandare'] != 1 else 'fattura', lg),
             'importo': None,
-            'dettaglio': "sono nell'app ma non sono partite per email",
+            'dettaglio': L.t("sono nell'app ma non sono partite per email", lg),
             'urgenza': ATTESA,
             'link': ('fatture', {'invio': 'da-mandare', 'anno': ''}),
         })
@@ -317,21 +325,22 @@ def da_fare(con, settings, registro=None):
     if finiti:
         voci.append({
             'chiave': 'crediti', 'icona': 'crediti',
-            'titolo': 'Pacchetti finiti',
+            'titolo': L.t('Pacchetti finiti', lg),
             'quante': len(finiti),
-            'unita': 'clienti' if len(finiti) != 1 else 'cliente',
+            'unita': L.t('clienti' if len(finiti) != 1 else 'cliente', lg),
             'importo': None,
-            'dettaglio': ', '.join(finiti[:4]) + (' e altri' if len(finiti) > 4 else '')
-                         + ' — va emessa la prossima fattura',
+            'dettaglio': L.t('{chi} — va emessa la prossima fattura', lg).format(
+                chi=', '.join(finiti[:4])
+                    + (L.t(' e altri', lg) if len(finiti) > 4 else '')),
             'urgenza': RITARDO,
             'link': ('crediti', {}),
         })
 
-    vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'))
+    vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'), lg)
     if vecchio:
         voci.append({
             'chiave': 'estratto', 'icona': 'banca',
-            'titolo': 'Estratto conto da aggiornare',
+            'titolo': L.t('Estratto conto da aggiornare', lg),
             'quante': None, 'unita': '', 'importo': None,
             'dettaglio': vecchio,
             'urgenza': ATTESA,
@@ -353,15 +362,15 @@ def _crediti_finiti(registro):
         return []          # i crediti non devono poter spegnere la Dashboard
 
 
-def _estratto_vecchio(ultimo):
+def _estratto_vecchio(ultimo, lg=None):
     """Da quanto l'app non sa piu' chi ti ha pagato. '' se e' aggiornato."""
     if not ultimo:
-        return "non ne hai ancora caricato nessuno: l'app non sa chi ti ha pagato"
+        return L.t("non ne hai ancora caricato nessuno: l'app non sa chi ti ha pagato", lg)
     try:
         giorni = (datetime.date.today() - datetime.date.fromisoformat(ultimo)).days
     except ValueError:
         return ''
     if giorni <= GIORNI_ESTRATTO_VECCHIO:
         return ''
-    return (f"l'ultimo arriva al {ultimo[8:10]}.{ultimo[5:7]}.{ultimo[:4]}, "
-            f'{giorni} giorni fa')
+    return L.t("l'ultimo arriva al {data}, {giorni} giorni fa", lg).format(
+        data='%s.%s.%s' % (ultimo[8:10], ultimo[5:7], ultimo[:4]), giorni=giorni)

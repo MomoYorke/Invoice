@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}{{ _('Dashboard') }}{% endblock %}
 {% set ICONE = {'fattura': 'fattura', 'email': 'email', 'errore': 'avviso',
                 'sessione': 'agenda', 'crediti': 'crediti'} %}
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-  <h1>Dashboard</h1>
+  <h1>{{ _('Dashboard') }}</h1>
   <button type="button" class="privacy-btn privacy-toggle no-blur" onclick="toggleRiservato()"
           aria-pressed="false" title="Nascondi gli importi (screenshot, luogo pubblico)">
     {% include '_occhio.html' %}
@@ -13,9 +13,11 @@
 
 {% if restano %}
 <div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-  <span class="muted">{{ icona('bussola', 'ic-mini') }} Ci sono ancora {{ restano | length }} cos{{ 'a' if restano|length == 1 else 'e' }}
-    da mettere a posto: {{ restano | map(attribute='titolo') | join(', ') | lower }}.</span>
-  <a class="btn small secondary" href="{{ url_for('benvenuto') }}">Vedi i primi passi</a>
+  {% set elenco = restano | map(attribute='titolo') | join(', ') | lower %}
+  <span class="muted">{{ icona('bussola', 'ic-mini') }}
+    {% if restano | length == 1 %}{{ _('Manca ancora una cosa da mettere a posto: {elenco}.').format(elenco=elenco) }}
+    {% else %}{{ _('Mancano ancora {n} cose da mettere a posto: {elenco}.').format(n=restano|length, elenco=elenco) }}{% endif %}</span>
+  <a class="btn small secondary" href="{{ url_for('benvenuto') }}">{{ _('Vedi i primi passi') }}</a>
 </div>
 {% endif %}
 
@@ -23,12 +25,13 @@
 {% set max_month = (months | max) or 1 %}
 <div class="hero">
   <div>
-    <div class="hero-label">Fatturato {{ year }} ad oggi</div>
+    <div class="hero-label">{{ _('Fatturato {anno} ad oggi').format(anno=year) }}</div>
     <div class="hero-value">{{ k.ytd | chf }}</div>
     {% if k.growth_bp is not none %}
     <div class="hero-delta">
       <span class="{{ 'up' if k.growth_bp >= 0 else 'down' }}">{{ '▲' if k.growth_bp >= 0 else '▼' }}
-        {{ '%+.1f' % (k.growth_bp / 100) }}%</span> rispetto allo stesso periodo del {{ year - 1 }}
+        {{ '%+.1f' % (k.growth_bp / 100) }}%</span>
+      {{ _('rispetto allo stesso periodo del {anno}').format(anno=year - 1) }}
     </div>
     {% endif %}
   </div>
@@ -41,16 +44,16 @@
               fill="{{ 'var(--accent)' if months[m] else '#e2e8f0' }}"/>
       {% endfor %}
     </svg>
-    <div class="hero-spark-label">gen — dic {{ year }}</div>
+    <div class="hero-spark-label">{{ _('gen — dic {anno}').format(anno=year) }}</div>
   </div>
   <div class="hero-link">
     <a class="btn small secondary" href="{{ url_for('performance', anno=year) }}">
-      {{ icona('grafico', 'ic-mini') }} Vedi le performance</a>
+      {{ icona('grafico', 'ic-mini') }} {{ _('Vedi le performance') }}</a>
   </div>
 </div>
 
 {# --- le cose che chiedono qualcosa a te --- #}
-<h2 class="sezione">Da fare</h2>
+<h2 class="sezione">{{ _('Da fare') }}</h2>
 <div class="panel elenco-da-fare">
   {% for c in cose %}
   <a class="riga-da-fare {{ c.urgenza }}" href="{{ url_for(c.link[0], **c.link[1]) }}">
@@ -73,13 +76,13 @@
   {% else %}
   <div class="tutto-fatto">
     {{ icona('spunta', 'ic') }}
-    <span>Niente in sospeso. Tutte le fatture sono partite e non aspetti soldi da nessuno.</span>
+    <span>{{ _('Niente in sospeso. Tutte le fatture sono partite e non aspetti soldi da nessuno.') }}</span>
   </div>
   {% endfor %}
 </div>
 
 {# --- cos'è successo da quando non guardavi --- #}
-<h2 class="sezione">Ultime cose</h2>
+<h2 class="sezione">{{ _('Ultime cose') }}</h2>
 <div class="panel">
   {% if novita %}
   <table>
@@ -93,7 +96,7 @@
     {% endfor %}
   </table>
   {% else %}
-  <p class="muted" style="margin:0">Ancora niente da raccontare.</p>
+  <p class="muted" style="margin:0">{{ _('Ancora niente da raccontare.') }}</p>
   {% endif %}
 </div>
 {% endblock %}
