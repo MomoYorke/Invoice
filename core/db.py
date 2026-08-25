@@ -135,6 +135,11 @@ DEFAULT_SETTINGS = {
     # dei buchi evidenti che una con sopra il nome e l'IBAN di un altro.
     # Nota: questi valori valgono solo per un database nuovo. Chi ha gia'
     # l'app installata si tiene quello che ha scritto.
+    # Chi USA l'app, che non e' la stessa cosa dell'attivita': «Emanuele Melis
+    # Personal Training» va sulla fattura, «Emanuele» serve per salutarlo. Non
+    # si ricava dall'altro: «Studio Bianchi Fisioterapia» darebbe «Studio».
+    'owner_first_name': '',
+    'owner_last_name': '',
     'business_name': '',
     'business_uid': '',
     'business_addr1': '',

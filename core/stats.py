@@ -43,6 +43,26 @@ def monthly(con, year):
     return months
 
 
+def mese_su_mese(con, anno, mese):
+    """Il mese in corso a confronto con quello prima.
+
+    Il mese prima di gennaio e' dicembre dell'anno prima: si legge di la',
+    altrimenti a gennaio il confronto sparirebbe ogni anno. La variazione
+    in percentuale esiste solo se il mese prima aveva un importo: dividere
+    per zero non da' «+100%», non da' niente.
+    """
+    ora = monthly(con, anno)[mese - 1]
+    if mese == 1:
+        prima = monthly(con, anno - 1)[11]
+        mese_prima, anno_prima = 12, anno - 1
+    else:
+        prima = monthly(con, anno)[mese - 2]
+        mese_prima, anno_prima = mese - 1, anno
+    return {'ora': ora, 'prima': prima, 'mese': mese, 'mese_prima': mese_prima,
+            'anno_prima': anno_prima,
+            'delta_bp': round((ora - prima) * 10000 / prima) if prima else None}
+
+
 def by_client(con, year=None):
     """[(nome, invoiced_cents, n_fatture)] ordinato per fatturato."""
     if year in LEGACY_YEARS:
