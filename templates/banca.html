@@ -1,33 +1,32 @@
 {% extends 'base.html' %}
-{% block title %}Banca{% endblock %}
+{% block title %}{{ _('Banca') }}{% endblock %}
 {% block content %}
-<h1>Banca</h1>
-<p class="sub">Gli accrediti del tuo estratto conto, accostati alle fatture.
-   <strong>L'app non segna niente da sola</strong>: propone, confermi tu.</p>
+<h1>{{ _('Banca') }}</h1>
+<p class="sub">{{ _('Gli accrediti del tuo estratto conto, accostati alle fatture.') }}
+   <strong>{{ _("L'app non segna niente da sola") }}</strong>{{ _(': propone, confermi tu.') }}</p>
 
 {% if problemi %}
 <div class="panel" style="border-color:#f59e0b;background:#fffbeb">
-  {% for p in problemi %}<p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }} {{ p }}</p>{% endfor %}
+  {% for dove, guaio in problemi %}<p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }}
+    <code style="font-size:12px">{{ dove }}</code>: {{ _(guaio) }}</p>{% endfor %}
 </div>
 {% endif %}
 
 <div class="panel" style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
   <div><strong style="font-size:22px">{{ da_decidere | length }}</strong>
-       <span class="muted">versamenti da decidere</span></div>
-  {% if chiare %}<div class="muted">di cui <strong>{{ chiare }}</strong> con una proposta chiara</div>{% endif %}
-  <div class="muted">{{ decisi | length }} già sistemati</div>
+       <span class="muted">{{ _('versamenti da decidere') }}</span></div>
+  {% if chiare %}<div class="muted">{{ _('di cui {n} con una proposta chiara').format(n=chiare) }}</div>{% endif %}
+  <div class="muted">{{ _('{n} già sistemati').format(n=decisi | length) }}</div>
 </div>
 
 {% if not prop %}
 <div class="panel">
-  <p style="margin-top:0">Nella cartella non c'è ancora nessun estratto conto.</p>
-  <p class="muted" style="margin-bottom:0">Scarica dall'e-banking i movimenti (CSV, oppure
-     il formato <strong>camt.053</strong> / <strong>camt.054</strong> in XML, che è quello
-     standard svizzero e funziona meglio) e appoggia i file qui:</p>
+  <p style="margin-top:0">{{ _("Nella cartella non c'è ancora nessun estratto conto.") }}</p>
+  <p class="muted" style="margin-bottom:0">{{ _("Scarica dall'e-banking i movimenti (CSV, oppure il formato {a} / {b} in XML, che è quello standard svizzero e funziona meglio) e appoggia i file qui:").format(
+       a='<strong>camt.053</strong>', b='<strong>camt.054</strong>') | safe }}</p>
   <p><code style="font-size:12.5px">{{ cartella }}</code></p>
-  <p class="muted" style="margin-bottom:0">Poi ricarica questa pagina. I file restano tuoi
-     e sul tuo Mac: l'app li legge e basta, non li sposta e non li modifica.
-     Legge <strong>solo le entrate</strong>: quello che spendi non lo guarda.</p>
+  <p class="muted" style="margin-bottom:0">{{ _("Poi ricarica questa pagina. I file restano tuoi e sul tuo Mac: l'app li legge e basta, non li sposta e non li modifica. Legge {sole}: quello che spendi non lo guarda.").format(
+       sole='<strong>' + _('solo le entrate') + '</strong>') | safe }}</p>
 </div>
 {% endif %}
 
@@ -36,33 +35,34 @@
   <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:baseline">
     <div>
       <strong style="font-size:17px">{{ p.m.importo_cents | chf }}</strong>
-      <span class="muted"> arrivati il {{ p.m.data | dateit }}</span>
+      <span class="muted"> {{ _('arrivati il {data}').format(data=p.m.data | dateit) }}</span>
     </div>
     <span class="muted" style="font-size:12px">{{ p.m.file }}</span>
   </div>
-  <p class="muted" style="font-size:13px;margin:6px 0 10px">{{ p.m.descrizione or '(nessuna causale)' }}</p>
+  <p class="muted" style="font-size:13px;margin:6px 0 10px">{{ p.m.descrizione or _('(nessuna causale)') }}</p>
 
   {% if p.candidati %}
   <table>
     {% for c in p.candidati %}
     <tr>
-      <td style="width:22px">{{ pallino('verde', 'il riferimento del pagamento combacia') if c.grado == 'certo'
-        else (pallino('blu', 'importo e nome combaciano') if c.grado == 'probabile'
-        else pallino('vuoto', "combacia solo l'importo")) }}</td>
+      <td style="width:22px">{{ pallino('verde', _('il riferimento del pagamento combacia')) if c.grado == 'certo'
+        else (pallino('blu', _('importo e nome combaciano')) if c.grado == 'probabile'
+        else pallino('vuoto', _("combacia solo l'importo"))) }}</td>
       <td>
         <a href="{{ url_for('fattura', inv_id=c.inv.id) }}"><strong>#{{ c.inv.number }}</strong></a>
         {{ c.inv.client_name }}
         <span class="muted">· {{ c.inv.date | dateit }}{% if c.giorni is not none %} ·
-          {{ c.giorni }} giorni prima{% endif %}</span>
-        <br><span class="muted" style="font-size:12px">{{ c.perche }}</span>
+          {{ _('{n} giorni prima').format(n=c.giorni) }}{% endif %}</span>
+        <br><span class="muted" style="font-size:12px">{{ _(c.perche) }}
+          {%- if not c.aperta %}{{ _(' — già segnata pagata, confermando aggiungo solo la data') }}{% endif %}</span>
       </td>
       <td class="right" style="white-space:nowrap">
         <form method="post" action="{{ url_for('banca_collega') }}" style="display:inline">
           <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
           <input type="hidden" name="invoice_id" value="{{ c.inv.id }}">
           <button class="btn small {{ '' if (loop.first and p.chiaro) else 'secondary' }}"
-                  onclick="return confirm('Segnare la #{{ c.inv.number }} pagata il {{ p.m.data | dateit }}?')">
-            {{ 'Conferma' if (loop.first and p.chiaro) else 'È questa' }}
+                  onclick="return confirm({{ _('Segnare la #{n} pagata il {data}?').format(n=c.inv.number, data=p.m.data | dateit) | tojson }})">
+            {{ _('Conferma') if (loop.first and p.chiaro) else _('È questa') }}
           </button>
         </form>
       </td>
@@ -70,17 +70,16 @@
     {% endfor %}
   </table>
   {% elif p.gruppi %}
-  <p class="muted" style="font-size:12.5px;margin:0 0 6px">Nessuna fattura da sola fa questo
-     importo, ma queste insieme sì:</p>
+  <p class="muted" style="font-size:12.5px;margin:0 0 6px">{{ _('Nessuna fattura da sola fa questo importo, ma queste insieme sì:') }}</p>
   <table>
     {% for g in p.gruppi %}
     <tr>
-      <td style="width:22px">{{ pallino('blu', 'importo e nome combaciano') }}</td>
+      <td style="width:22px">{{ pallino('blu', _('importo e nome combaciano')) }}</td>
       <td>
         <strong>{{ g.numeri }}</strong> — {{ g.fatture[0].client_name }}
         <span class="muted">·
           {% for i in g.fatture %}{{ i.total_cents | chf(false) }}{% if not loop.last %} + {% endif %}{% endfor %}</span>
-        <br><span class="muted" style="font-size:12px">{{ g.perche }}</span>
+        <br><span class="muted" style="font-size:12px">{{ _(g.perche).format(quante=g.quante) }}</span>
       </td>
       <td class="right">
         <form method="post" action="{{ url_for('banca_collega') }}" style="display:inline">
@@ -88,8 +87,8 @@
           <input type="hidden" name="invoice_ids"
                  value="{% for i in g.fatture %}{{ i.id }}{% if not loop.last %},{% endif %}{% endfor %}">
           <button class="btn small"
-                  onclick="return confirm('Segnare {{ g.numeri }} pagate il {{ p.m.data | dateit }}?')">
-            Sono queste
+                  onclick="return confirm({{ _('Segnare {numeri} pagate il {data}?').format(numeri=g.numeri, data=p.m.data | dateit) | tojson }})">
+            {{ _('Sono queste') }}
           </button>
         </form>
       </td>
@@ -97,8 +96,7 @@
     {% endfor %}
   </table>
   {% else %}
-  <p class="muted" style="margin:0 0 10px">Nessuna fattura aperta con questo importo nei
-     giorni intorno. Può essere un rimborso, un giroconto o un pagamento che non c'entra.</p>
+  <p class="muted" style="margin:0 0 10px">{{ _("Nessuna fattura aperta con questo importo nei giorni intorno. Può essere un rimborso, un giroconto o un pagamento che non c'entra.") }}</p>
   {% endif %}
 
   <div class="mt" style="border-top:1px solid var(--line);padding-top:10px;
@@ -106,18 +104,17 @@
     <form method="post" action="{{ url_for('banca_collega') }}"
           style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
-      <label style="margin:0;font-weight:400;font-size:13px">Oppure dimmelo tu — numero
-        della fattura:</label>
-      <input type="text" name="numeri" placeholder="es. 53, 58" style="width:110px">
+      <label style="margin:0;font-weight:400;font-size:13px">{{ _('Oppure dimmelo tu — numero della fattura:') }}</label>
+      <input type="text" name="numeri" placeholder="{{ _('es. 53, 58') }}" style="width:110px">
       <label style="margin:0;font-weight:400;font-size:12px">
         <input type="checkbox" name="accetta_differenza" value="1" style="width:auto">
-        anche se l'importo non torna</label>
-      <button class="btn small secondary">Collega</button>
+        {{ _("anche se l'importo non torna") }}</label>
+      <button class="btn small secondary">{{ _('Collega') }}</button>
     </form>
     <form method="post" action="{{ url_for('banca_collega') }}" style="margin-left:auto">
       <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
       <input type="hidden" name="azione" value="ignora">
-      <button class="btn small secondary">Non è una fattura — metti da parte</button>
+      <button class="btn small secondary">{{ _('Non è una fattura — metti da parte') }}</button>
     </form>
   </div>
 </div>
@@ -125,25 +122,25 @@
 
 {% if decisi %}
 <div class="panel">
-  <h2 style="margin-top:0">Già sistemati</h2>
+  <h2 style="margin-top:0">{{ _('Già sistemati') }}</h2>
   <table>
     {% for p in decisi %}
     <tr>
       <td style="white-space:nowrap">{{ p.m.data | dateit }}</td>
       <td class="num">{{ p.m.importo_cents | chf(false) }}</td>
       <td>
-        {% if p.deciso.automatico %}<span class="badge" style="font-size:10.5px">dall'app</span>{% endif %}
+        {% if p.deciso.automatico %}<span class="badge" style="font-size:10.5px">{{ _("dall'app") }}</span>{% endif %}
         {% if p.collegate %}
           {% for f in p.collegate %}<a href="{{ url_for('fattura', inv_id=f.id) }}">#{{ f.number }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
           {{ p.collegate[0].client_name }}
-        {% else %}<span class="muted">messo da parte</span>{% endif %}
+        {% else %}<span class="muted">{{ _('messo da parte') }}</span>{% endif %}
       </td>
       <td class="muted" style="font-size:12px">{{ p.m.descrizione[:50] }}</td>
       <td class="right">
         <form method="post" action="{{ url_for('banca_collega') }}" style="display:inline">
           <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
           <input type="hidden" name="azione" value="annulla">
-          <button class="btn small secondary">Annulla</button>
+          <button class="btn small secondary">{{ _('Annulla') }}</button>
         </form>
       </td>
     </tr>
@@ -154,8 +151,7 @@
 
 {% if prop %}
 <p class="muted" style="font-size:12.5px;max-width:760px">
-  {{ pallino('verde') }} il riferimento del pagamento combacia · {{ pallino('blu') }} importo e nome
-  combaciano · {{ pallino('vuoto') }} combacia solo l'importo. Il pallino verde comparirà quando le fatture usciranno
-  come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.</p>
+  {{ pallino('verde') }} {{ _('il riferimento del pagamento combacia') }} · {{ pallino('blu') }} {{ _('importo e nome combaciano') }} ·
+  {{ pallino('vuoto') }} {{ _("combacia solo l'importo") }}. {{ _("Il pallino verde comparirà quando le fatture usciranno come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.") }}</p>
 {% endif %}
 {% endblock %}

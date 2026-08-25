@@ -359,7 +359,7 @@ def leggi_cartella(cartella=None):
     cartella = cartella or CARTELLA
     movimenti, problemi = [], []
     if not os.path.isdir(cartella):
-        return [], [f'La cartella «{cartella}» non esiste.']
+        return [], [(cartella, 'Questa cartella non esiste.')]
     for percorso in sorted(glob.glob(os.path.join(cartella, '*'))):
         if not percorso.lower().endswith(ESTENSIONI):
             continue
@@ -375,7 +375,7 @@ def leggi_cartella(cartella=None):
         except Exception as e:
             voci, errore = [], f'{type(e).__name__}: {e}'
         if errore:
-            problemi.append(f'{os.path.basename(percorso)}: {errore}')
+            problemi.append((os.path.basename(percorso), errore))
         movimenti.extend(voci)
     # stesso versamento in due file scaricati due volte: si tiene una volta sola
     viste, uniche = set(), []
@@ -491,8 +491,6 @@ def candidati_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_
             grado, perche = PROBABILE, 'importo esatto e il nome compare nella causale'
         else:
             grado, perche = POSSIBILE, 'importo esatto, ma il nome non compare nella causale'
-        if not aperta:
-            perche += ' — già segnata pagata, confermando aggiungo solo la data'
         fuori.append({'inv': inv, 'grado': grado, 'perche': perche, 'aperta': aperta,
                       'somiglianza': somiglianza, 'data_citata': data_citata,
                       'giorni': (giorno - datetime.date.fromisoformat(inv['date'])).days
@@ -606,7 +604,8 @@ def gruppi_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_DOP
             fuori.append({
                 'fatture': list(gruppo),
                 'numeri': ', '.join(f"#{i['number']}" for i in gruppo),
-                'perche': f'{quante} fatture dello stesso cliente che insieme fanno '
+                'quante': quante,
+                'perche': '{quante} fatture dello stesso cliente che insieme fanno '
                           'esattamente questo importo',
             })
         if fuori:

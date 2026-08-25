@@ -748,10 +748,35 @@ def _test_lingua(r):
            _tedesco_col_lei(L), [])
 
 
+def _pagina_dice_gia_pagata():
+    """La pagina Banca avverte quando la fattura era gia' spuntata a mano."""
+    for pagina, sorgente in _sorgenti_pagine():
+        if pagina != 'banca.html':
+            continue
+        pulito = ' '.join(sorgente.split())
+        return 'not c.aperta' in pulito and 'già segnata pagata' in pulito
+    return False
+
+
 def _tedesco_col_lei(L):
-    """Le frasi tedesche che danno del Lei invece che del tu."""
-    lei = re.compile(r'\b(Ihre?[nms]?|Ihnen|Sie)\b')
-    return sorted(v for v in L.TESTI['de'].values() if lei.search(v))
+    """Le frasi tedesche che danno del Lei invece che del tu.
+
+    Il tedesco scrive «Sie» sia per il Lei sia per «essa»: «Sie liest die
+    Datei» vuol dire «la app la legge». Quel «Sie» sta sempre a inizio frase,
+    perche' e' soggetto; il «Lei» di cortesia capita quasi sempre in mezzo.
+    Quindi «Sie» e «Ihr» si guardano solo a frase iniziata, mentre «Ihre»,
+    «Ihnen» e compagnia sono possessivi di cortesia e valgono ovunque.
+    """
+    ovunque = re.compile(r'\b(Ihnen|Ihre|Ihrem|Ihren|Ihrer|Ihres)\b')
+    in_mezzo = re.compile(r'(?<![.!?:]\s)(?<!^)\b(Sie|Ihr)\b')
+    fuori = []
+    for v in L.TESTI['de'].values():
+        if ovunque.search(v) or any(in_mezzo.search(f.strip())
+                                    for f in re.split(r'(?<=[.!?:])\s+', v)[1:] or []):
+            fuori.append(v)
+        elif in_mezzo.search(re.split(r'(?<=[.!?:])\s+', v)[0]):
+            fuori.append(v)
+    return sorted(fuori)
 
 
 def _sorgenti_pagine():
@@ -1599,8 +1624,11 @@ def _test_banca(r):
     pagata = next(c for c in cand if c['inv']['number'] == 60)
     _check(r, 'Banca', 'una fattura già pagata a mano resta proponibile',
            pagata['aperta'], False)
+    # la frase la mette la pagina, non banca.py: cosi' si puo' tradurre. Il
+    # controllo resta lo stesso — la riga deve dirlo — solo guardato dove
+    # adesso la frase vive davvero.
     _check(r, 'Banca', 'e la riga lo dice, invece di far credere a un incasso nuovo',
-           'già segnata pagata' in pagata['perche'], True)
+           _pagina_dice_gia_pagata(), True)
     _check(r, 'Banca', 'a parità di indizi la fattura ancora aperta viene prima',
            cand[1]['aperta'], True)
 

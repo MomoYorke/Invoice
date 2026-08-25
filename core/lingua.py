@@ -264,6 +264,230 @@ TESTI = {
         'Indirizzo — CAP e città': 'Address — postcode and town',
         'Aggiungi': 'Add',
         'nome@esempio.ch': 'name@example.ch',
+        # --- Crediti ---
+        'Crediti sessioni': 'Session credits',
+        'Ogni sessione svolta consuma un credito. Quando il pacchetto finisce, si rifattura.':
+            'Every session done uses up a credit. When the pack runs out, you invoice again.',
+        'Registro dal {data}.': 'Register since {data}.',
+        'Chi lavora a crediti': 'Who works on credits',
+        'Il calendario non è ancora collegato: le sessioni non si registrano da sole.':
+            'The calendar is not connected yet: sessions do not record themselves.',
+        'Collega il calendario': 'Connect the calendar',
+        "Il calendario non risponde — qui sotto vedi l'ultima lettura riuscita.":
+            'The calendar is not answering — below is the last successful reading.',
+        'Riprova adesso': 'Try again now',
+        'Sessioni lette da {calendario}': 'Sessions read from {calendario}',
+        ' · ultima lettura {data} alle {ora}': ' · last read {data} at {ora}',
+        'Aggiorna adesso': 'Refresh now',
+        'Crediti terminati per {n} cliente:': 'Credits used up for {n} client:',
+        'Crediti terminati per {n} clienti:': 'Credits used up for {n} clients:',
+        'i pacchetti si pagano in anticipo: emetti la prossima fattura per ridare crediti.':
+            'packs are paid up front, so issue the next invoice to give the credits back.',
+        'Nessun cliente a crediti': 'No clients on credits',
+        'I crediti servono a chi vende pacchetti di sessioni prepagate: il cliente compra dieci sedute, ogni incontro ne consuma una, quando finiscono si rifattura.':
+            'Credits are for anyone selling prepaid session packs: the client buys ten sessions, each meeting uses one, and when they run out you invoice again.',
+        "Perché l'app possa contarle, deve sapere chi sono e quale nome cercare nei titoli del tuo calendario.":
+            'For the app to count them, it needs to know who they are and which word to look for in your calendar titles.',
+        'Aggiungi il primo': 'Add the first one',
+        'Pacchetto': 'Pack',
+        'Usati': 'Used',
+        'Rimasti': 'Left',
+        'Dal': 'Since',
+        'Ultima sessione': 'Last session',
+        'pacchetto {chi}': 'pack of {chi}',
+        'pacchetto': 'pack',
+        'Crediti terminati': 'Credits used up',
+        'In esaurimento': 'Running low',
+        'In corso': 'In progress',
+        '✓ incassata': '✓ collected',
+        'da incassare': 'to collect',
+        'fatturato ({rif}) — numero non registrato':
+            'invoiced ({rif}) — number not recorded',
+        'Cambia fattura': 'Change invoice',
+        'Collega fattura': 'Link an invoice',
+        'Numero della fattura che copre {pacchetto}':
+            'Number of the invoice that covers {pacchetto}',
+        'intestata a {chi}': 'made out to {chi}',
+        'es. 84': 'e.g. 84',
+        'Collega e chiudi pacchetto': 'Link and close the pack',
+        'Prima creo la fattura →': 'Let me create the invoice first →',
+        'Registra quale fattura copre questo pacchetto e marca le {n} sessioni. Non sostituisce la prossima fattura: il pacchetto nuovo si apre da solo alla prossima sessione.':
+            'Records which invoice covers this pack and marks its {n} sessions. It does not replace the next invoice: the new pack opens by itself at the next session.',
+        'Aggiornare i crediti dal calendario': 'Updating credits from the calendar',
+        "Non c'è ancora nulla da leggere: la lettura del calendario parte dal {inizio} e oggi è il {oggi}.":
+            'Nothing to read yet: the calendar is read from {inizio} onwards and today is {oggi}.',
+        'Intervallo da leggere su {calendario}:': 'Range to read on {calendario}:',
+        "Il calendario lo legge l'app da sola, ogni volta che apri questa pagina (al massimo una volta ogni quarto d'ora); con «Aggiorna adesso» lo rileggi subito. Le sessioni già registrate non vengono mai duplicate (ogni evento porta il suo ID Google), e lo storico validato non viene mai riscritto.":
+            'The app reads the calendar by itself every time you open this page (at most once every quarter of an hour); «Refresh now» reads it again straight away. Sessions already recorded are never duplicated (every event carries its Google ID), and validated history is never rewritten.',
+        'Gli appuntamenti futuri non consumano crediti: contano solo le sessioni fino a oggi. Una sessione cancellata consuma comunque il credito.':
+            'Future appointments use no credits: only sessions up to today count. A cancelled session still uses its credit.',
+        'Ultime fatture': 'Latest invoices',
+        # --- Clienti a crediti ---
+        'Clienti a crediti': 'Clients on credits',
+        "Chi compra un pacchetto di sessioni prepagate. Per ognuno l'app sa quale parola cercare nei titoli del calendario, quante sessioni vale un pacchetto e a che prezzo lo riconosce sulle fatture.":
+            'Anyone who buys a prepaid pack of sessions. For each one the app knows which word to look for in the calendar titles, how many sessions a pack is worth and at which price it recognises one on the invoices.',
+        'Torna ai crediti': 'Back to credits',
+        "Non c'è ancora nessuno": 'Nobody here yet',
+        "Finché questo elenco è vuoto, la pagina Crediti resta vuota anche lei: l'app non sa quali nomi cercare nel calendario. Aggiungi qui sotto il primo cliente che lavora a pacchetto.":
+            'While this list is empty the Credits page stays empty too: the app does not know which names to look for in the calendar. Add the first client who works on packs below.',
+        'Chi paga a sessione singola o a fattura mensile non va messo qui: questa pagina serve solo ai pacchetti prepagati.':
+            'Anyone paying per single session or by monthly invoice does not belong here: this page is only for prepaid packs.',
+        'Nel calendario': 'In the calendar',
+        'Pacchetti': 'Packs',
+        'Prezzo': 'Price',
+        'supplemento di {chi}': 'add-on to {chi}',
+        '({n} nel registro)': '({n} in the register)',
+        'Sessioni per pacchetto': 'Sessions per pack',
+        'Sigla del pacchetto': 'Pack code',
+        'I pacchetti si chiamano {sigla}-01, {sigla}-02 e così via.':
+            'The packs are called {sigla}-01, {sigla}-02 and so on.',
+        'Prezzo del pacchetto': 'Price of the pack',
+        "Quando emetti una fattura di questo importo, l'app capisce da sola che ha comprato un pacchetto e gli ridà i crediti. Più prezzi separati da virgola, se ne hai più di uno.":
+            'When you issue an invoice for this amount, the app works out by itself that they bought a pack and gives the credits back. Several prices separated by commas, if you have more than one.',
+        'lascia vuoto: la fattura va a {nome}': 'leave empty: the invoice goes to {nome}',
+        'È il supplemento di': 'Is the add-on to',
+        'lascia vuoto quasi sempre': 'leave empty almost always',
+        "Solo per chi fa le sedute in coppia e paga un pacchetto ridotto in aggiunta a quello dell'altro. Scrivi qui la parola-calendario dell'altro. Nei giorni in cui l'altro non c'è, la sessione è piena e scala dal pacchetto dell'altro.":
+            'Only for someone who trains as a pair and pays a reduced pack on top of the other person\\u2019s. Write the other person\\u2019s calendar word here. On days when the other one is away, the session counts in full and comes off the other pack.',
+        'Archiviato — non è più cliente, ma il suo nome si riconosce ancora nei titoli':
+            'Archived — no longer a client, but the name is still recognised in the titles',
+        'Tolgo {nome} dai clienti a crediti?': 'Remove {nome} from the clients on credits?',
+        "Togli dall'elenco": 'Remove from the list',
+        'Aggiungi un cliente a crediti': 'Add a client on credits',
+        'Parola da cercare nei titoli del calendario':
+            'Word to look for in the calendar titles',
+        'lascia vuoto: usa il nome': 'leave empty: the name is used',
+        'Un evento che si chiama «Anna», «anna pt» o «Anna - cancelled» conta come una sua sessione. Scegli una parola che non compaia per caso in altri appuntamenti.':
+            'An event called «Anna», «anna pt» or «Anna - cancelled» counts as one of their sessions. Pick a word that does not turn up by chance in other appointments.',
+        'lascia vuoto: le prime tre lettere': 'leave empty: the first three letters',
+        # --- Pacchetto ---
+        'Pacchetto {id}': 'Pack {id}',
+        '{n} sessioni su {crediti} crediti': '{n} sessions out of {crediti} credits',
+        'dal {inizio}': 'from {inizio}',
+        ' al {fine}': ' to {fine}',
+        ' (aperto)': ' (open)',
+        'fatturato:': 'invoiced:',
+        'si': 'yes',
+        'no': 'no',
+        'Titolo sul calendario': 'Title in the calendar',
+        'cancellata — credito consumato': 'cancelled — credit used',
+        'da calendario': 'from the calendar',
+        # --- Agenda ---
+        'Le sedute davvero svolte: una per credito consumato. Gli appuntamenti ancora da fare non compaiono.':
+            'The sessions actually done: one for each credit used. Appointments still to come do not show up.',
+        'sessioni': 'sessions',
+        'sessioni nel {anno}': 'sessions in {anno}',
+        'di cui con orario:': 'of which with a time:',
+        'annullate (credito consumato):': 'cancelled (credit used):',
+        'Aggiorna gli orari dal calendario': 'Refresh the times from the calendar',
+        'Anno': 'Year',
+        'tutti': 'all',
+        'Filtra': 'Filter',
+        'Azzera': 'Clear',
+        "Di {n} sessioni non conosco l'ora. Sono quelle dei calendari vecchi, che «{calendario}» non contiene più. Se incolli in":
+            'For {n} sessions I do not know the time. They come from old calendars, which «{calendario}» no longer holds. If you paste into',
+        "anche l'indirizzo iCal del calendario storico, si riempiono da sole.":
+            'the iCal address of the old calendar too, they fill in by themselves.',
+        'Giorno': 'Day',
+        'Ora': 'Time',
+        'Sul calendario': 'In the calendar',
+        'Credito': 'Credit',
+        'Fattura': 'Invoice',
+        'annullata': 'cancelled',
+        'Nessuna sessione con questi filtri.': 'No sessions with these filters.',
+        # --- Banca ---
+        'Gli accrediti del tuo estratto conto, accostati alle fatture.':
+            'The money in on your bank statement, set side by side with your invoices.',
+        "L'app non segna niente da sola": 'The app marks nothing by itself',
+        ': propone, confermi tu.': ': it suggests, you confirm.',
+        'versamenti da decidere': 'payments to decide on',
+        'di cui {n} con una proposta chiara': 'of which {n} with a clear match',
+        '{n} già sistemati': '{n} already sorted',
+        "Nella cartella non c'è ancora nessun estratto conto.":
+            'There is no bank statement in the folder yet.',
+        "Scarica dall'e-banking i movimenti (CSV, oppure il formato {a} / {b} in XML, che è quello standard svizzero e funziona meglio) e appoggia i file qui:":
+            'Download the transactions from your e-banking (CSV, or the {a} / {b} format in XML, which is the Swiss standard and works better) and drop the files here:',
+        "Poi ricarica questa pagina. I file restano tuoi e sul tuo Mac: l'app li legge e basta, non li sposta e non li modifica. Legge {sole}: quello che spendi non lo guarda.":
+            'Then reload this page. The files stay yours and stay on your Mac: the app only reads them, it does not move or change them. It reads {sole}: what you spend it never looks at.',
+        'solo le entrate': 'only the money coming in',
+        'arrivati il {data}': 'arrived on {data}',
+        '(nessuna causale)': '(no reference text)',
+        'il riferimento del pagamento combacia': 'the payment reference matches',
+        'importo e nome combaciano': 'amount and name match',
+        "combacia solo l'importo": 'only the amount matches',
+        '{n} giorni prima': '{n} days earlier',
+        'il riferimento del pagamento è quello della fattura':
+            'the payment reference is the one on the invoice',
+        'importo esatto e la causale cita la data di questa fattura':
+            'exact amount, and the reference text quotes the date of this invoice',
+        'importo esatto e il nome compare nella causale':
+            'exact amount and the name appears in the reference text',
+        'importo esatto, ma il nome non compare nella causale':
+            'exact amount, but the name does not appear in the reference text',
+        ' — già segnata pagata, confermando aggiungo solo la data':
+            ' — already marked paid; confirming only adds the date',
+        '{quante} fatture dello stesso cliente che insieme fanno esattamente questo importo':
+            '{quante} invoices from the same client that together make exactly this amount',
+        'Segnare la #{n} pagata il {data}?': 'Mark #{n} as paid on {data}?',
+        'Conferma': 'Confirm',
+        'È questa': 'This is the one',
+        'Nessuna fattura da sola fa questo importo, ma queste insieme sì:':
+            'No single invoice makes this amount, but these together do:',
+        'Segnare {numeri} pagate il {data}?': 'Mark {numeri} as paid on {data}?',
+        'Sono queste': 'These are the ones',
+        "Nessuna fattura aperta con questo importo nei giorni intorno. Può essere un rimborso, un giroconto o un pagamento che non c'entra.":
+            'No open invoice with this amount in the days around it. It could be a refund, a transfer between your own accounts, or a payment that has nothing to do with this.',
+        'Oppure dimmelo tu — numero della fattura:':
+            'Or just tell me — invoice number:',
+        'es. 53, 58': 'e.g. 53, 58',
+        "anche se l'importo non torna": 'even if the amount does not add up',
+        'Collega': 'Link',
+        'Non è una fattura — metti da parte': 'Not an invoice — set it aside',
+        'Già sistemati': 'Already sorted',
+        "dall'app": 'by the app',
+        'messo da parte': 'set aside',
+        'Annulla': 'Undo',
+        "Il pallino verde comparirà quando le fatture usciranno come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.":
+            'The green dot will appear once invoices go out as QR-invoices with a reference: from then on the match is no longer a guess.',
+        'Questa cartella non esiste.': 'This folder does not exist.',
+        'Non ho riconosciuto le colonne: manca una intestazione con data e importo.':
+            'I did not recognise the columns: there is no header row with a date and an amount.',
+        'Per leggere i PDF serve la libreria pypdf.':
+            'Reading PDFs needs the pypdf library.',
+        # --- Commercialista ---
+        'Pacchetto per la commercialista': 'Package for the accountant',
+        "Tutto quello che serve a {nome} ({citta}), pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Everything {nome} ({citta}) needs, ready in one click: an Excel invoice register, a PDF summary and a copy of every invoice of the year, in a single zip.',
+        'Fatturato': 'Revenue',
+        'Incassato': 'Collected',
+        'Fonte': 'Source',
+        'Excel storico': 'historical Excel',
+        'Genera pacchetto {anno}': 'Build the {anno} package',
+        'Nota: per 2022–2023 il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.':
+            'Note: for 2022–2023 the package holds the data available in the invoices; the official totals for those years come from the historical Excel summaries.',
+        'Pacchetti generati': 'Packages built',
+        'Scarica zip': 'Download zip',
+        # --- i mesi, per il grafico ---
+        'Gen': 'Jan',
+        'Feb': 'Feb',
+        'Mar': 'Mar',
+        'Apr': 'Apr',
+        'Mag': 'May',
+        'Giu': 'Jun',
+        'Lug': 'Jul',
+        'Ago': 'Aug',
+        'Set': 'Sep',
+        'Ott': 'Oct',
+        'Nov': 'Nov',
+        'Dic': 'Dec',
+        # --- i giorni, per l’Agenda ---
+        'lun': 'Mon',
+        'mar': 'Tue',
+        'mer': 'Wed',
+        'gio': 'Thu',
+        'ven': 'Fri',
+        'sab': 'Sat',
+        'dom': 'Sun',
     },
     'de': {
         # --- Menü ---
@@ -486,6 +710,230 @@ TESTI = {
         'Indirizzo — CAP e città': 'Adresse — PLZ und Ort',
         'Aggiungi': 'Hinzufügen',
         'nome@esempio.ch': 'name@beispiel.ch',
+        # --- Guthaben ---
+        'Crediti sessioni': 'Sitzungsguthaben',
+        'Ogni sessione svolta consuma un credito. Quando il pacchetto finisce, si rifattura.':
+            'Jede geleistete Sitzung verbraucht ein Guthaben. Ist das Paket aufgebraucht, stellst du neu Rechnung.',
+        'Registro dal {data}.': 'Register seit {data}.',
+        'Chi lavora a crediti': 'Wer auf Guthaben arbeitet',
+        'Il calendario non è ancora collegato: le sessioni non si registrano da sole.':
+            'Der Kalender ist noch nicht verbunden: die Sitzungen tragen sich nicht von selbst ein.',
+        'Collega il calendario': 'Kalender verbinden',
+        "Il calendario non risponde — qui sotto vedi l'ultima lettura riuscita.":
+            'Der Kalender antwortet nicht — unten siehst du die letzte gelungene Abfrage.',
+        'Riprova adesso': 'Jetzt nochmals versuchen',
+        'Sessioni lette da {calendario}': 'Sitzungen gelesen aus {calendario}',
+        ' · ultima lettura {data} alle {ora}': ' · zuletzt gelesen {data} um {ora}',
+        'Aggiorna adesso': 'Jetzt aktualisieren',
+        'Crediti terminati per {n} cliente:': 'Guthaben aufgebraucht bei {n} Kunden:',
+        'Crediti terminati per {n} clienti:': 'Guthaben aufgebraucht bei {n} Kunden:',
+        'i pacchetti si pagano in anticipo: emetti la prossima fattura per ridare crediti.':
+            'Pakete werden im Voraus bezahlt: stell die nächste Rechnung, damit das Guthaben zurückkommt.',
+        'Nessun cliente a crediti': 'Keine Kunden auf Guthaben',
+        'I crediti servono a chi vende pacchetti di sessioni prepagate: il cliente compra dieci sedute, ogni incontro ne consuma una, quando finiscono si rifattura.':
+            'Guthaben sind für alle, die vorausbezahlte Sitzungspakete verkaufen: der Kunde kauft zehn Sitzungen, jeder Termin verbraucht eine, und wenn sie aufgebraucht sind, stellst du neu Rechnung.',
+        "Perché l'app possa contarle, deve sapere chi sono e quale nome cercare nei titoli del tuo calendario.":
+            'Damit die App sie zählen kann, muss sie wissen, wer sie sind und welches Wort sie in deinen Kalendertiteln suchen soll.',
+        'Aggiungi il primo': 'Den ersten hinzufügen',
+        'Pacchetto': 'Paket',
+        'Usati': 'Verbraucht',
+        'Rimasti': 'Übrig',
+        'Dal': 'Seit',
+        'Ultima sessione': 'Letzte Sitzung',
+        'pacchetto {chi}': 'Paket von {chi}',
+        'pacchetto': 'Paket',
+        'Crediti terminati': 'Guthaben aufgebraucht',
+        'In esaurimento': 'Geht zur Neige',
+        'In corso': 'Laufend',
+        '✓ incassata': '✓ eingegangen',
+        'da incassare': 'offen',
+        'fatturato ({rif}) — numero non registrato':
+            'fakturiert ({rif}) — Nummer nicht erfasst',
+        'Cambia fattura': 'Rechnung ändern',
+        'Collega fattura': 'Rechnung verknüpfen',
+        'Numero della fattura che copre {pacchetto}':
+            'Nummer der Rechnung, die {pacchetto} deckt',
+        'intestata a {chi}': 'ausgestellt auf {chi}',
+        'es. 84': 'z. B. 84',
+        'Collega e chiudi pacchetto': 'Verknüpfen und Paket abschliessen',
+        'Prima creo la fattura →': 'Zuerst die Rechnung erstellen →',
+        'Registra quale fattura copre questo pacchetto e marca le {n} sessioni. Non sostituisce la prossima fattura: il pacchetto nuovo si apre da solo alla prossima sessione.':
+            'Hält fest, welche Rechnung dieses Paket deckt, und markiert seine {n} Sitzungen. Sie ersetzt die nächste Rechnung nicht: das neue Paket öffnet sich bei der nächsten Sitzung von selbst.',
+        'Aggiornare i crediti dal calendario': 'Guthaben aus dem Kalender aktualisieren',
+        "Non c'è ancora nulla da leggere: la lettura del calendario parte dal {inizio} e oggi è il {oggi}.":
+            'Es gibt noch nichts zu lesen: der Kalender wird ab {inizio} gelesen, und heute ist der {oggi}.',
+        'Intervallo da leggere su {calendario}:': 'Zu lesender Zeitraum auf {calendario}:',
+        "Il calendario lo legge l'app da sola, ogni volta che apri questa pagina (al massimo una volta ogni quarto d'ora); con «Aggiorna adesso» lo rileggi subito. Le sessioni già registrate non vengono mai duplicate (ogni evento porta il suo ID Google), e lo storico validato non viene mai riscritto.":
+            'Die App liest den Kalender von selbst, jedes Mal wenn du diese Seite öffnest (höchstens einmal pro Viertelstunde); mit «Jetzt aktualisieren» liest sie ihn sofort neu. Bereits erfasste Sitzungen werden nie doppelt angelegt (jeder Termin trägt seine Google-ID), und geprüfte Historie wird nie überschrieben.',
+        'Gli appuntamenti futuri non consumano crediti: contano solo le sessioni fino a oggi. Una sessione cancellata consuma comunque il credito.':
+            'Künftige Termine verbrauchen kein Guthaben: es zählen nur Sitzungen bis heute. Eine abgesagte Sitzung verbraucht ihr Guthaben trotzdem.',
+        'Ultime fatture': 'Letzte Rechnungen',
+        # --- Kunden auf Guthaben ---
+        'Clienti a crediti': 'Kunden auf Guthaben',
+        "Chi compra un pacchetto di sessioni prepagate. Per ognuno l'app sa quale parola cercare nei titoli del calendario, quante sessioni vale un pacchetto e a che prezzo lo riconosce sulle fatture.":
+            'Wer ein vorausbezahltes Sitzungspaket kauft. Für jeden weiss die App, welches Wort sie in den Kalendertiteln suchen soll, wie viele Sitzungen ein Paket wert ist und an welchem Preis sie es auf den Rechnungen erkennt.',
+        'Torna ai crediti': 'Zurück zu den Guthaben',
+        "Non c'è ancora nessuno": 'Noch niemand da',
+        "Finché questo elenco è vuoto, la pagina Crediti resta vuota anche lei: l'app non sa quali nomi cercare nel calendario. Aggiungi qui sotto il primo cliente che lavora a pacchetto.":
+            'Solange diese Liste leer ist, bleibt auch die Seite Guthaben leer: die App weiss nicht, welche Namen sie im Kalender suchen soll. Füge unten den ersten Kunden hinzu, der auf Paket arbeitet.',
+        'Chi paga a sessione singola o a fattura mensile non va messo qui: questa pagina serve solo ai pacchetti prepagati.':
+            'Wer pro Einzelsitzung oder per Monatsrechnung zahlt, gehört nicht hierher: diese Seite ist nur für vorausbezahlte Pakete.',
+        'Nel calendario': 'Im Kalender',
+        'Pacchetti': 'Pakete',
+        'Prezzo': 'Preis',
+        'supplemento di {chi}': 'Zusatz zu {chi}',
+        '({n} nel registro)': '({n} im Register)',
+        'Sessioni per pacchetto': 'Sitzungen pro Paket',
+        'Sigla del pacchetto': 'Kürzel des Pakets',
+        'I pacchetti si chiamano {sigla}-01, {sigla}-02 e così via.':
+            'Die Pakete heissen {sigla}-01, {sigla}-02 und so weiter.',
+        'Prezzo del pacchetto': 'Preis des Pakets',
+        "Quando emetti una fattura di questo importo, l'app capisce da sola che ha comprato un pacchetto e gli ridà i crediti. Più prezzi separati da virgola, se ne hai più di uno.":
+            'Wenn du eine Rechnung über diesen Betrag stellst, erkennt die App von selbst, dass ein Paket gekauft wurde, und gibt das Guthaben zurück. Mehrere Preise mit Komma trennen, falls du mehr als einen hast.',
+        'lascia vuoto: la fattura va a {nome}': 'leer lassen: die Rechnung geht an {nome}',
+        'È il supplemento di': 'Ist der Zusatz zu',
+        'lascia vuoto quasi sempre': 'fast immer leer lassen',
+        "Solo per chi fa le sedute in coppia e paga un pacchetto ridotto in aggiunta a quello dell'altro. Scrivi qui la parola-calendario dell'altro. Nei giorni in cui l'altro non c'è, la sessione è piena e scala dal pacchetto dell'altro.":
+            'Nur für jemanden, der zu zweit trainiert und zusätzlich zum Paket der anderen Person ein reduziertes Paket bezahlt. Schreib hier das Kalenderwort der anderen Person hin. An Tagen, an denen die andere Person fehlt, zählt die Sitzung voll und geht vom Paket der anderen ab.',
+        'Archiviato — non è più cliente, ma il suo nome si riconosce ancora nei titoli':
+            'Archiviert — nicht mehr Kunde, aber der Name wird in den Titeln weiterhin erkannt',
+        'Tolgo {nome} dai clienti a crediti?': '{nome} aus den Kunden auf Guthaben entfernen?',
+        "Togli dall'elenco": 'Aus der Liste entfernen',
+        'Aggiungi un cliente a crediti': 'Kunden auf Guthaben hinzufügen',
+        'Parola da cercare nei titoli del calendario':
+            'Wort, das in den Kalendertiteln gesucht wird',
+        'lascia vuoto: usa il nome': 'leer lassen: der Name wird verwendet',
+        'Un evento che si chiama «Anna», «anna pt» o «Anna - cancelled» conta come una sua sessione. Scegli una parola che non compaia per caso in altri appuntamenti.':
+            'Ein Termin mit dem Titel «Anna», «anna pt» oder «Anna - cancelled» zählt als eine ihrer Sitzungen. Wähl ein Wort, das nicht zufällig in anderen Terminen vorkommt.',
+        'lascia vuoto: le prime tre lettere': 'leer lassen: die ersten drei Buchstaben',
+        # --- Paket ---
+        'Pacchetto {id}': 'Paket {id}',
+        '{n} sessioni su {crediti} crediti': '{n} Sitzungen von {crediti} Guthaben',
+        'dal {inizio}': 'ab {inizio}',
+        ' al {fine}': ' bis {fine}',
+        ' (aperto)': ' (offen)',
+        'fatturato:': 'fakturiert:',
+        'si': 'ja',
+        'no': 'nein',
+        'Titolo sul calendario': 'Titel im Kalender',
+        'cancellata — credito consumato': 'abgesagt — Guthaben verbraucht',
+        'da calendario': 'aus dem Kalender',
+        # --- Sitzungen ---
+        'Le sedute davvero svolte: una per credito consumato. Gli appuntamenti ancora da fare non compaiono.':
+            'Die tatsächlich geleisteten Sitzungen: eine pro verbrauchtem Guthaben. Termine, die noch bevorstehen, erscheinen nicht.',
+        'sessioni': 'Sitzungen',
+        'sessioni nel {anno}': 'Sitzungen im Jahr {anno}',
+        'di cui con orario:': 'davon mit Uhrzeit:',
+        'annullate (credito consumato):': 'abgesagt (Guthaben verbraucht):',
+        'Aggiorna gli orari dal calendario': 'Uhrzeiten aus dem Kalender aktualisieren',
+        'Anno': 'Jahr',
+        'tutti': 'alle',
+        'Filtra': 'Filtern',
+        'Azzera': 'Zurücksetzen',
+        "Di {n} sessioni non conosco l'ora. Sono quelle dei calendari vecchi, che «{calendario}» non contiene più. Se incolli in":
+            'Bei {n} Sitzungen kenne ich die Uhrzeit nicht. Sie stammen aus alten Kalendern, die «{calendario}» nicht mehr enthält. Wenn du unter',
+        "anche l'indirizzo iCal del calendario storico, si riempiono da sole.":
+            'auch die iCal-Adresse des alten Kalenders einfügst, füllen sie sich von selbst.',
+        'Giorno': 'Tag',
+        'Ora': 'Uhrzeit',
+        'Sul calendario': 'Im Kalender',
+        'Credito': 'Guthaben',
+        'Fattura': 'Rechnung',
+        'annullata': 'abgesagt',
+        'Nessuna sessione con questi filtri.': 'Keine Sitzung mit diesen Filtern.',
+        # --- Bank ---
+        'Gli accrediti del tuo estratto conto, accostati alle fatture.':
+            'Die Eingänge auf deinem Kontoauszug, den Rechnungen gegenübergestellt.',
+        "L'app non segna niente da sola": 'Die App markiert nichts von selbst',
+        ': propone, confermi tu.': ': sie schlägt vor, du bestätigst.',
+        'versamenti da decidere': 'Zahlungen zu entscheiden',
+        'di cui {n} con una proposta chiara': 'davon {n} mit einem klaren Vorschlag',
+        '{n} già sistemati': '{n} bereits erledigt',
+        "Nella cartella non c'è ancora nessun estratto conto.":
+            'Im Ordner liegt noch kein Kontoauszug.',
+        "Scarica dall'e-banking i movimenti (CSV, oppure il formato {a} / {b} in XML, che è quello standard svizzero e funziona meglio) e appoggia i file qui:":
+            'Lade die Bewegungen aus dem E-Banking herunter (CSV, oder das Format {a} / {b} in XML, das der Schweizer Standard ist und besser funktioniert) und leg die Dateien hier ab:',
+        "Poi ricarica questa pagina. I file restano tuoi e sul tuo Mac: l'app li legge e basta, non li sposta e non li modifica. Legge {sole}: quello che spendi non lo guarda.":
+            'Dann lade diese Seite neu. Die Dateien bleiben deine und bleiben auf deinem Mac: die App liest sie nur, sie verschiebt und ändert sie nicht. Sie liest {sole}: was du ausgibst, schaut sie nie an.',
+        'solo le entrate': 'nur die Eingänge',
+        'arrivati il {data}': 'eingegangen am {data}',
+        '(nessuna causale)': '(kein Verwendungszweck)',
+        'il riferimento del pagamento combacia': 'die Zahlungsreferenz stimmt überein',
+        'importo e nome combaciano': 'Betrag und Name stimmen überein',
+        "combacia solo l'importo": 'nur der Betrag stimmt überein',
+        '{n} giorni prima': '{n} Tage vorher',
+        'il riferimento del pagamento è quello della fattura':
+            'die Zahlungsreferenz ist die der Rechnung',
+        'importo esatto e la causale cita la data di questa fattura':
+            'genauer Betrag, und der Verwendungszweck nennt das Datum dieser Rechnung',
+        'importo esatto e il nome compare nella causale':
+            'genauer Betrag, und der Name steht im Verwendungszweck',
+        'importo esatto, ma il nome non compare nella causale':
+            'genauer Betrag, aber der Name steht nicht im Verwendungszweck',
+        ' — già segnata pagata, confermando aggiungo solo la data':
+            ' — bereits als bezahlt markiert; die Bestätigung ergänzt nur das Datum',
+        '{quante} fatture dello stesso cliente che insieme fanno esattamente questo importo':
+            '{quante} Rechnungen desselben Kunden, die zusammen genau diesen Betrag ergeben',
+        'Segnare la #{n} pagata il {data}?': '#{n} als bezahlt am {data} markieren?',
+        'Conferma': 'Bestätigen',
+        'È questa': 'Das ist sie',
+        'Nessuna fattura da sola fa questo importo, ma queste insieme sì:':
+            'Keine einzelne Rechnung ergibt diesen Betrag, diese zusammen aber schon:',
+        'Segnare {numeri} pagate il {data}?': '{numeri} als bezahlt am {data} markieren?',
+        'Sono queste': 'Das sind sie',
+        "Nessuna fattura aperta con questo importo nei giorni intorno. Può essere un rimborso, un giroconto o un pagamento che non c'entra.":
+            'Keine offene Rechnung mit diesem Betrag in den Tagen darum herum. Es kann eine Rückerstattung sein, ein Übertrag zwischen deinen Konten oder eine Zahlung, die nichts damit zu tun hat.',
+        'Oppure dimmelo tu — numero della fattura:':
+            'Oder sag es mir einfach — Rechnungsnummer:',
+        'es. 53, 58': 'z. B. 53, 58',
+        "anche se l'importo non torna": 'auch wenn der Betrag nicht aufgeht',
+        'Collega': 'Verknüpfen',
+        'Non è una fattura — metti da parte': 'Keine Rechnung — beiseitelegen',
+        'Già sistemati': 'Bereits erledigt',
+        "dall'app": 'von der App',
+        'messo da parte': 'beiseitegelegt',
+        'Annulla': 'Rückgängig',
+        "Il pallino verde comparirà quando le fatture usciranno come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.":
+            'Der grüne Punkt erscheint, sobald die Rechnungen als QR-Rechnung mit Referenz hinausgehen: ab dann ist die Zuordnung keine Vermutung mehr.',
+        'Questa cartella non esiste.': 'Diesen Ordner gibt es nicht.',
+        'Non ho riconosciuto le colonne: manca una intestazione con data e importo.':
+            'Ich habe die Spalten nicht erkannt: es fehlt eine Kopfzeile mit Datum und Betrag.',
+        'Per leggere i PDF serve la libreria pypdf.':
+            'Zum Lesen von PDFs wird die Bibliothek pypdf gebraucht.',
+        # --- Treuhänder ---
+        'Pacchetto per la commercialista': 'Paket für den Treuhänder',
+        "Tutto quello che serve a {nome} ({citta}), pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Alles, was {nome} ({citta}) braucht, mit einem Klick bereit: Excel mit dem Rechnungsregister, PDF-Zusammenfassung und eine Kopie aller Rechnungen des Jahres, in einem einzigen Zip.',
+        'Fatturato': 'Umsatz',
+        'Incassato': 'Eingegangen',
+        'Fonte': 'Quelle',
+        'Excel storico': 'historisches Excel',
+        'Genera pacchetto {anno}': 'Paket {anno} erstellen',
+        'Nota: per 2022–2023 il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.':
+            'Hinweis: für 2022–2023 enthält das Paket die in den Rechnungen verfügbaren Daten; die offiziellen Jahrestotale stammen aus den historischen Excel-Zusammenfassungen.',
+        'Pacchetti generati': 'Erstellte Pakete',
+        'Scarica zip': 'Zip herunterladen',
+        # --- die Monate, für die Grafik ---
+        'Gen': 'Jan',
+        'Feb': 'Feb',
+        'Mar': 'Mär',
+        'Apr': 'Apr',
+        'Mag': 'Mai',
+        'Giu': 'Jun',
+        'Lug': 'Jul',
+        'Ago': 'Aug',
+        'Set': 'Sep',
+        'Ott': 'Okt',
+        'Nov': 'Nov',
+        'Dic': 'Dez',
+        # --- die Wochentage, für die Sitzungen ---
+        'lun': 'Mo',
+        'mar': 'Di',
+        'mer': 'Mi',
+        'gio': 'Do',
+        'ven': 'Fr',
+        'sab': 'Sa',
+        'dom': 'So',
     },
 }
 

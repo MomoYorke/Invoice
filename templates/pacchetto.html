@@ -1,30 +1,32 @@
 {% extends 'base.html' %}
-{% block title %}Pacchetto {{ p.id }}{% endblock %}
+{% block title %}{{ _('Pacchetto {id}').format(id=p.id) }}{% endblock %}
 {% block content %}
-<h1>Pacchetto {{ p.id }} <span class="muted">— {{ p.cliente }}</span></h1>
+<h1>{{ _('Pacchetto {id}').format(id=p.id) }} <span class="muted">— {{ p.cliente }}</span></h1>
 <p class="sub">
-  {{ p.sessioni | length }} sessioni su {{ p.crediti }} crediti ·
-  dal {{ p.inizio | dateit }}{% if p.fine %} al {{ p.fine | dateit }}{% else %} (aperto){% endif %} ·
-  fatturato: <strong>{{ p.fatturato or 'no' }}</strong>{% if fattura_stato %} · {{ '✓ incassata' if fattura_stato == 'pagata' else 'da incassare' }}{% endif %}
+  {{ _('{n} sessioni su {crediti} crediti').format(n=p.sessioni | length, crediti=p.crediti) }} ·
+  {{ _('dal {inizio}').format(inizio=p.inizio | dateit) }}
+  {%- if p.fine %}{{ _(' al {fine}').format(fine=p.fine | dateit) }}{% else %}{{ _(' (aperto)') }}{% endif %} ·
+  {{ _('fatturato:') }} <strong>{{ _(p.fatturato) if p.fatturato else _('no') }}</strong>
+  {%- if fattura_stato %} · {{ _('✓ incassata') if fattura_stato == 'pagata' else _('da incassare') }}{% endif %}
 </p>
 {% if p.nota %}<div class="issue">{{ icona('nota', 'ic-mini') }} {{ p.nota }}</div>{% endif %}
 
 <div class="panel" style="max-width:720px">
   <table>
-    <tr><th>#</th><th>Data</th><th>Titolo sul calendario</th><th>Note</th></tr>
+    <tr><th>#</th><th>{{ _('Data') }}</th><th>{{ _('Titolo sul calendario') }}</th><th>{{ _('Note') }}</th></tr>
     {% for s in p.sessioni %}
     <tr>
       <td>{{ s.n }}</td>
       <td>{{ s.data | dateit }}</td>
       <td>{{ s.titolo }}</td>
       <td class="muted" style="font-size:12.5px">
-        {% if s.cancellata %}<span class="badge emessa">cancellata — credito consumato</span>{% endif %}
-        {% if s.fattura %} fatt. #{{ s.fattura }}{% endif %}
-        {% if s.event_id %}<span title="{{ s.event_id }}"> · da calendario</span>{% endif %}
+        {% if s.cancellata %}<span class="badge emessa">{{ _('cancellata — credito consumato') }}</span>{% endif %}
+        {% if s.fattura %} {{ _('fatt.') }} #{{ s.fattura }}{% endif %}
+        {% if s.event_id %}<span title="{{ s.event_id }}"> · {{ _('da calendario') }}</span>{% endif %}
       </td>
     </tr>
     {% endfor %}
   </table>
-  <a class="btn small secondary mt" href="{{ url_for('crediti') }}">← Torna ai crediti</a>
+  <a class="btn small secondary mt" href="{{ url_for('crediti') }}">← {{ _('Torna ai crediti') }}</a>
 </div>
 {% endblock %}

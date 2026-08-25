@@ -1,24 +1,25 @@
 {% extends 'base.html' %}
-{% block title %}Crediti{% endblock %}
+{% block title %}{{ _('Crediti') }}{% endblock %}
 {% block content %}
-<h1>Crediti sessioni</h1>
-<p class="sub">Ogni sessione svolta consuma un credito. Quando il pacchetto finisce, si rifattura.
-   {% if aggiornato %}<span class="muted">Registro dal {{ aggiornato }}.</span>{% endif %}
-   <a href="{{ url_for('crediti_clienti') }}">Chi lavora a crediti</a></p>
+<h1>{{ _('Crediti sessioni') }}</h1>
+<p class="sub">{{ _('Ogni sessione svolta consuma un credito. Quando il pacchetto finisce, si rifattura.') }}
+   {% if aggiornato %}<span class="muted">{{ _('Registro dal {data}.').format(data=aggiornato | dateit) }}</span>{% endif %}
+   <a href="{{ url_for('crediti_clienti') }}">{{ _('Chi lavora a crediti') }}</a></p>
 
 <div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   {% if not sync_attivo %}
-    <span>{{ icona('agenda', 'ic-mini') }} Il calendario non è ancora collegato: le sessioni non si registrano da sole.</span>
-    <a class="btn small" href="{{ url_for('impostazioni') }}">Collega il calendario</a>
+    <span>{{ icona('agenda', 'ic-mini') }} {{ _('Il calendario non è ancora collegato: le sessioni non si registrano da sole.') }}</span>
+    <a class="btn small" href="{{ url_for('impostazioni') }}">{{ _('Collega il calendario') }}</a>
   {% elif sync_esito == 'errore' %}
-    <span style="color:#92400e">{{ icona('avviso', 'ic-mini') }} Il calendario non risponde — qui sotto vedi l'ultima lettura riuscita.</span>
+    <span style="color:#92400e">{{ icona('avviso', 'ic-mini') }} {{ _("Il calendario non risponde — qui sotto vedi l'ultima lettura riuscita.") }}</span>
     <form method="post" action="{{ url_for('crediti_sincronizza') }}" style="display:inline">
-      <button class="btn small">Riprova adesso</button></form>
+      <button class="btn small">{{ _('Riprova adesso') }}</button></form>
   {% else %}
-    <span class="muted">{{ icona('agenda', 'ic-mini') }} Sessioni lette da {{ calendario_nome }}
-      {%- if sync_quando %} · ultima lettura {{ sync_quando[8:10] }}.{{ sync_quando[5:7] }} alle {{ sync_quando[11:16] }}{% endif %}</span>
+    <span class="muted">{{ icona('agenda', 'ic-mini') }} {{ _('Sessioni lette da {calendario}').format(calendario=calendario_nome) }}
+      {%- if sync_quando %}{{ _(' · ultima lettura {data} alle {ora}').format(
+            data=sync_quando[8:10] ~ '.' ~ sync_quando[5:7], ora=sync_quando[11:16]) }}{% endif %}</span>
     <form method="post" action="{{ url_for('crediti_sincronizza') }}" style="display:inline">
-      <button class="btn small secondary">Aggiorna adesso</button></form>
+      <button class="btn small secondary">{{ _('Aggiorna adesso') }}</button></form>
   {% endif %}
 </div>
 
@@ -26,34 +27,34 @@
 
 {% if esauriti %}
 <div class="flash error" style="font-size:15px">
-  {{ icona('soldi', 'ic-mini') }} <strong>Crediti terminati per {{ esauriti | length }} client{{ 'e' if esauriti|length == 1 else 'i' }}:</strong>
+  {{ icona('soldi', 'ic-mini') }}
+  <strong>{% if esauriti | length == 1 %}{{ _('Crediti terminati per {n} cliente:').format(n=1) }}
+    {%- else %}{{ _('Crediti terminati per {n} clienti:').format(n=esauriti | length) }}{% endif %}</strong>
   {{ esauriti | map(attribute='cliente') | join(', ') }} —
-  i pacchetti si pagano in anticipo, quindi <strong>emetti la prossima fattura</strong>
-  per ridare crediti.
+  {{ _('i pacchetti si pagano in anticipo: emetti la prossima fattura per ridare crediti.') }}
 </div>
 {% endif %}
 
 {% if not righe %}
 <div class="panel">
-  <h2 style="margin-top:0">Nessun cliente a crediti</h2>
-  <p>I crediti servono a chi vende pacchetti di sessioni prepagate: il cliente compra
-     dieci sedute, ogni incontro ne consuma una, quando finiscono si rifattura.</p>
-  <p>Perché l'app possa contarle, deve sapere chi sono e quale nome cercare nei titoli
-     del tuo calendario.</p>
-  <a class="btn" href="{{ url_for('crediti_clienti') }}">Aggiungi il primo</a>
+  <h2 style="margin-top:0">{{ _('Nessun cliente a crediti') }}</h2>
+  <p>{{ _('I crediti servono a chi vende pacchetti di sessioni prepagate: il cliente compra dieci sedute, ogni incontro ne consuma una, quando finiscono si rifattura.') }}</p>
+  <p>{{ _("Perché l'app possa contarle, deve sapere chi sono e quale nome cercare nei titoli del tuo calendario.") }}</p>
+  <a class="btn" href="{{ url_for('crediti_clienti') }}">{{ _('Aggiungi il primo') }}</a>
 </div>
 {% else %}
 <div class="panel">
   <table>
-    <tr><th>Cliente</th><th>Pacchetto</th><th class="num">Usati</th><th class="num">Rimasti</th>
-        <th>Dal</th><th>Ultima sessione</th><th>Stato</th><th></th></tr>
+    <tr><th>{{ _('Cliente') }}</th><th>{{ _('Pacchetto') }}</th><th class="num">{{ _('Usati') }}</th>
+        <th class="num">{{ _('Rimasti') }}</th><th>{{ _('Dal') }}</th><th>{{ _('Ultima sessione') }}</th>
+        <th>{{ _('Stato') }}</th><th></th></tr>
     {% for r in righe %}
     {% set pieno = r.terminati %}
     <tr>
       <td><strong>{{ r.cliente }}</strong>
-        {% if r.intestato_a != r.cliente %}<div class="muted" style="font-size:12px">pacchetto {{ r.intestato_a }}</div>{% endif %}
-        {% if r.fattura_a != r.cliente %}<div class="muted" style="font-size:12px">fattura a <strong>{{ r.fattura_a }}</strong>{% if r.importo_atteso %} · <span class="money">{{ r.importo_atteso }}</span>{% endif %}</div>
-        {% elif r.importo_atteso %}<div class="muted" style="font-size:12px">pacchetto <span class="money">{{ r.importo_atteso }}</span></div>{% endif %}
+        {% if r.intestato_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('pacchetto {chi}').format(chi=r.intestato_a) }}</div>{% endif %}
+        {% if r.fattura_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('fattura a {chi}').format(chi=r.fattura_a) }}{% if r.importo_atteso %} · <span class="money">{{ r.importo_atteso }}</span>{% endif %}</div>
+        {% elif r.importo_atteso %}<div class="muted" style="font-size:12px">{{ _('pacchetto') }} <span class="money">{{ r.importo_atteso }}</span></div>{% endif %}
       </td>
       <td><a href="{{ url_for('crediti_pacchetto', pid=r.pacchetto) }}">{{ r.pacchetto }}</a></td>
       <td class="num no-blur">{{ r.usati }}/{{ r.crediti }}</td>
@@ -62,26 +63,26 @@
       <td class="muted">{{ r.ultima_sessione | dateit if r.ultima_sessione else '—' }}</td>
       <td>
         <span class="badge {{ 'emessa' if r.in_esaurimento else 'pagata' }}"
-              style="{{ 'background:#fee2e2;color:#b91c1c' if pieno }}">{{ r.stato }}</span>
+              style="{{ 'background:#fee2e2;color:#b91c1c' if pieno }}">{{ _(r.stato) }}</span>
         {% if r.fattura_numero %}
           {% if r.fattura_stato == 'pagata' %}
             <div style="font-size:12px;color:#065f46;margin-top:3px">
-              fattura <strong>#{{ r.fattura_numero }}</strong> · ✓ incassata</div>
+              {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('✓ incassata') }}</div>
           {% elif r.fattura_stato %}
             <div style="font-size:12px;color:#92400e;margin-top:3px">
-              fattura <strong>#{{ r.fattura_numero }}</strong> · da incassare</div>
+              {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('da incassare') }}</div>
           {% else %}
             <div class="muted" style="font-size:12px;margin-top:3px">
-              fattura <strong>#{{ r.fattura_numero }}</strong></div>
+              {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong></div>
           {% endif %}
         {% elif r.saldato %}
-          <div class="muted" style="font-size:12px;margin-top:3px">fatturato ({{ r.fatturato }}) — numero non registrato</div>
+          <div class="muted" style="font-size:12px;margin-top:3px">{{ _('fatturato ({rif}) — numero non registrato').format(rif=_(r.fatturato)) }}</div>
         {% endif %}
       </td>
       <td class="right">
         <button class="btn small {{ 'secondary' if r.fattura_numero else ('' if pieno else 'secondary') }}" type="button"
                 onclick="var e=document.getElementById('lk-{{ loop.index }}');e.style.display=(e.style.display==='block'?'none':'block')">
-          {{ 'Cambia fattura' if r.fattura_numero else 'Collega fattura' }}
+          {{ _('Cambia fattura') if r.fattura_numero else _('Collega fattura') }}
         </button>
       </td>
     </tr>
@@ -91,16 +92,13 @@
               style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
           <input type="hidden" name="pacchetto" value="{{ r.pacchetto }}">
           <div>
-            <label style="margin-top:0">Numero della fattura che copre {{ r.pacchetto }}
-              {% if r.importo_atteso %}<span class="muted">(intestata a {{ r.fattura_a }}, <span class="money">{{ r.importo_atteso }}</span>)</span>{% endif %}</label>
-            <input type="number" name="numero" placeholder="es. 84" style="width:140px" required>
+            <label style="margin-top:0">{{ _('Numero della fattura che copre {pacchetto}').format(pacchetto=r.pacchetto) }}
+              {% if r.importo_atteso %}<span class="muted">({{ _('intestata a {chi}').format(chi=r.fattura_a) }}, <span class="money">{{ r.importo_atteso }}</span>)</span>{% endif %}</label>
+            <input type="number" name="numero" placeholder="{{ _('es. 84') }}" style="width:140px" required>
           </div>
-          <button class="btn small">Collega e chiudi pacchetto</button>
-          <a class="btn small secondary" href="{{ url_for('nuova') }}">Prima creo la fattura →</a>
-          <span class="muted" style="font-size:12.5px">
-            Registra <em>quale fattura copre</em> questo pacchetto e marca le
-            {{ r.usati }} sessioni. Non sostituisce la prossima fattura: il pacchetto
-            nuovo si apre da solo alla prossima sessione.</span>
+          <button class="btn small">{{ _('Collega e chiudi pacchetto') }}</button>
+          <a class="btn small secondary" href="{{ url_for('nuova') }}">{{ _('Prima creo la fattura →') }}</a>
+          <span class="muted" style="font-size:12.5px">{{ _('Registra quale fattura copre questo pacchetto e marca le {n} sessioni. Non sostituisce la prossima fattura: il pacchetto nuovo si apre da solo alla prossima sessione.').format(n=r.usati) }}</span>
         </form>
       </td>
     </tr>
@@ -111,28 +109,22 @@
 
 <div class="grid2">
   <div class="panel">
-    <h2>Aggiornare i crediti dal calendario</h2>
+    <h2>{{ _('Aggiornare i crediti dal calendario') }}</h2>
     {% if finestra[0] %}
       {% if finestra[0] > finestra[1] %}
-      <p class="muted">Non c'è ancora nulla da leggere: la lettura del calendario parte dal
-         <strong>20.08.2026</strong> e oggi è il {{ finestra[1].strftime('%d.%m.%Y') }}.</p>
+      <p class="muted">{{ _("Non c'è ancora nulla da leggere: la lettura del calendario parte dal {inizio} e oggi è il {oggi}.").format(
+           inizio=finestra[0].strftime('%d.%m.%Y'), oggi=finestra[1].strftime('%d.%m.%Y')) }}</p>
       {% else %}
-      <p>Intervallo da leggere su <strong>{{ calendario_nome }}</strong>:
+      <p>{{ _('Intervallo da leggere su {calendario}:').format(calendario=calendario_nome) }}
          <strong>{{ finestra[0].strftime('%d.%m.%Y') }} → {{ finestra[1].strftime('%d.%m.%Y') }}</strong></p>
       {% endif %}
     {% endif %}
-    <p class="muted" style="font-size:13.5px">
-      Il calendario lo legge l'app da sola, ogni volta che apri questa pagina (al massimo
-      una volta ogni quarto d'ora); con <em>Aggiorna adesso</em> lo rileggi subito.
-      Le sessioni già registrate non vengono mai duplicate (ogni evento porta il suo ID Google),
-      e lo storico validato non viene mai riscritto.</p>
-    <p class="muted" style="font-size:12.5px">
-      Gli appuntamenti futuri non consumano crediti: contano solo le sessioni fino a oggi.
-      Una sessione cancellata consuma comunque il credito.</p>
+    <p class="muted" style="font-size:13.5px">{{ _("Il calendario lo legge l'app da sola, ogni volta che apri questa pagina (al massimo una volta ogni quarto d'ora); con «Aggiorna adesso» lo rileggi subito. Le sessioni già registrate non vengono mai duplicate (ogni evento porta il suo ID Google), e lo storico validato non viene mai riscritto.") }}</p>
+    <p class="muted" style="font-size:12.5px">{{ _('Gli appuntamenti futuri non consumano crediti: contano solo le sessioni fino a oggi. Una sessione cancellata consuma comunque il credito.') }}</p>
   </div>
 
   <div class="panel">
-    <h2>Ultime fatture</h2>
+    <h2>{{ _('Ultime fatture') }}</h2>
     <table>
       {% for f in recenti[:8] %}
       <tr>

@@ -1800,8 +1800,8 @@ if __name__ == '__main__':
               % (len(_fatti), ', '.join('#%s' % x['numero'] for x in _fatti[:8])))
     elif _mov:
         print('  Banca: %d accrediti letti, niente di nuovo da collegare' % len(_mov))
-    for _p in _prob:
-        print('  Banca: ' + _p)
+    for _dove, _guaio in _prob:
+        print('  Banca: %s: %s' % (_dove, _guaio))
     # primo avvio: se il DB e' vuoto, importa lo storico automaticamente
     n = con.execute('SELECT COUNT(*) c FROM invoices').fetchone()['c']
     if n == 0:

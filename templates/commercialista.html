@@ -1,40 +1,39 @@
 {% extends 'base.html' %}
-{% block title %}Commercialista{% endblock %}
+{% block title %}{{ _('Commercialista') }}{% endblock %}
 {% block content %}
-<h1>Pacchetto per la commercialista</h1>
-<p class="sub">Tutto quello che serve a {{ settings.accountant_name }} ({{ settings.accountant_city }}), pronto in un click:
-Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.</p>
+<h1>{{ _('Pacchetto per la commercialista') }}</h1>
+<p class="sub">{{ _("Tutto quello che serve a {nome} ({citta}), pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.").format(
+     nome=settings.accountant_name, citta=settings.accountant_city) }}</p>
 
 <div class="panel" style="max-width:680px">
   <table>
-    <tr><th>Anno</th><th class="num">Fatturato</th><th class="num">Incassato</th><th>Fonte</th><th></th></tr>
+    <tr><th>{{ _('Anno') }}</th><th class="num">{{ _('Fatturato') }}</th><th class="num">{{ _('Incassato') }}</th>
+        <th>{{ _('Fonte') }}</th><th></th></tr>
     {% for y, v in yearly.items() | reverse %}
     <tr>
       <td><strong>{{ y }}</strong></td>
       <td class="num">{{ v.invoiced | chf(false) }}</td>
       <td class="num">{{ v.paid | chf(false) }}</td>
-      <td class="muted">{{ 'Excel storico' if v.legacy else 'fatture' }}</td>
+      <td class="muted">{{ _('Excel storico') if v.legacy else _('fatture') }}</td>
       <td class="right">
         <form method="post" action="{{ url_for('commercialista_genera') }}">
           <input type="hidden" name="anno" value="{{ y }}">
-          <button class="btn small">Genera pacchetto {{ y }}</button>
+          <button class="btn small">{{ _('Genera pacchetto {anno}').format(anno=y) }}</button>
         </form>
       </td>
     </tr>
     {% endfor %}
   </table>
-  <p class="muted" style="font-size:12.5px;margin-top:10px">
-    Nota: per 2022–2023 il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali
-    di quegli anni vengono dai riepiloghi Excel dello storico.</p>
+  <p class="muted" style="font-size:12.5px;margin-top:10px">{{ _('Nota: per 2022–2023 il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.') }}</p>
 </div>
 
 {% if pkgs %}
 <div class="panel" style="max-width:680px">
-  <h2>Pacchetti generati</h2>
+  <h2>{{ _('Pacchetti generati') }}</h2>
   <table>
     {% for p in pkgs %}
     <tr><td>{{ icona('pacco', 'ic-mini') }} {{ p }}</td>
-        <td class="right"><a class="btn small secondary" href="{{ url_for('esporti_file', fname=p) }}">Scarica zip</a></td></tr>
+        <td class="right"><a class="btn small secondary" href="{{ url_for('esporti_file', fname=p) }}">{{ _('Scarica zip') }}</a></td></tr>
     {% endfor %}
   </table>
 </div>

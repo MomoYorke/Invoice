@@ -58,7 +58,7 @@
       {% set hp = (months_prev[m] / max_month * 170) | round(1) %}
       <rect x="{{ 20 + m * 45 }}" y="{{ 190 - hp }}" width="14" height="{{ hp }}" fill="#cbd5e1" rx="2"/>
       <rect x="{{ 36 + m * 45 }}" y="{{ 190 - h }}" width="14" height="{{ h }}" fill="#0f766e" rx="2"/>
-      <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ mesi[m] }}</text>
+      <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ _(mesi[m]) }}</text>
       {% if months[m] > 0 %}
       <text x="{{ 43 + m * 45 }}" y="{{ 185 - h }}" class="bar-label bar-value" text-anchor="middle">{{ (months[m] // 100) }}</text>
       {% endif %}
