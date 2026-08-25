@@ -239,6 +239,9 @@ TESTI = {
         'Indirizzo riga 2': 'Address line 2',
         'Etichetta nome file': 'Label used in file names',
         'Come ti firmi con lui/lei': 'How you sign off with them',
+        'Lingua della fattura e della mail': 'Language of the invoice and the email',
+        'È la lingua dei documenti che riceve lui, non quella con cui usi tu l’app.':
+            'This is the language of the documents they receive, not the one you use the app in.',
         'Informale': 'Informal',
         'Formale': 'Formal',
         '(non ancora scritto)': '(not written yet)',
@@ -467,6 +470,145 @@ TESTI = {
             'Note: for 2022–2023 the package holds the data available in the invoices; the official totals for those years come from the historical Excel summaries.',
         'Pacchetti generati': 'Packages built',
         'Scarica zip': 'Download zip',
+        # --- i messaggi che compaiono in alto dopo un’azione ---
+        'Fattura #{n} creata e verificata ✓ — {tot} (importo confermato identico su Word e PDF).':
+            'Invoice #{n} created and checked ✓ — {tot} (amount confirmed identical on Word and PDF).',
+        ' Il numero #{n} è stato riusato da una fattura nel Cestino.':
+            ' Number #{n} was reused from an invoice in the Trash.',
+        ' 🎟️ Crediti invariati: questa fattura non compra un pacchetto di sessioni.':
+            ' 🎟️ Credits unchanged: this invoice does not buy a pack of sessions.',
+        'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} crediti.':
+            'Linked to pack {pid} of {nome}, which still has {rimasti} credits.',
+        '{nome} ha ancora crediti sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima sessione utile.':
+            '{nome} still has credits on pack {pid}: this invoice waits and will open the next pack at the first session that comes.',
+        'Aperto il pacchetto {pid} per {nome}: {crediti} crediti disponibili.':
+            'Opened pack {pid} for {nome}: {crediti} credits available.',
+        '⚠️ Crediti NON aggiornati. Questa sembra una fattura-pacchetto per {chi}, ma il totale è {tot} mentre il pacchetto costa {attesi}. Controlla la quantità e il prezzo: per un pacchetto da {crediti} crediti la quantità di solito non è 1. Se invece il prezzo è cambiato davvero, aggiornalo nella scheda del cliente a crediti.':
+            '⚠️ Credits NOT updated. This looks like a pack invoice for {chi}, but the total is {tot} while the pack costs {attesi}. Check the quantity and the price: for a pack of {crediti} credits the quantity is usually not 1. If the price really has changed, update it in the card of that client on credits.',
+        'Non sono riuscito ad aggiornare i crediti per questa fattura: controlla la pagina Crediti.':
+            'I could not update the credits for this invoice: have a look at the Credits page.',
+        'La fattura è salvata, ma la copia di sicurezza fuori dal Mac non è riuscita: {guaio} — controlla in Impostazioni.':
+            'The invoice is saved, but the backup copy off this Mac did not work: {guaio} — have a look in Settings.',
+        'Fattura #{n} spostata nel Cestino. Nulla è andato perso: puoi ripristinarla dalla pagina Cestino.':
+            'Invoice #{n} moved to the Trash. Nothing is lost: you can restore it from the Trash page.',
+        'Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).':
+            'Invoice #{n} restored ({quanti} files put back where they were).',
+        'Cliente aggiornato.': 'Client updated.',
+        'Cliente «{nome}» aggiunto.': 'Client «{nome}» added.',
+        'Pacchetto {anno} pronto: Excel + PDF riepilogo + {quante} fatture PDF. Zip: {zip}':
+            '{anno} package ready: Excel + PDF summary + {quante} invoice PDFs. Zip: {zip}',
+        ' — PDF non trovati per: {elenco}': ' — no PDF found for: {elenco}',
+        '{nome} è ora fra i clienti a crediti.': '{nome} is now one of the clients on credits.',
+        'Modifiche salvate per {nome}.': 'Changes saved for {nome}.',
+        '{nome} non è più fra i clienti a crediti.':
+            '{nome} is no longer one of the clients on credits.',
+        'Pacchetto {pid} collegato alla fattura #{n} ({cliente}): {quante} sessioni marcate. Il prossimo pacchetto si apre da solo alla prima sessione nuova.':
+            'Pack {pid} linked to invoice #{n} ({cliente}): {quante} sessions marked. The next pack opens by itself at the first new session.',
+        'Corretta la fattura #{n} ({cliente}): {cosa}. La correzione resta anche dopo un Reimporta.':
+            'Invoice #{n} corrected ({cliente}): {cosa}. The correction stays even after a re-import.',
+        'Correzione annullata: il dato è tornato come nel file di origine.':
+            'Correction undone: the value is back to what the original file says.',
+        'Anomalia archiviata. La trovi in fondo alla pagina se ti serve rivederla.':
+            'Issue filed away. You find it at the bottom of the page if you need to see it again.',
+        "Anomalia ripristinata: torna nell'elenco dei controlli.":
+            'Issue brought back: it returns to the list of checks.',
+        'Reimport completato: {dettaglio}': 'Re-import finished: {dettaglio}',
+        'Seleziona un cliente.': 'Choose a client.',
+        'Inserisci almeno una riga con descrizione e importo.':
+            'Put in at least one line with a description and an amount.',
+        'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
+            'Number #{n} already exists. The next free one is #{libero}.',
+        'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':
+            'A file «{file}» already exists — to be safe I am not overwriting it.',
+        '⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. {guai} Nessun file è stato salvato: controlla i dati e riprova.':
+            '⚠️ Invoice NOT created: the automatic check found a problem. {guai} No file was saved: check the data and try again.',
+        'Fattura inviata a {a} il {data} alle {ora}.': 'Invoice sent to {a} on {data} at {ora}.',
+        '{quante} fatture inviate a {a} il {data} alle {ora}.':
+            '{quante} invoices sent to {a} on {data} at {ora}.',
+        'Le fatture importate dallo storico non si possono eliminare da qui.':
+            'Invoices imported from the history cannot be deleted from here.',
+        'Nome mancante.': 'Name missing.',
+        "Manca l'indirizzo iCal del calendario: si incolla in Impostazioni.":
+            'The iCal address of the calendar is missing: you paste it in Settings.',
+        'Servono almeno il nome e la parola da cercare nel calendario.':
+            'At least the name and the word to look for in the calendar are needed.',
+        '«{chi}» non è fra i clienti a crediti: aggiungilo prima.':
+            '«{chi}» is not among the clients on credits: add them first.',
+        "{nome} ha {quanti} pacchetto nel registro: cancellare la scheda perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.":
+            '{nome} has {quanti} pack in the register: deleting the card would lose that history. I have archived it — the name is still recognised in the calendar, but no new packs will open.',
+        "{nome} ha {quanti} pacchetti nel registro: cancellare la scheda perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.":
+            '{nome} has {quanti} packs in the register: deleting the card would lose that history. I have archived it — the name is still recognised in the calendar, but no new packs will open.',
+        "Ho collegato da solo {quanti} versamento, quello su cui non c'era niente da decidere: {quali}{extra}. Lo trovi qui sotto marcato «collegato dall'app»: se sbaglio, Annulla.":
+            'I linked {quanti} payment by myself, the one where there was nothing to decide: {quali}{extra}. You find it below marked «linked by the app»: if I got it wrong, Undo.',
+        "Ho collegato da solo {quanti} versamenti, quelli su cui non c'era niente da decidere: {quali}{extra}. Li trovi qui sotto marcati «collegato dall'app»: se sbaglio, Annulla.":
+            'I linked {quanti} payments by myself, the ones where there was nothing to decide: {quali}{extra}. You find them below marked «linked by the app»: if I got it wrong, Undo.',
+        'Quel versamento non è più nei file della cartella.':
+            'That payment is no longer in the files in the folder.',
+        'Versamento messo da parte: non è una fattura.':
+            'Payment set aside: it is not an invoice.',
+        'Un calendario non ha risposto: {guaio}': 'A calendar did not answer: {guaio}',
+        'Orari trovati: {quanti}.': 'Times found: {quanti}.',
+        'Indica il numero della fattura.': 'Give the invoice number.',
+        'Non esiste una fattura #{n}.': 'There is no invoice #{n}.',
+        'Fattura non trovata.': 'Invoice not found.',
+        'Non hai inserito nulla da correggere.': 'You have not entered anything to correct.',
+        'Impostazioni salvate.': 'Settings saved.',
+        'Logo aggiornato. Lo trovi sulle prossime fatture, in PDF e in Word.':
+            'Logo updated. You will find it on the next invoices, in PDF and in Word.',
+        'Logo rimosso: al suo posto torna il segnaposto.':
+            'Logo removed: the placeholder comes back in its place.',
+        "Non c'era nessun logo da rimuovere.": 'There was no logo to remove.',
+        "Copia creata e verificata: {file} ({kb} KB). Il database dentro l'archivio è integro.":
+            'Copy made and checked: {file} ({kb} KB). The database inside the archive is sound.',
+        'Copia NON riuscita: {guaio}': 'Copy did NOT work: {guaio}',
+        "Storico ({quanti} documenti): invariato dall'ultima copia, non ne serviva una nuova.":
+            'History ({quanti} documents): unchanged since the last copy, a new one was not needed.',
+        'Storico copiato: {file} — {quanti} documenti.':
+            'History copied: {file} — {quanti} documents.',
+        'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
+        'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'Non hai scelto nessun file.': 'You have not chosen a file.',
+        'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':
+            'Image too heavy ({kb} KB): the maximum is 5 MB.',
+        "Non riesco a leggere questo file: dev'essere un'immagine (PNG, JPG).":
+            'I cannot read this file: it has to be an image (PNG, JPG).',
+        ' e altri {n}': ' and {n} more',
+        'Riga {n}: importo non riconosciuto («{cosa}»).':
+            'Line {n}: amount not recognised («{cosa}»).',
+        "Non mando niente finché c'è un problema aperto: {guai}":
+            'I am sending nothing while a problem is open: {guai}',
+        'Non è partita: {guaio}': 'It did not go out: {guaio}',
+        'La mail è partita, ma non sono riuscito a metterne una copia in Inviata: {guaio}':
+            'The mail went out, but I could not put a copy of it in Sent: {guaio}',
+        "Prova inviata a {a}{dove}. Guarda com'è arrivata prima di mandarla al cliente.":
+            'Test sent to {a}{dove}. Have a look at how it arrived before sending it to the client.',
+        ' e ne trovi la copia in «{cartella}»': ' and you find the copy in «{cartella}»',
+        "Il calendario non risponde: {guaio} — i crediti qui sotto sono quelli dell'ultima lettura riuscita.":
+            'The calendar is not answering: {guaio} — the credits below are the ones from the last successful read.',
+        'I crediti devono essere un numero.': 'The credits have to be a number.',
+        'Collegamento annullato. Il versamento torna fra quelli da decidere.':
+            'Link undone. The payment goes back among the ones to decide on.',
+        'Fattura {quali} segnata pagata il {data}.': 'Invoice {quali} marked paid on {data}.',
+        'Fatture {quali} segnate pagate il {data}.': 'Invoices {quali} marked paid on {data}.',
+        'Nessun orario nuovo: il calendario non sa altro di quei giorni.':
+            'No new times: the calendar knows nothing more about those days.',
+        'Pacchetto inesistente.': 'No such pack.',
+        'Importo «{cosa}» non riconosciuto. Scrivilo come 1’800.- oppure 1800.00 e riprova.':
+            'Amount «{cosa}» not recognised. Write it as 1’800.- or 1800.00 and try again.',
+        'Riga {n}: {qty} × {unit} = {calc}, ma il totale riga indicato è {tot}.{suggerimento} Correggi una delle cifre, oppure lascia vuoto il totale e lo calcolo io.':
+            'Line {n}: {qty} × {unit} = {calc}, but the line total given is {tot}.{suggerimento} Fix one of the figures, or leave the total empty and I work it out.',
+        ' La descrizione parla di {quante} sessioni: forse la quantità è {quante}?':
+            ' The description mentions {quante} sessions: maybe the quantity is {quante}?',
+        'Sessioni nuove registrate: {dettaglio}': 'New sessions recorded: {dettaglio}',
+        'Calendario letto: nessuna sessione nuova.': 'Calendar read: no new sessions.',
+        'Data non valida.': 'Date not valid.',
+        'Attenzione: {quali} fa {somma} ma il versamento è di {importo} ({differenza}). Non ho collegato niente. Se è giusto lo stesso, rimetti i numeri e spunta la casella.':
+            'Careful: {quali} makes {somma} but the payment is {importo} ({differenza}). I have linked nothing. If it is right anyway, put the numbers back and tick the box.',
+        'La fattura numero {n} non esiste.': 'Invoice number {n} does not exist.',
+        'Il numero {n} è su più di una fattura e dalla causale non capisco quale: {elenco}. Rinumerane una e riprova.':
+            'Number {n} is on more than one invoice and the reference text does not tell me which: {elenco}. Renumber one of them and try again.',
+        ' È il {n}° rifiuto: non provo più per {minuti} minuti, altrimenti il server blocca il tuo indirizzo IP. Correggi la password in Impostazioni — salvarla toglie la pausa.':
+            ' That is refusal number {n}: I stop trying for {minuti} minutes, otherwise the server blocks your IP address. Fix the password in Settings — saving it lifts the pause.',
         # --- i mesi, per il grafico ---
         'Gen': 'Jan',
         'Feb': 'Feb',
@@ -847,6 +989,9 @@ TESTI = {
         'Indirizzo riga 2': 'Adresse Zeile 2',
         'Etichetta nome file': 'Bezeichnung im Dateinamen',
         'Come ti firmi con lui/lei': 'Wie du dich bei ihm/ihr verabschiedest',
+        'Lingua della fattura e della mail': 'Sprache der Rechnung und der E-Mail',
+        'È la lingua dei documenti che riceve lui, non quella con cui usi tu l’app.':
+            'Das ist die Sprache der Dokumente, die er oder sie bekommt, nicht die, in der du die App benutzt.',
         'Informale': 'Informell',
         'Formale': 'Förmlich',
         '(non ancora scritto)': '(noch nicht geschrieben)',
@@ -1077,6 +1222,148 @@ TESTI = {
             'Hinweis: für 2022–2023 enthält das Paket die in den Rechnungen verfügbaren Daten; die offiziellen Jahrestotale stammen aus den historischen Excel-Zusammenfassungen.',
         'Pacchetti generati': 'Erstellte Pakete',
         'Scarica zip': 'Zip herunterladen',
+        # --- die Meldungen oben nach einer Aktion ---
+        'Fattura #{n} creata e verificata ✓ — {tot} (importo confermato identico su Word e PDF).':
+            'Rechnung #{n} erstellt und geprüft ✓ — {tot} (Betrag auf Word und PDF bestätigt identisch).',
+        ' Il numero #{n} è stato riusato da una fattura nel Cestino.':
+            ' Die Nummer #{n} wurde von einer Rechnung im Papierkorb wiederverwendet.',
+        ' 🎟️ Crediti invariati: questa fattura non compra un pacchetto di sessioni.':
+            ' 🎟️ Guthaben unverändert: diese Rechnung kauft kein Sitzungspaket.',
+        'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} crediti.':
+            'Mit Paket {pid} von {nome} verknüpft, das noch {rimasti} Guthaben hat.',
+        '{nome} ha ancora crediti sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima sessione utile.':
+            '{nome} hat noch Guthaben auf Paket {pid}: diese Rechnung wartet und öffnet das nächste Paket bei der ersten passenden Sitzung.',
+        'Aperto il pacchetto {pid} per {nome}: {crediti} crediti disponibili.':
+            'Paket {pid} für {nome} eröffnet: {crediti} Guthaben verfügbar.',
+        '⚠️ Crediti NON aggiornati. Questa sembra una fattura-pacchetto per {chi}, ma il totale è {tot} mentre il pacchetto costa {attesi}. Controlla la quantità e il prezzo: per un pacchetto da {crediti} crediti la quantità di solito non è 1. Se invece il prezzo è cambiato davvero, aggiornalo nella scheda del cliente a crediti.':
+            '⚠️ Guthaben NICHT aktualisiert. Das sieht nach einer Paketrechnung für {chi} aus, aber das Total ist {tot}, während das Paket {attesi} kostet. Prüf Menge und Preis: bei einem Paket mit {crediti} Guthaben ist die Menge meist nicht 1. Hat sich der Preis wirklich geändert, trag ihn in der Karte des Kunden auf Guthaben nach.',
+        'Non sono riuscito ad aggiornare i crediti per questa fattura: controlla la pagina Crediti.':
+            'Ich konnte die Guthaben für diese Rechnung nicht aktualisieren: schau auf der Seite Guthaben nach.',
+        'La fattura è salvata, ma la copia di sicurezza fuori dal Mac non è riuscita: {guaio} — controlla in Impostazioni.':
+            'Die Rechnung ist gespeichert, aber die Sicherungskopie ausserhalb des Macs hat nicht geklappt: {guaio} — schau in den Einstellungen nach.',
+        'Fattura #{n} spostata nel Cestino. Nulla è andato perso: puoi ripristinarla dalla pagina Cestino.':
+            'Rechnung #{n} in den Papierkorb verschoben. Nichts ist verloren: du kannst sie auf der Seite Papierkorb wiederherstellen.',
+        'Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).':
+            'Rechnung #{n} wiederhergestellt ({quanti} Dateien zurück an ihrem Platz).',
+        'Cliente aggiornato.': 'Kunde aktualisiert.',
+        'Cliente «{nome}» aggiunto.': 'Kunde «{nome}» hinzugefügt.',
+        'Pacchetto {anno} pronto: Excel + PDF riepilogo + {quante} fatture PDF. Zip: {zip}':
+            'Paket {anno} bereit: Excel + PDF-Zusammenfassung + {quante} Rechnungs-PDFs. Zip: {zip}',
+        ' — PDF non trovati per: {elenco}': ' — kein PDF gefunden für: {elenco}',
+        '{nome} è ora fra i clienti a crediti.': '{nome} gehört jetzt zu den Kunden auf Guthaben.',
+        'Modifiche salvate per {nome}.': 'Änderungen für {nome} gespeichert.',
+        '{nome} non è più fra i clienti a crediti.':
+            '{nome} gehört nicht mehr zu den Kunden auf Guthaben.',
+        'Pacchetto {pid} collegato alla fattura #{n} ({cliente}): {quante} sessioni marcate. Il prossimo pacchetto si apre da solo alla prima sessione nuova.':
+            'Paket {pid} mit Rechnung #{n} ({cliente}) verknüpft: {quante} Sitzungen markiert. Das nächste Paket öffnet sich bei der ersten neuen Sitzung von selbst.',
+        'Corretta la fattura #{n} ({cliente}): {cosa}. La correzione resta anche dopo un Reimporta.':
+            'Rechnung #{n} korrigiert ({cliente}): {cosa}. Die Korrektur bleibt auch nach einem neuen Import.',
+        'Correzione annullata: il dato è tornato come nel file di origine.':
+            'Korrektur rückgängig: der Wert steht wieder so da wie in der Originaldatei.',
+        'Anomalia archiviata. La trovi in fondo alla pagina se ti serve rivederla.':
+            'Auffälligkeit abgelegt. Du findest sie unten auf der Seite, falls du sie nochmals brauchst.',
+        "Anomalia ripristinata: torna nell'elenco dei controlli.":
+            'Auffälligkeit zurückgeholt: sie steht wieder in der Liste der Prüfungen.',
+        'Reimport completato: {dettaglio}': 'Neuimport fertig: {dettaglio}',
+        'Seleziona un cliente.': 'Wähl einen Kunden.',
+        'Inserisci almeno una riga con descrizione e importo.':
+            'Trag mindestens eine Zeile mit Beschreibung und Betrag ein.',
+        'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
+            'Die Nummer #{n} gibt es schon. Die nächste freie ist #{libero}.',
+        'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':
+            'Eine Datei «{file}» gibt es schon — sicherheitshalber überschreibe ich sie nicht.',
+        '⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. {guai} Nessun file è stato salvato: controlla i dati e riprova.':
+            '⚠️ Rechnung NICHT erstellt: die automatische Prüfung hat ein Problem gefunden. {guai} Es wurde keine Datei gespeichert: prüf die Angaben und versuch es nochmals.',
+        'Fattura inviata a {a} il {data} alle {ora}.': 'Rechnung an {a} gesendet am {data} um {ora}.',
+        '{quante} fatture inviate a {a} il {data} alle {ora}.':
+            '{quante} Rechnungen an {a} gesendet am {data} um {ora}.',
+        'Le fatture importate dallo storico non si possono eliminare da qui.':
+            'Aus der Historie importierte Rechnungen lassen sich hier nicht löschen.',
+        'Nome mancante.': 'Name fehlt.',
+        "Manca l'indirizzo iCal del calendario: si incolla in Impostazioni.":
+            'Die iCal-Adresse des Kalenders fehlt: sie wird in den Einstellungen eingefügt.',
+        'Servono almeno il nome e la parola da cercare nel calendario.':
+            'Mindestens der Name und das im Kalender zu suchende Wort werden gebraucht.',
+        '«{chi}» non è fra i clienti a crediti: aggiungilo prima.':
+            '«{chi}» gehört nicht zu den Kunden auf Guthaben: füg die Person zuerst hinzu.',
+        "{nome} ha {quanti} pacchetto nel registro: cancellare la scheda perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.":
+            '{nome} hat {quanti} Paket im Register: die Karte zu löschen würde diese Geschichte verlieren. Ich habe sie archiviert — der Name wird im Kalender weiterhin erkannt, aber es öffnen sich keine neuen Pakete mehr.',
+        "{nome} ha {quanti} pacchetti nel registro: cancellare la scheda perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.":
+            '{nome} hat {quanti} Pakete im Register: die Karte zu löschen würde diese Geschichte verlieren. Ich habe sie archiviert — der Name wird im Kalender weiterhin erkannt, aber es öffnen sich keine neuen Pakete mehr.',
+        "Ho collegato da solo {quanti} versamento, quello su cui non c'era niente da decidere: {quali}{extra}. Lo trovi qui sotto marcato «collegato dall'app»: se sbaglio, Annulla.":
+            'Ich habe {quanti} Zahlung von selbst verknüpft, die, bei der es nichts zu entscheiden gab: {quali}{extra}. Du findest sie unten mit «von der App verknüpft» markiert: wenn ich falsch liege, Rückgängig.',
+        "Ho collegato da solo {quanti} versamenti, quelli su cui non c'era niente da decidere: {quali}{extra}. Li trovi qui sotto marcati «collegato dall'app»: se sbaglio, Annulla.":
+            'Ich habe {quanti} Zahlungen von selbst verknüpft, jene, bei denen es nichts zu entscheiden gab: {quali}{extra}. Du findest sie unten mit «von der App verknüpft» markiert: wenn ich falsch liege, Rückgängig.',
+        'Quel versamento non è più nei file della cartella.':
+            'Diese Zahlung steht nicht mehr in den Dateien des Ordners.',
+        'Versamento messo da parte: non è una fattura.':
+            'Zahlung beiseitegelegt: sie ist keine Rechnung.',
+        'Un calendario non ha risposto: {guaio}': 'Ein Kalender hat nicht geantwortet: {guaio}',
+        'Orari trovati: {quanti}.': 'Gefundene Uhrzeiten: {quanti}.',
+        'Indica il numero della fattura.': 'Gib die Rechnungsnummer an.',
+        'Non esiste una fattura #{n}.': 'Eine Rechnung #{n} gibt es nicht.',
+        'Fattura non trovata.': 'Rechnung nicht gefunden.',
+        'Non hai inserito nulla da correggere.': 'Du hast nichts zum Korrigieren eingetragen.',
+        'Impostazioni salvate.': 'Einstellungen gespeichert.',
+        'Logo aggiornato. Lo trovi sulle prossime fatture, in PDF e in Word.':
+            'Logo aktualisiert. Du findest es auf den nächsten Rechnungen, in PDF und in Word.',
+        'Logo rimosso: al suo posto torna il segnaposto.':
+            'Logo entfernt: an seiner Stelle kommt der Platzhalter zurück.',
+        "Non c'era nessun logo da rimuovere.": 'Es gab kein Logo zum Entfernen.',
+        "Copia creata e verificata: {file} ({kb} KB). Il database dentro l'archivio è integro.":
+            'Kopie erstellt und geprüft: {file} ({kb} KB). Die Datenbank im Archiv ist heil.',
+        'Copia NON riuscita: {guaio}': 'Kopie hat NICHT geklappt: {guaio}',
+        "Storico ({quanti} documenti): invariato dall'ultima copia, non ne serviva una nuova.":
+            'Historie ({quanti} Dokumente): unverändert seit der letzten Kopie, eine neue war nicht nötig.',
+        'Storico copiato: {file} — {quanti} documenti.':
+            'Historie kopiert: {file} — {quanti} Dokumente.',
+        'Copia dello storico NON riuscita: {guaio}':
+            'Kopie der Historie hat NICHT geklappt: {guaio}',
+        'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'Non hai scelto nessun file.': 'Du hast keine Datei gewählt.',
+        'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':
+            'Bild zu schwer ({kb} KB): das Maximum sind 5 MB.',
+        "Non riesco a leggere questo file: dev'essere un'immagine (PNG, JPG).":
+            'Ich kann diese Datei nicht lesen: es muss ein Bild sein (PNG, JPG).',
+        ' e altri {n}': ' und {n} weitere',
+        'Riga {n}: importo non riconosciuto («{cosa}»).':
+            'Zeile {n}: Betrag nicht erkannt («{cosa}»).',
+        "Non mando niente finché c'è un problema aperto: {guai}":
+            'Ich schicke nichts, solange ein Problem offen ist: {guai}',
+        'Non è partita: {guaio}': 'Sie ist nicht hinausgegangen: {guaio}',
+        'La mail è partita, ma non sono riuscito a metterne una copia in Inviata: {guaio}':
+            'Die Mail ist hinausgegangen, aber ich konnte keine Kopie davon in Gesendet ablegen: {guaio}',
+        "Prova inviata a {a}{dove}. Guarda com'è arrivata prima di mandarla al cliente.":
+            'Testmail an {a} gesendet{dove}. Schau, wie sie angekommen ist, bevor du sie dem Kunden schickst.',
+        ' e ne trovi la copia in «{cartella}»': ' und die Kopie findest du in «{cartella}»',
+        "Il calendario non risponde: {guaio} — i crediti qui sotto sono quelli dell'ultima lettura riuscita.":
+            'Der Kalender antwortet nicht: {guaio} — die Guthaben unten stammen aus der letzten gelungenen Abfrage.',
+        'I crediti devono essere un numero.': 'Die Guthaben müssen eine Zahl sein.',
+        'Collegamento annullato. Il versamento torna fra quelli da decidere.':
+            'Verknüpfung rückgängig. Die Zahlung geht zurück zu denen, die zu entscheiden sind.',
+        'Fattura {quali} segnata pagata il {data}.':
+            'Rechnung {quali} als bezahlt am {data} markiert.',
+        'Fatture {quali} segnate pagate il {data}.':
+            'Rechnungen {quali} als bezahlt am {data} markiert.',
+        'Nessun orario nuovo: il calendario non sa altro di quei giorni.':
+            'Keine neuen Uhrzeiten: der Kalender weiss nichts weiter über diese Tage.',
+        'Pacchetto inesistente.': 'Dieses Paket gibt es nicht.',
+        'Importo «{cosa}» non riconosciuto. Scrivilo come 1’800.- oppure 1800.00 e riprova.':
+            'Betrag «{cosa}» nicht erkannt. Schreib ihn als 1’800.- oder 1800.00 und versuch es nochmals.',
+        'Riga {n}: {qty} × {unit} = {calc}, ma il totale riga indicato è {tot}.{suggerimento} Correggi una delle cifre, oppure lascia vuoto il totale e lo calcolo io.':
+            'Zeile {n}: {qty} × {unit} = {calc}, aber als Zeilentotal steht {tot}.{suggerimento} Korrigier eine der Zahlen, oder lass das Total leer und ich rechne es aus.',
+        ' La descrizione parla di {quante} sessioni: forse la quantità è {quante}?':
+            ' In der Beschreibung stehen {quante} Sitzungen: vielleicht ist die Menge {quante}?',
+        'Sessioni nuove registrate: {dettaglio}': 'Neue Sitzungen erfasst: {dettaglio}',
+        'Calendario letto: nessuna sessione nuova.': 'Kalender gelesen: keine neuen Sitzungen.',
+        'Data non valida.': 'Datum ungültig.',
+        'Attenzione: {quali} fa {somma} ma il versamento è di {importo} ({differenza}). Non ho collegato niente. Se è giusto lo stesso, rimetti i numeri e spunta la casella.':
+            'Achtung: {quali} ergibt {somma}, die Zahlung beträgt aber {importo} ({differenza}). Ich habe nichts verknüpft. Stimmt es trotzdem, trag die Nummern nochmals ein und setz das Häkchen.',
+        'La fattura numero {n} non esiste.': 'Die Rechnung Nummer {n} gibt es nicht.',
+        'Il numero {n} è su più di una fattura e dalla causale non capisco quale: {elenco}. Rinumerane una e riprova.':
+            'Die Nummer {n} steht auf mehr als einer Rechnung, und aus dem Verwendungszweck geht nicht hervor, welche: {elenco}. Nummerier eine davon um und versuch es nochmals.',
+        ' È il {n}° rifiuto: non provo più per {minuti} minuti, altrimenti il server blocca il tuo indirizzo IP. Correggi la password in Impostazioni — salvarla toglie la pausa.':
+            ' Das ist die {n}. Ablehnung: ich versuche es {minuti} Minuten lang nicht mehr, sonst sperrt der Server deine IP-Adresse. Korrigier das Passwort in den Einstellungen — das Speichern hebt die Pause auf.',
         # --- die Monate, für die Grafik ---
         'Gen': 'Jan',
         'Feb': 'Feb',
@@ -1265,6 +1552,113 @@ TESTI = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# I DOCUMENTI. Dizionario a parte, non per ordine ma per una differenza vera:
+# qui non si parla a chi usa l'app, si parla al suo CLIENTE. Il tedesco della
+# fattura da' del Lei; quello dei menu da' del tu. Tenerli insieme vorrebbe
+# dire scegliere quale dei due sbagliare.
+# ---------------------------------------------------------------------------
+
+DOCUMENTI = {
+    'en': {
+        # --- la fattura ---
+        'QUANTITÀ': 'QUANTITY',
+        'DESCRIZIONE': 'DESCRIPTION',
+        'PREZZO UNITARIO': 'UNIT PRICE',
+        'TOTALE': 'TOTAL',
+        'TOTALE DA PAGARE': 'TOTAL DUE',
+        'Condizioni': 'Terms',
+        'Grazie per aver scelto {nome}!': 'Thanks for choosing {nome}!',
+        'Pagabile entro 30 giorni netti a:': 'Payable within 30 days net to:',
+        # --- la mail ---
+        'In allegato la fattura di questo mese per {servizio}.':
+            "Please find attached this month's invoice for {servizio}.",
+        'In allegato la Sua fattura per {servizio}.':
+            'Please find attached your invoice for {servizio}.',
+        'In allegato la fattura di questo mese.':
+            "Please find attached this month's invoice.",
+        'In allegato la Sua fattura.': 'Please find attached your invoice.',
+        'In allegato {quante} fatture.': 'Attached are {quante} invoices.',
+        'Se ha già pagato questo mese con l\'ordine permanente, può semplicemente '
+        'tenere il documento allegato per i Suoi archivi.\n':
+            "If you have already completed this month's payment by standing order, "
+            'you can simply keep the attached document for your records.\n',
+        'due': 'two', 'tre': 'three', 'quattro': 'four',
+        'cinque': 'five', 'sei': 'six',
+    },
+    'de': {
+        # --- die Rechnung ---
+        'QUANTITÀ': 'MENGE',
+        'DESCRIZIONE': 'BESCHREIBUNG',
+        'PREZZO UNITARIO': 'EINZELPREIS',
+        'TOTALE': 'TOTAL',
+        'TOTALE DA PAGARE': 'ZU BEZAHLEN',
+        'Condizioni': 'Bedingungen',
+        'Grazie per aver scelto {nome}!':
+            'Vielen Dank, dass Sie sich für {nome} entschieden haben!',
+        'Pagabile entro 30 giorni netti a:': 'Zahlbar innert 30 Tagen netto an:',
+        # --- die E-Mail ---
+        'In allegato la fattura di questo mese per {servizio}.':
+            'Anbei die Rechnung dieses Monats für {servizio}.',
+        'In allegato la Sua fattura per {servizio}.':
+            'Anbei Ihre Rechnung für {servizio}.',
+        'In allegato la fattura di questo mese.': 'Anbei die Rechnung dieses Monats.',
+        'In allegato la Sua fattura.': 'Anbei Ihre Rechnung.',
+        'In allegato {quante} fatture.': 'Anbei {quante} Rechnungen.',
+        'Se ha già pagato questo mese con l\'ordine permanente, può semplicemente '
+        'tenere il documento allegato per i Suoi archivi.\n':
+            'Falls Sie die Zahlung dieses Monats bereits per Dauerauftrag geleistet '
+            'haben, können Sie das beiliegende Dokument einfach für Ihre Unterlagen '
+            'behalten.\n',
+        'due': 'zwei', 'tre': 'drei', 'quattro': 'vier',
+        'cinque': 'fünf', 'sei': 'sechs',
+    },
+}
+
+# I mesi come li scrive la mail nell'oggetto. Non passano dal dizionario
+# perche' qui conta la POSIZIONE (il mese numero 8), non una frase.
+MESI_DOC = {
+    'it': ('Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio',
+           'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'),
+    'en': ('January', 'February', 'March', 'April', 'May', 'June', 'July',
+           'August', 'September', 'October', 'November', 'December'),
+    'de': ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli',
+           'August', 'September', 'Oktober', 'November', 'Dezember'),
+}
+
+
+# Il ripiego dei DOCUMENTI non e' quello dell'app. Chi non ha mai scelto una
+# lingua per un cliente riceve documenti in inglese, che e' come sono sempre
+# usciti: un ripiego che cambia le fatture gia' spedite non e' un ripiego.
+PREDEFINITA_DOC = 'en'
+
+
+def normalizza_doc(codice):
+    """La lingua di un documento. Se non si sa, inglese."""
+    return codice if codice in CODICI else PREDEFINITA_DOC
+
+
+def t_doc(frase, lingua=None):
+    """La frase di un documento nella lingua del CLIENTE, non dell'app."""
+    lingua = normalizza_doc(lingua)
+    if lingua == PREDEFINITA:
+        return frase
+    return DOCUMENTI.get(lingua, {}).get(frase, frase)
+
+
+def mesi_doc(lingua=None):
+    """I dodici nomi di mese nella lingua del cliente."""
+    return MESI_DOC[normalizza_doc(lingua)]
+
+
+def mancanti_doc(lingua):
+    """Le frasi di documento che questa lingua non ha. Serve al collaudo."""
+    fatte = set(DOCUMENTI.get(lingua, {}))
+    return sorted(f for f in TUTTE_DOC if f not in fatte)
+
+
 # L'italiano non ha un dizionario: e' lui la chiave. Questo e' l'elenco di
 # tutte le frasi note, che serve al collaudo per dire quali mancano altrove.
 TUTTE = sorted(set(TESTI['en']) | set(TESTI['de']))
+
+TUTTE_DOC = sorted(set(DOCUMENTI['en']) | set(DOCUMENTI['de']))

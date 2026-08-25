@@ -15,6 +15,8 @@ from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib.styles import ParagraphStyle
 
 from .money import fmt_dash
+from . import docgen
+from . import lingua as L
 from . import marchio
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +31,7 @@ DESC_STYLE = ParagraphStyle('desc', fontName='Helvetica', fontSize=9, leading=11
 
 
 def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
-              total_cents, settings):
+              total_cents, settings, lingua=None):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     c = canvas.Canvas(out_path, pagesize=A4)
     c.setTitle(f"Fattura #{number} - {settings.get('business_name', '')}")
@@ -79,7 +81,8 @@ def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
     scale = USABLE / sum(col_w)
     col_w = [w * scale for w in col_w]
 
-    header = ['QUANTITY', 'DESCRIPTION', 'UNIT PRICE', 'TOTAL']
+    header = [L.t_doc(x, lingua) for x in
+              ('QUANTITÀ', 'DESCRIZIONE', 'PREZZO UNITARIO', 'TOTALE')]
     data = [header]
     n_rows = max(8, len(items))
     for i in range(n_rows):
@@ -90,7 +93,8 @@ def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
             data.append([str(it['qty']), Paragraph(it['description'], DESC_STYLE), unit, tot])
         else:
             data.append(['', '', '', ''])
-    data.append(['', '', 'TOTAL DUE', fmt_dash(total_cents) + '\nCHF'])
+    data.append(['', '', L.t_doc('TOTALE DA PAGARE', lingua),
+                 fmt_dash(total_cents) + '\nCHF'])
 
     t = Table(data, colWidths=col_w)
     style = [
@@ -119,14 +123,16 @@ def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
     c.setFont('Helvetica', 10)
     thanks_y = max(MB + 130, table_top - th - 60)
     c.drawCentredString(PAGE_W / 2, thanks_y,
-                        f"Thanks for choosing {settings.get('business_name', '')}!")
+                        L.t_doc('Grazie per aver scelto {nome}!', lingua).format(
+                            nome=settings.get('business_name', '')))
 
     # --- terms ---
     y = MB + 62
     c.setFont('Helvetica', 9)
-    c.drawString(ML, y, 'Terms:')
-    c.line(ML, y - 1.5, ML + c.stringWidth('Terms:', 'Helvetica', 9), y - 1.5)
-    for line in (settings.get('terms', ''), settings.get('business_name', ''),
+    etichetta = L.t_doc('Condizioni', lingua) + ':'
+    c.drawString(ML, y, etichetta)
+    c.line(ML, y - 1.5, ML + c.stringWidth(etichetta, 'Helvetica', 9), y - 1.5)
+    for line in (docgen.condizioni(settings, lingua), settings.get('business_name', ''),
                  'IBAN: ' + settings.get('business_iban', '')):
         y -= 13
         c.drawString(ML, y, line)

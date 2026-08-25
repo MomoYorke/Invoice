@@ -359,7 +359,7 @@ def leggi_cartella(cartella=None):
     cartella = cartella or CARTELLA
     movimenti, problemi = [], []
     if not os.path.isdir(cartella):
-        return [], [(cartella, 'Questa cartella non esiste.')]
+        return [], [(cartella, CARTELLA_ASSENTE)]
     for percorso in sorted(glob.glob(os.path.join(cartella, '*'))):
         if not percorso.lower().endswith(ESTENSIONI):
             continue
@@ -438,6 +438,18 @@ def somiglianza_nome(descrizione, nome_cliente):
     return trovati / len(pezzi)
 
 
+# Le frasi che la pagina Banca mostra sotto ogni candidato. Stanno qui come
+# costanti, e non scritte a mano piu' sotto, perche' cosi' il collaudo puo'
+# raccoglierle e controllare che esistano in tutte le lingue.
+PERCHE_RIFERIMENTO = 'il riferimento del pagamento è quello della fattura'
+PERCHE_DATA = 'importo esatto e la causale cita la data di questa fattura'
+PERCHE_NOME = 'importo esatto e il nome compare nella causale'
+PERCHE_SOLO_IMPORTO = 'importo esatto, ma il nome non compare nella causale'
+PERCHE_GRUPPO = ('{quante} fatture dello stesso cliente che insieme fanno '
+                 'esattamente questo importo')
+CARTELLA_ASSENTE = 'Questa cartella non esiste.'
+
+
 def _riferimento_uguale(movimento, inv):
     """Il riferimento della QR-fattura, quando c'e', decide da solo.
 
@@ -483,14 +495,13 @@ def candidati_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_
                           _somiglianza_alias(con, movimento, inv))
         data_citata = bool(inv['date'] and inv['date'] in citate)
         if _riferimento_uguale(movimento, inv):
-            grado, perche = CERTO, 'il riferimento del pagamento è quello della fattura'
+            grado, perche = CERTO, PERCHE_RIFERIMENTO
         elif data_citata:
-            grado = PROBABILE
-            perche = 'importo esatto e la causale cita la data di questa fattura'
+            grado, perche = PROBABILE, PERCHE_DATA
         elif somiglianza >= 0.5:
-            grado, perche = PROBABILE, 'importo esatto e il nome compare nella causale'
+            grado, perche = PROBABILE, PERCHE_NOME
         else:
-            grado, perche = POSSIBILE, 'importo esatto, ma il nome non compare nella causale'
+            grado, perche = POSSIBILE, PERCHE_SOLO_IMPORTO
         fuori.append({'inv': inv, 'grado': grado, 'perche': perche, 'aperta': aperta,
                       'somiglianza': somiglianza, 'data_citata': data_citata,
                       'giorni': (giorno - datetime.date.fromisoformat(inv['date'])).days
@@ -605,8 +616,7 @@ def gruppi_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_DOP
                 'fatture': list(gruppo),
                 'numeri': ', '.join(f"#{i['number']}" for i in gruppo),
                 'quante': quante,
-                'perche': '{quante} fatture dello stesso cliente che insieme fanno '
-                          'esattamente questo importo',
+                'perche': PERCHE_GRUPPO,
             })
         if fuori:
             break                    # due bastano: non si va a cercarne tre

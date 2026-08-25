@@ -9,7 +9,23 @@ from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 
 from .money import fmt_dash
+from . import lingua as L
 from . import marchio
+
+
+# Le condizioni di pagamento le scrive chi usa l'app, nelle Impostazioni. Se
+# non le ha toccate, quella che si vede e' la frase di partenza dell'app, e
+# quella si puo' tradurre; se invece l'ha riscritta, sono parole sue e si
+# lasciano stare — tradurgliele sarebbe metterle in bocca qualcosa che non ha
+# detto.
+CONDIZIONI_DI_SERIE = 'Payable within 30 days net to:'
+
+
+def condizioni(settings, lingua=None):
+    testo = (settings or {}).get('terms', '')
+    if testo.strip() == CONDIZIONI_DI_SERIE:
+        return L.t_doc('Pagabile entro 30 giorni netti a:', lingua)
+    return testo
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(APP_DIR, 'assets', 'fattura-modello.docx')
@@ -58,7 +74,7 @@ RIGA_NOME_PAGAMENTO = 12
 RIGA_IBAN = 13
 
 
-def _scrivi_intestazione(d, settings):
+def _scrivi_intestazione(d, settings, lingua=None):
     """Chi emette la fattura: nome, UID, indirizzo, contatti, condizioni, IBAN.
 
     Se qualcuno rimaneggia il template e una riga non c'e' piu', quella riga si
@@ -73,8 +89,9 @@ def _scrivi_intestazione(d, settings):
             _set_paragraph_text(cella.paragraphs[i], settings.get(chiave, ''))
     nome = settings.get('business_name', '')
     testi = {
-        RIGA_RINGRAZIAMENTO: f'Thanks for choosing {nome}!' if nome else '',
-        RIGA_CONDIZIONI: settings.get('terms', ''),
+        RIGA_RINGRAZIAMENTO: (L.t_doc('Grazie per aver scelto {nome}!', lingua)
+                              .format(nome=nome) if nome else ''),
+        RIGA_CONDIZIONI: condizioni(settings, lingua),
         RIGA_NOME_PAGAMENTO: nome,
         RIGA_IBAN: 'IBAN: ' + settings.get('business_iban', ''),
     }
@@ -127,11 +144,45 @@ def _scrivi_logo(d):
         return
 
 
+# Le etichette che stanno gia' scritte dentro il modello Word. Il modello e'
+# in inglese, che e' la lingua con cui l'app e' nata; per un cliente tedesco
+# o italiano vanno riscritte una per una, perche' Word non ha segnaposti.
+ETICHETTE = {
+    'QUANTITY': 'QUANTITÀ',
+    'DESCRIPTION': 'DESCRIZIONE',
+    'UNIT PRICE': 'PREZZO UNITARIO',
+    'TOTAL': 'TOTALE',
+    'TOTAL due': 'TOTALE DA PAGARE',
+    'Terms': 'Condizioni',
+}
+
+
+def _traduci_etichette(d, lingua):
+    """Riscrive le etichette del modello nella lingua del cliente.
+
+    Si lavora sui pezzi di testo del file Word, non sui paragrafi: nel
+    modello le intestazioni della tabella stanno dentro riquadri di testo,
+    che python-docx non mostra fra i paragrafi. Passando dai pezzi si
+    raggiungono tutte, e per giunta si tocca solo la parola: «Terms» resta
+    sottolineato e i due punti restano dove sono.
+
+    Va chiamata a modello appena aperto, prima che ci finiscano dentro i
+    dati: cosi' non puo' scambiare per un'etichetta il nome di un cliente.
+    """
+    if L.normalizza_doc(lingua) == L.PREDEFINITA_DOC:
+        return                       # il modello e' gia' cosi'
+    for pezzo in d.element.body.iter(qn('w:t')):
+        chiave = ETICHETTE.get((pezzo.text or '').strip())
+        if chiave:
+            pezzo.text = L.t_doc(chiave, lingua)
+
+
 def build_docx(out_path, number, date_str, client_name, addr_lines, items, total_cents,
-               settings=None):
+               settings=None, lingua=None):
     """items: lista di dict {qty, description, unit_cents, total_cents} (max 8 righe)."""
     d = Document(TEMPLATE)
-    _scrivi_intestazione(d, settings)
+    _traduci_etichette(d, lingua)
+    _scrivi_intestazione(d, settings, lingua)
     _scrivi_logo(d)
     _scrivi_proprieta(d, settings)
     header = d.tables[0]

@@ -26,21 +26,21 @@ import mimetypes
 from email.message import EmailMessage
 
 from .money import fmt_chf
+from . import lingua as L
 from . import servizi as srv
 
-FRASE_ABBONAMENTO = (
-    "If you have already completed this month's payment by standing order, "
-    "you can simply keep the attached document for your records.\n")
+FRASE_ABBONAMENTO = ("Se ha già pagato questo mese con l'ordine permanente, può "
+                     'semplicemente tenere il documento allegato per i Suoi archivi.\n')
 # "questa fattura del mese" vale per gli abbonamenti mensili; un pacchetto di
 # dieci sessioni non e' mensile e dirlo sarebbe sbagliato
-APERTURA_MENSILE = "Please find attached this month's invoice for {servizio}."
-APERTURA_SEMPLICE = "Please find attached your invoice for {servizio}."
+APERTURA_MENSILE = 'In allegato la fattura di questo mese per {servizio}.'
+APERTURA_SEMPLICE = 'In allegato la Sua fattura per {servizio}.'
 # Se il servizio non si riconosce (chi usa l'app vende altro), la frase resta
 # corretta senza nominarlo: meglio non dirlo che dirlo sbagliato.
-APERTURA_MENSILE_ANONIMA = "Please find attached this month's invoice."
-APERTURA_SEMPLICE_ANONIMA = "Please find attached your invoice."
-APERTURA_MULTIPLA = "Attached are {quante} invoices."
-QUANTE = {2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
+APERTURA_MENSILE_ANONIMA = 'In allegato la fattura di questo mese.'
+APERTURA_SEMPLICE_ANONIMA = 'In allegato la Sua fattura.'
+APERTURA_MULTIPLA = 'In allegato {quante} fatture.'
+QUANTE = {2: 'due', 3: 'tre', 4: 'quattro', 5: 'cinque', 6: 'sei'}
 
 # I due modelli di frase centrale. La chiave e' anche il suffisso
 # dell'impostazione che li contiene ('email_corpo_coaching', 'email_corpo_pt'),
@@ -243,13 +243,20 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
     corpo = testo_modello(settings, modello) if corpo is None else corpo
     corpo = (corpo or '').strip()
 
+    # la lingua della mail e' quella del CLIENTE: e' lui che la legge
+    lingua = L.normalizza_doc(
+        cliente['lingua'] if cliente and 'lingua' in cliente.keys() else None)
     servizio = servizio_di(descrizioni, settings)
     if len(allegati) > 1:
-        apertura = APERTURA_MULTIPLA.format(quante=QUANTE.get(len(allegati), len(allegati)))
+        quante = QUANTE.get(len(allegati))
+        apertura = L.t_doc(APERTURA_MULTIPLA, lingua).format(
+            quante=L.t_doc(quante, lingua) if quante else len(allegati))
     elif servizio:
-        apertura = (APERTURA_MENSILE if abbonato else APERTURA_SEMPLICE).format(servizio=servizio)
+        apertura = L.t_doc(APERTURA_MENSILE if abbonato else APERTURA_SEMPLICE,
+                           lingua).format(servizio=servizio)
     else:
-        apertura = APERTURA_MENSILE_ANONIMA if abbonato else APERTURA_SEMPLICE_ANONIMA
+        apertura = L.t_doc(APERTURA_MENSILE_ANONIMA if abbonato
+                           else APERTURA_SEMPLICE_ANONIMA, lingua)
     oggetto_grezzo = oggetto_modello(settings, modello)
     valori = {
         'apertura': apertura,
@@ -258,7 +265,7 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         'numero': inv['number'],
         'totale': fmt_chf(inv['total_cents']),
         'servizio': servizio,
-        'riga_abbonamento': FRASE_ABBONAMENTO if abbonato else '',
+        'riga_abbonamento': L.t_doc(FRASE_ABBONAMENTO, lingua) if abbonato else '',
         'corpo': corpo,
         'saluto': saluto_di(settings, tono),
     }

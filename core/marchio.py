@@ -48,14 +48,16 @@ def salva(dati):
     Qualunque formato entri (PNG, JPEG, ...) esce PNG: cosi' il resto
     dell'app non deve piu' preoccuparsi di che immagine sia."""
     if not dati:
-        return 'Non hai scelto nessun file.'
+        return ('Non hai scelto nessun file.', {})
     if len(dati) > PESO_MAX:
-        return f'Immagine troppo pesante ({len(dati) // 1024} KB): il massimo è 5 MB.'
+        return ('Immagine troppo pesante ({kb} KB): il massimo è 5 MB.',
+                {'kb': len(dati) // 1024})
     try:
         img = Image.open(io.BytesIO(dati))
         img.load()
     except Exception:
-        return "Non riesco a leggere questo file: dev'essere un'immagine (PNG, JPG)."
+        return ("Non riesco a leggere questo file: dev'essere un'immagine (PNG, JPG).",
+                {})
     img = img.convert('RGBA')
     img.thumbnail((LATO_MAX, LATO_MAX), Image.LANCZOS)
     os.makedirs(os.path.dirname(PERSONALE), exist_ok=True)

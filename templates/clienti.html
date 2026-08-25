@@ -15,6 +15,7 @@
       <td><strong>{{ c.name }}</strong>{% if c.archived %} <span class="muted">{{ _('(archiviato)') }}</span>{% endif %}
         {% if c.notes %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ c.notes }}</div>{% endif %}</td>
       <td class="muted no-blur" style="font-size:13px">{{ c.email or '—' }}
+        <div style="font-size:11px">{{ (c.lingua or 'en') | upper }}</div>
         {% if c.abbonamento %}<div style="font-size:11px">{{ _('abbonamento mensile') }}</div>{% endif %}
         {% if c.intestatario %}<div style="font-size:11px">{{ _('fattura a {chi}').format(chi=c.intestatario) }}</div>{% endif %}</td>
       <td class="muted" style="font-size:13px">{{ c.address1 }}{% if c.address2 %}, {{ c.address2.replace('\n', ', ') }}{% endif %}</td>
@@ -30,6 +31,13 @@
             <label>{{ _('Indirizzo riga 2') }}</label><input type="text" name="address2" value="{{ c.address2 }}">
             <label>{{ _('Etichetta nome file') }}</label><input type="text" name="file_label" value="{{ c.file_label }}">
             <label>{{ _('Email') }}</label><input type="email" name="email" value="{{ c.email }}" placeholder="{{ _('nome@esempio.ch') }}">
+            <label>{{ _('Lingua della fattura e della mail') }}</label>
+            <select name="lingua">
+              {% for cod, nome in lingue %}
+                <option value="{{ cod }}" {{ 'selected' if (c.lingua or 'en') == cod }}>{{ nome }}</option>
+              {% endfor %}
+            </select>
+            <span class="muted" style="font-size:11.5px">{{ _('È la lingua dei documenti che riceve lui, non quella con cui usi tu l’app.') }}</span>
             <label>{{ _('Come ti firmi con lui/lei') }}</label>
             <select name="tono">
               <option value="informale" {{ 'selected' if c.tono != 'formale' }}>{{ _('Informale') }} — «{{ saluti.informale }}»</option>

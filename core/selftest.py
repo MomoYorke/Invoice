@@ -728,6 +728,44 @@ def _test_lingua(r):
     _check(r, 'Lingua', 'ogni frase chiesta dalle pagine sta nei dizionari',
            _frasi_senza_traduzione(L), [])
 
+    # Meta' dei messaggi non sta nelle pagine ma nel codice: avvisa('...') e
+    # lng.t('...'). Se una di quelle frasi non e' nei dizionari non succede
+    # niente di rumoroso — esce in italiano in mezzo all'inglese — quindi la
+    # si guarda qui insieme alle altre.
+    _check(r, 'Lingua', 'ogni frase chiesta dal codice sta nei dizionari',
+           _frasi_codice_senza_traduzione(L), [])
+
+    # Certi moduli non sanno che lingua e' scelta e restituiscono la frase
+    # come chiave, da tradurre a chi la mostra. Quelle chiavi non compaiono
+    # dentro una chiamata, quindi il controllo qui sopra non le vede: si
+    # chiamano le funzioni e si guarda cosa tornano davvero.
+    _check(r, 'Lingua', 'anche le frasi che i moduli restituiscono sono tradotte',
+           _frasi_restituite_senza_traduzione(L), [])
+
+    # --- i documenti: seconda lingua, altre regole ---
+    _check(r, 'Lingua', 'inglese e tedesco conoscono le stesse frasi dei documenti',
+           L.mancanti_doc('en') + L.mancanti_doc('de'), [])
+    # Un cliente senza lingua scritta NON deve ricevere documenti in italiano:
+    # le fatture di quest'app sono sempre uscite in inglese, e un ripiego che
+    # cambia la lingua delle fatture gia' spedite non e' un ripiego.
+    _check(r, 'Lingua', 'un cliente senza lingua riceve documenti in inglese',
+           L.normalizza_doc(None), 'en')
+    _check(r, 'Lingua', 'e anche uno con una lingua che non esiste',
+           L.normalizza_doc('klingon'), 'en')
+    _check(r, 'Lingua', 'la fattura in inglese e\' quella di sempre',
+           L.t_doc('QUANTITÀ', 'en'), 'QUANTITY')
+    _check(r, 'Lingua', 'la fattura in tedesco parla tedesco',
+           L.t_doc('QUANTITÀ', 'de'), 'MENGE')
+    # Nei documenti si parla al CLIENTE, e con un cliente si usa il Lei: la
+    # regola del tu vale per l'app, non per quello che leggono i suoi clienti.
+    _check(r, 'Lingua', 'il tedesco dei documenti da\' del Lei, non del tu',
+           _documenti_col_tu(L), [])
+    # Le etichette che docgen riscrive nel modello Word devono esistere
+    # davvero: se qualcuno rinomina una chiave, la fattura tedesca esce con
+    # una colonna in inglese e nessuno se ne accorge.
+    _check(r, 'Lingua', 'ogni etichetta del modello Word ha la sua traduzione',
+           _etichette_word_senza_traduzione(L), [])
+
     # I segnaposti sono la parte fragile: {n} che sparisce dalla traduzione fa
     # sparire un numero dalla pagina, {n} scritto storto fa saltare la pagina
     # con un errore. Meglio accorgersene qui.
@@ -758,6 +796,18 @@ def _pagina_dice_gia_pagata():
     return False
 
 
+def _documenti_col_tu(L):
+    """Le frasi di documento che danno del tu al cliente."""
+    tu = re.compile(r'\b([Dd]u|[Dd]ein\w*|[Dd]ir|[Dd]ich)\b')
+    return sorted(v for v in L.DOCUMENTI['de'].values() if tu.search(v))
+
+
+def _etichette_word_senza_traduzione(L):
+    """Le etichette del modello Word che i dizionari non conoscono."""
+    from . import docgen
+    return sorted(c for c in docgen.ETICHETTE.values() if c not in L.DOCUMENTI['en'])
+
+
 def _tedesco_col_lei(L):
     """Le frasi tedesche che danno del Lei invece che del tu.
 
@@ -777,6 +827,49 @@ def _tedesco_col_lei(L):
         elif in_mezzo.search(re.split(r'(?<=[.!?:])\s+', v)[0]):
             fuori.append(v)
     return sorted(fuori)
+
+
+def _frasi_codice_senza_traduzione(L):
+    """[(file, frase)] per ogni avvisa('...') o lng.t('...') mai tradotto."""
+    import ast
+    import glob
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # i file di collaudo no: dentro ci sono frasi finte apposta, tipo quella
+    # che serve a provare che una frase non tradotta esce lo stesso in italiano
+    perc = [os.path.join(base, 'app.py')] + [
+        p for p in sorted(glob.glob(os.path.join(base, 'core', '*.py')))
+        if 'selftest' not in os.path.basename(p)]
+    fuori = []
+    for p in perc:
+        with io.open(p, encoding='utf-8') as f:
+            sorgente = f.read()
+        for nodo in ast.walk(ast.parse(sorgente)):
+            if not isinstance(nodo, ast.Call) or not nodo.args:
+                continue
+            nome = getattr(nodo.func, 'attr', None) or getattr(nodo.func, 'id', '')
+            if nome not in ('avvisa', 't'):
+                continue
+            for arg in nodo.args[:2]:            # avvisa(frase) e lng.t(frase, lingua)
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str) \
+                        and len(arg.value) > 2 and arg.value not in L.TESTI['en'] \
+                        and arg.value not in ('en', 'de', 'it'):
+                    fuori.append((os.path.basename(p), arg.value))
+                break
+    return sorted(set(fuori))
+
+
+def _frasi_restituite_senza_traduzione(L):
+    """Le chiavi che i moduli danno indietro e nessuno ha tradotto."""
+    from . import marchio
+    from . import banca as B
+    frasi = []
+    for dati in (b'', b'non e\' un png', b'\x89PNG' + b'x' * marchio.PESO_MAX):
+        esito = marchio.salva(dati)
+        if esito:
+            frasi.append(esito[0])
+    frasi += [B.PERCHE_RIFERIMENTO, B.PERCHE_DATA, B.PERCHE_NOME, B.PERCHE_SOLO_IMPORTO,
+              B.PERCHE_GRUPPO, B.CARTELLA_ASSENTE]
+    return sorted(f for f in frasi if f not in L.TESTI['en'])
 
 
 def _sorgenti_pagine():

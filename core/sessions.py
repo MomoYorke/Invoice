@@ -506,12 +506,15 @@ def aggancia_fattura(reg, client_name, numero, total_cents, data=None):
         if not e_saldato(p):
             p['fatturato'] = f'si - #{numero}'
             p['fattura_numero'] = numero
-            return 'collegato', (f'Collegata al pacchetto {p["id"]} di {nome}, '
-                                 f'che ha ancora {p["crediti"] - len(p.get("sessioni", []))} crediti.')
+            return 'collegato', (
+                'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} crediti.',
+                {'pid': p['id'], 'nome': nome,
+                 'rimasti': p['crediti'] - len(p.get('sessioni', []))})
         reg.setdefault('prepagate', {})[chiave] = numero
-        return 'in_attesa', (f'{nome} ha ancora crediti sul pacchetto {p["id"]}: '
-                             f'questa fattura resta in attesa e aprira' + chr(39) + ' il pacchetto '
-                             f'successivo alla prima sessione utile.')
+        return 'in_attesa', (
+            '{nome} ha ancora crediti sul pacchetto {pid}: questa fattura resta in '
+            'attesa e aprirà il pacchetto successivo alla prima sessione utile.',
+            {'nome': nome, 'pid': p['id']})
 
     # pacchetto esaurito o inesistente: la fattura ne apre uno nuovo, gia' pagato
     if p is not None:
@@ -521,8 +524,9 @@ def aggancia_fattura(reg, client_name, numero, total_cents, data=None):
     nuovo['fatturato'] = f'si - #{numero}'
     nuovo['fattura_numero'] = numero
     nuovo['nota'] = f'Aperto dalla fattura #{numero}'
-    return 'nuovo', (f'Aperto il pacchetto {nuovo["id"]} per {nome}: '
-                     f'{nuovo["crediti"]} crediti disponibili.')
+    return 'nuovo', ('Aperto il pacchetto {pid} per {nome}: {crediti} crediti '
+                     'disponibili.',
+                     {'pid': nuovo['id'], 'nome': nome, 'crediti': nuovo['crediti']})
 
 
 def usa_prepagata(reg, chiave, pacchetto):

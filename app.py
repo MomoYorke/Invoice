@@ -16,7 +16,7 @@ import traceback
 import subprocess
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   send_file, jsonify, flash, abort)
+                   send_file, jsonify, flash, abort, g)
 from dateutil.relativedelta import relativedelta
 
 from core import db, stats, importer, exports, verify, selftest, corrections, backup, mailer
@@ -276,7 +276,7 @@ def _crea_fattura(con):
         a1 = f.get('nc_indirizzo1', '').strip()
         a2 = f.get('nc_indirizzo2', '').strip()
         if not name:
-            flash('Nome del nuovo cliente mancante.', 'error')
+            avvisa('Nome del nuovo cliente mancante.', 'error')
             return redirect(url_for('nuova'))
         key = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
         cur = con.execute(
@@ -286,7 +286,7 @@ def _crea_fattura(con):
         client_id = cur.fetchone()['id']
     client = con.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     if not client:
-        flash('Seleziona un cliente.', 'error')
+        avvisa('Seleziona un cliente.', 'error')
         return redirect(url_for('nuova'))
     addr_lines = [l for l in ([client['address1']] + (client['address2'] or '').split('\n')) if l]
     # Chi fa le sedute e chi riceve la fattura possono essere due persone
@@ -311,7 +311,8 @@ def _crea_fattura(con):
         if tot_c is None and unit_c is not None:
             tot_c = line_total(qty, unit_c)
         if tot_c is None:
-            flash(f'Riga {i + 1}: importo non riconosciuto ("{tot_raw or unit_raw}").', 'error')
+            avvisa('Riga {n}: importo non riconosciuto («{cosa}»).', 'error',
+                   n=i + 1, cosa=tot_raw or unit_raw)
             return redirect(url_for('nuova'))
         # Coerenza qty x unit = totale. Con quantita' 1 NON si blocca: e' il formato
         # che usi spesso sulle fatture-pacchetto (1 | "12 Sessions Pack" | 150.- | 1'800.-),
@@ -324,17 +325,19 @@ def _crea_fattura(con):
                 m = re.search(r'(\d+)\s*(?:x|×)?\s*(?:sessions?|credits?|crediti|sessioni)',
                               desc, re.I)
                 if m and int(m.group(1)) != qty:
-                    suggerimento = (f' La descrizione parla di {m.group(1)} sessioni: '
-                                    f'forse la quantità è {m.group(1)}?')
-                flash(f'Riga {i + 1}: {qty} × {fmt_chf(unit_c)} = {fmt_chf(calc)}, '
-                      f'ma il totale riga indicato è {fmt_chf(tot_c)}.{suggerimento} '
-                      'Correggi una delle cifre, oppure lascia vuoto il totale e lo calcolo io.',
-                      'error')
+                    suggerimento = lng.t(' La descrizione parla di {quante} sessioni: '
+                                         'forse la quantità è {quante}?',
+                                         _lingua_app()).format(quante=m.group(1))
+                avvisa('Riga {n}: {qty} × {unit} = {calc}, ma il totale riga indicato è '
+                       '{tot}.{suggerimento} Correggi una delle cifre, oppure lascia '
+                       'vuoto il totale e lo calcolo io.', 'error',
+                       n=i + 1, qty=qty, unit=fmt_chf(unit_c), calc=fmt_chf(calc),
+                       tot=fmt_chf(tot_c), suggerimento=suggerimento)
                 return redirect(url_for('nuova'))
         items.append({'qty': qty, 'description': desc, 'unit_cents': unit_c, 'total_cents': tot_c})
         total += tot_c
     if not items:
-        flash('Inserisci almeno una riga con descrizione e importo.', 'error')
+        avvisa('Inserisci almeno una riga con descrizione e importo.', 'error')
         return redirect(url_for('nuova'))
 
     # --- numero e data ---
@@ -342,7 +345,8 @@ def _crea_fattura(con):
     dup = con.execute('SELECT id FROM invoices WHERE number=? AND deleted_at IS NULL',
                       (number,)).fetchone()
     if dup:
-        flash(f'Il numero #{number} esiste già. Il prossimo libero è #{db.next_number(con)}.', 'error')
+        avvisa('Il numero #{n} esiste già. Il prossimo libero è #{libero}.', 'error',
+               n=number, libero=db.next_number(con))
         return redirect(url_for('nuova'))
     # se quel numero appartiene solo a una fattura nel Cestino, si puo' riusare:
     # serve per rifare una fattura sbagliata senza lasciare buchi
@@ -361,12 +365,16 @@ def _crea_fattura(con):
     docx_path = os.path.join(out_dir, fname + '.docx')
     pdf_path = os.path.join(out_dir, fname + '.pdf')
     if os.path.exists(docx_path) or os.path.exists(pdf_path):
-        flash(f'Esiste già un file "{fname}" — per sicurezza non sovrascrivo.', 'error')
+        avvisa('Esiste già un file «{file}» — per sicurezza non sovrascrivo.', 'error',
+               file=fname)
         return redirect(url_for('nuova'))
+    # la lingua della fattura e' quella del CLIENTE: e' lui che la legge
+    lingua_cliente = lng.normalizza_doc(
+        client['lingua'] if 'lingua' in client.keys() else None)
     docgen.build_docx(docx_path, number, date_str, intestatario, addr_lines, items, total,
-                      settings)
+                      settings, lingua_cliente)
     pdfgen.build_pdf(pdf_path, number, date_str, intestatario, addr_lines, items,
-                     total, settings)
+                     total, settings, lingua_cliente)
 
     # --- VERIFICA AUTOMATICA: rileggo i file veri e controllo gli importi al centesimo.
     #     Se qualcosa non torna, NON salvo la fattura e rimuovo i file generati. ---
@@ -376,9 +384,9 @@ def _crea_fattura(con):
             if os.path.exists(p):
                 os.remove(p)
         con.close()
-        flash('⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. '
-              + ' '.join(problems) + ' Nessun file è stato salvato: controlla i dati e riprova.',
-              'error')
+        avvisa('⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. '
+               '{guai} Nessun file è stato salvato: controlla i dati e riprova.', 'error',
+               guai=' '.join(problems))
         return redirect(url_for('nuova'))
 
     cur = con.execute(
@@ -395,10 +403,12 @@ def _crea_fattura(con):
                      it['unit_cents'], it['total_cents']))
     con.commit()
     con.close()
-    msg = (f'Fattura #{number} creata e verificata ✓ — {fmt_chf(total)} '
-           '(importo confermato identico su Word e PDF).')
+    lg = _lingua_app()
+    msg = lng.t('Fattura #{n} creata e verificata ✓ — {tot} (importo confermato '
+                'identico su Word e PDF).', lg).format(n=number, tot=fmt_chf(total))
     if nel_cestino:
-        msg += f' Il numero #{number} è stato riusato da una fattura nel Cestino.'
+        msg += lng.t(' Il numero #{n} è stato riusato da una fattura nel Cestino.',
+                     lg).format(n=number)
     # --- crediti: si aggiornano da soli, e se qualcosa non torna lo dicono ---
     avviso = None
     try:
@@ -410,30 +420,34 @@ def _crea_fattura(con):
                                                      total, date_iso)
             if esito:
                 sess.salva(reg)
-                msg += ' 🎟️ ' + dettaglio
+                frase, valori = dettaglio
+                msg += ' 🎟️ ' + lng.t(frase, lg).format(**valori)
         elif info['e_pacchetto'] and not info['prezzo_ok']:
             # sembra un pacchetto ma l'importo non e' quello solito: NON tocco i crediti
             attesi = ' o '.join(fmt_chf(x) for x in info['prezzo_atteso']) or '—'
-            avviso = (f"⚠️ Crediti NON aggiornati. Questa sembra una fattura-pacchetto per "
-                      f"{sess.nome_cliente(info['chiave'])}, ma il totale è {fmt_chf(total)} "
-                      f"mentre il pacchetto costa {attesi}. "
-                      f"Controlla la quantità e il prezzo: per un pacchetto da "
-                      f"{sess.cliente(info['chiave'])['crediti']} crediti la quantità di solito "
-                      f"non è 1. Se invece il prezzo è cambiato davvero, dimmelo e aggiorno l'app.")
+            avviso = lng.t(
+                '⚠️ Crediti NON aggiornati. Questa sembra una fattura-pacchetto per '
+                '{chi}, ma il totale è {tot} mentre il pacchetto costa {attesi}. '
+                'Controlla la quantità e il prezzo: per un pacchetto da {crediti} '
+                'crediti la quantità di solito non è 1. Se invece il prezzo è cambiato '
+                'davvero, aggiornalo nella scheda del cliente a crediti.', lg).format(
+                    chi=sess.nome_cliente(info['chiave']), tot=fmt_chf(total),
+                    attesi=attesi, crediti=sess.cliente(info['chiave'])['crediti'])
         elif info['ha_crediti']:
-            msg += (' 🎟️ Crediti invariati: questa fattura non compra un pacchetto '
-                    'di sessioni.')
+            msg += lng.t(' 🎟️ Crediti invariati: questa fattura non compra un '
+                         'pacchetto di sessioni.', lg)
     except Exception as e:
         err_logger.error('Aggancio crediti fallito per #%s: %s', number, e)
-        avviso = ('Non sono riuscito ad aggiornare i crediti per questa fattura: '
-                  'controlla la pagina Crediti.')
+        avviso = lng.t('Non sono riuscito ad aggiornare i crediti per questa '
+                       'fattura: controlla la pagina Crediti.', lg)
     # --- copia fuori dal Mac: una fattura appena fatta non deve stare in un
     # posto solo nemmeno per un minuto ---
     esito = backup.archivia_fuori(_cartella_backup(), motivo=f'fattura-{number}')
     if not esito['ok']:
         err_logger.error('Backup esterno fallito dopo #%s: %s', number, esito['errore'])
-        flash('La fattura è salvata, ma la copia di sicurezza fuori dal Mac non è '
-              'riuscita: ' + esito['errore'] + ' — controlla in Impostazioni.', 'error')
+        avvisa('La fattura è salvata, ma la copia di sicurezza fuori dal Mac non è '
+               'riuscita: {guaio} — controlla in Impostazioni.', 'error',
+               guaio=esito['errore'])
     flash(msg, 'ok')
     if avviso:
         flash(avviso, 'error')
@@ -585,6 +599,27 @@ def _percorsi_extra(con, ids, settings):
 PAUSA_MINUTI = 20
 
 
+def _lingua_app():
+    """La lingua scelta, letta una volta sola per ogni richiesta."""
+    if not hasattr(g, 'lingua_app'):
+        con = get_con()
+        g.lingua_app = lng.normalizza(db.get_settings(con).get('lingua'))
+        con.close()
+    return g.lingua_app
+
+
+def avvisa(frase, categoria='ok', **valori):
+    """Un messaggio in cima alla pagina, nella lingua dell'app.
+
+    La frase italiana e' la chiave del dizionario, e i pezzi che cambiano
+    (numeri, nomi, importi) arrivano a parte invece che gia' incollati
+    dentro: una frase composta a pezzi non si potrebbe tradurre, perche'
+    ogni lingua mette le parole in un ordine suo.
+    """
+    testo = lng.t(frase, _lingua_app())
+    flash(testo.format(**valori) if valori else testo, categoria)
+
+
 def _pausa_smtp(settings):
     """Dopo due password sbagliate l'app smette di provare per un po'.
 
@@ -617,9 +652,11 @@ def _conta_fallimento(con, codice, errore):
     if n >= 2:
         fino = datetime.datetime.now() + datetime.timedelta(minutes=PAUSA_MINUTI)
         db.set_setting(con, 'smtp_pausa_fino', fino.isoformat(timespec='seconds'))
-        return (errore + f' È il {n}° rifiuto: non provo più per {PAUSA_MINUTI} minuti, '
-                'altrimenti il server blocca il tuo indirizzo IP. Correggi la password '
-                'in Impostazioni — salvarla toglie la pausa.')
+        return errore + lng.t(
+            ' È il {n}° rifiuto: non provo più per {minuti} minuti, altrimenti il '
+            'server blocca il tuo indirizzo IP. Correggi la password in Impostazioni '
+            '— salvarla toglie la pausa.',
+            _lingua_app()).format(n=n, minuti=PAUSA_MINUTI)
     return errore
 
 
@@ -719,8 +756,8 @@ def fattura_email(inv_id):
             con.close()
             return pagina()
         if msg['problemi']:
-            flash("Non mando niente finché c'è un problema aperto: " + ' '.join(msg['problemi']),
-                  'error')
+            avvisa("Non mando niente finché c'è un problema aperto: {guai}", 'error',
+                   guai=' '.join(msg['problemi']))
             con.close()
             return pagina()
         destinatario = (settings.get('email_test_to') or settings.get('smtp_user')) \
@@ -735,7 +772,8 @@ def fattura_email(inv_id):
                             allegati=allegati, prova=1 if azione == 'prova' else 0,
                             esito='errore', motivo=mailer._nascondi(errore, settings),
                             **_intestazioni(msg, settings, destinatario))
-            flash('Non è partita: ' + _conta_fallimento(con, codice, errore), 'error')
+            avvisa('Non è partita: {guaio}', 'error',
+                   guaio=_conta_fallimento(con, codice, errore))
             con.close()
             return pagina()
         db.set_setting(con, 'smtp_fallimenti', '0')
@@ -749,8 +787,8 @@ def fattura_email(inv_id):
                 db.set_setting(con, 'imap_cartella', cartella)
         else:
             err_logger.error('Copia in Inviata fallita per #%s: %s', inv['number'], perche)
-            flash('La mail è partita, ma non sono riuscito a metterne una copia in '
-                  'Inviata: ' + perche, 'error')
+            avvisa('La mail è partita, ma non sono riuscito a metterne una copia in '
+                   'Inviata: {guaio}', 'error', guaio=perche)
         _registra_email(con, destinatario=destinatario or msg['to'],
                         oggetto=msg['subject'], fatture=numeri, invoice_id=inv_id,
                         allegati=allegati, prova=1 if azione == 'prova' else 0,
@@ -758,9 +796,10 @@ def fattura_email(inv_id):
                         motivo='' if copiata else 'copia in Inviata non riuscita: ' + perche,
                         **_intestazioni(msg, settings, destinatario))
         if azione == 'prova':
-            dove = (f' e ne trovi la copia in «{cartella}»' if copiata else '')
-            flash(f"Prova inviata a {destinatario}{dove}. Guarda com'è arrivata prima "
-                  'di mandarla al cliente.', 'ok')
+            dove = (lng.t(' e ne trovi la copia in «{cartella}»',
+                          _lingua_app()).format(cartella=cartella) if copiata else '')
+            avvisa("Prova inviata a {a}{dove}. Guarda com'è arrivata prima di mandarla "
+                   'al cliente.', 'ok', a=destinatario, dove=dove)
             con.close()
             return pagina()
         adesso = datetime.datetime.now().isoformat(timespec='seconds')
@@ -769,9 +808,11 @@ def fattura_email(inv_id):
         con.commit()
         con.close()
         quante = 1 + len(scelte)
-        quando = datetime.datetime.now().strftime('%d.%m.%Y alle %H:%M')
-        flash(f"{'Fattura inviata' if quante == 1 else str(quante) + ' fatture inviate'} "
-              f"a {msg['to']} il {quando}.", 'ok')
+        adesso_it = datetime.datetime.now()
+        avvisa('Fattura inviata a {a} il {data} alle {ora}.' if quante == 1
+               else '{quante} fatture inviate a {a} il {data} alle {ora}.', 'ok',
+               quante=quante, a=msg['to'], data=adesso_it.strftime('%d.%m.%Y'),
+               ora=adesso_it.strftime('%H:%M'))
         return redirect(url_for('fattura', inv_id=inv_id))
 
     con.close()
@@ -785,7 +826,7 @@ def elimina(inv_id):
     if not inv:
         abort(404)
     if inv['source'] != 'app':
-        flash('Le fatture importate dallo storico non si possono eliminare da qui.', 'error')
+        avvisa('Le fatture importate dallo storico non si possono eliminare da qui.', 'error')
         con.close()
         return redirect(url_for('fattura', inv_id=inv_id))
     # backup del database PRIMA di toccare qualsiasi cosa
@@ -803,8 +844,8 @@ def elimina(inv_id):
                 (db.now_iso(), (request.form.get('motivo') or '').strip(), inv_id))
     con.commit()
     con.close()
-    flash(f"Fattura #{inv['number']} spostata nel Cestino. "
-          "Nulla è andato perso: puoi ripristinarla dalla pagina Cestino.", 'ok')
+    avvisa('Fattura #{n} spostata nel Cestino. Nulla è andato perso: puoi '
+           'ripristinarla dalla pagina Cestino.', 'ok', n=inv['number'])
     return redirect(url_for('fatture'))
 
 
@@ -842,7 +883,8 @@ def cestino_ripristina(inv_id):
     con.execute('UPDATE invoices SET deleted_at=NULL, deleted_reason="" WHERE id=?', (inv_id,))
     con.commit()
     con.close()
-    flash(f"Fattura #{inv['number']} ripristinata ({restored} file rimessi al loro posto).", 'ok')
+    avvisa('Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).', 'ok',
+           n=inv['number'], quanti=restored)
     return redirect(url_for('fattura', inv_id=inv_id))
 
 
@@ -872,19 +914,20 @@ def cliente_salva(cid):
     # 'tono' c'era nel modulo ma non qui: il menu «come ti firmi» si poteva
     # cambiare e non veniva mai salvato
     con.execute('UPDATE clients SET name=?, address1=?, address2=?, file_label=?, notes=?, '
-                'email=?, tono=?, paga_come=?, intestatario=?, abbonamento=?, '
+                'email=?, tono=?, lingua=?, paga_come=?, intestatario=?, abbonamento=?, '
                 'archived=? WHERE id=?',
                 (f.get('name', '').strip(), f.get('address1', '').strip(),
                  f.get('address2', '').strip(), f.get('file_label', '').strip(),
                  f.get('notes', '').strip(), f.get('email', '').strip(),
                  'formale' if f.get('tono') == 'formale' else 'informale',
+                 lng.normalizza_doc(f.get('lingua')),
                  f.get('paga_come', '').strip(),
                  f.get('intestatario', '').strip(),
                  1 if f.get('abbonamento') else 0,
                  1 if f.get('archived') else 0, cid))
     con.commit()
     con.close()
-    flash('Cliente aggiornato.', 'ok')
+    avvisa('Cliente aggiornato.', 'ok')
     return redirect(url_for('clienti'))
 
 
@@ -893,7 +936,7 @@ def cliente_nuovo():
     f = request.form
     name = f.get('name', '').strip()
     if not name:
-        flash('Nome mancante.', 'error')
+        avvisa('Nome mancante.', 'error')
         return redirect(url_for('clienti'))
     key = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
     con = get_con()
@@ -903,7 +946,7 @@ def cliente_nuovo():
                  f.get('file_label', '').strip() or name, f.get('email', '').strip()))
     con.commit()
     con.close()
-    flash(f'Cliente "{name}" aggiunto.', 'ok')
+    avvisa('Cliente «{nome}» aggiunto.', 'ok', nome=name)
     return redirect(url_for('clienti'))
 
 
@@ -927,10 +970,13 @@ def commercialista_genera():
     settings = db.get_settings(con)
     res = exports.build_package(con, year, settings, settings['source_folder'])
     con.close()
-    msg = (f"Pacchetto {year} pronto: Excel + PDF riepilogo + {res['copied']} fatture PDF. "
-           f"Zip: {os.path.basename(res['zip'])}")
+    lg = _lingua_app()
+    msg = lng.t('Pacchetto {anno} pronto: Excel + PDF riepilogo + {quante} fatture '
+                'PDF. Zip: {zip}', lg).format(anno=year, quante=res['copied'],
+                                              zip=os.path.basename(res['zip']))
     if res['missing']:
-        msg += f" — PDF non trovati per: {', '.join(res['missing'][:6])}"
+        msg += lng.t(' — PDF non trovati per: {elenco}', lg).format(
+            elenco=', '.join(res['missing'][:6]))
     flash(msg, 'ok')
     subprocess.Popen(['open', res['folder']])
     return redirect(url_for('commercialista'))
@@ -1004,14 +1050,14 @@ def _sincronizza_calendario(forzata=False):
 def crediti_sincronizza():
     esito, dettaglio = _sincronizza_calendario(forzata=True)
     if esito == 'spento':
-        flash("Manca l'indirizzo iCal del calendario: si incolla in Impostazioni.", 'error')
+        avvisa("Manca l'indirizzo iCal del calendario: si incolla in Impostazioni.", 'error')
     elif esito == 'errore':
-        flash('Il calendario non risponde: ' + dettaglio + ' — i crediti qui sotto sono '
-              "quelli dell'ultima lettura riuscita.", 'error')
+        avvisa('Il calendario non risponde: {guaio} — i crediti qui sotto sono quelli '
+               "dell'ultima lettura riuscita.", 'error', guaio=dettaglio)
     elif dettaglio:
-        flash('Sessioni nuove registrate: ' + dettaglio, 'ok')
+        avvisa('Sessioni nuove registrate: {dettaglio}', 'ok', dettaglio=dettaglio)
     else:
-        flash('Calendario letto: nessuna sessione nuova.', 'ok')
+        avvisa('Calendario letto: nessuna sessione nuova.', 'ok')
     return redirect(url_for('crediti'))
 
 
@@ -1076,12 +1122,12 @@ def crediti_cliente_salva():
     chiave = sess.chiave_da_nome(f.get('chiave') or f.get('nome'))
     nome = (f.get('nome') or '').strip()
     if not chiave or not nome:
-        flash('Servono almeno il nome e la parola da cercare nel calendario.', 'error')
+        avvisa('Servono almeno il nome e la parola da cercare nel calendario.', 'error')
         return redirect(url_for('crediti_clienti'))
     try:
         crediti = max(0, int(f.get('crediti') or 0))
     except ValueError:
-        flash('I crediti devono essere un numero.', 'error')
+        avvisa('I crediti devono essere un numero.', 'error')
         return redirect(url_for('crediti_clienti'))
     con = get_con()
     esistenti = {r['chiave']: r for r in db.crediti_clienti(con)}
@@ -1091,7 +1137,8 @@ def crediti_cliente_salva():
         compagno = ''                       # non puo' essere il supplemento di se stesso
     if compagno and compagno not in esistenti:
         con.close()
-        flash(f'«{compagno}» non è fra i clienti a crediti: aggiungilo prima.', 'error')
+        avvisa('«{chi}» non è fra i clienti a crediti: aggiungilo prima.', 'error',
+               chi=compagno)
         return redirect(url_for('crediti_clienti'))
     db.crediti_cliente_salva(con, chiave, {
         'nome': nome,
@@ -1105,8 +1152,8 @@ def crediti_cliente_salva():
     })
     con.close()
     sess.ricarica()          # l'app deve accorgersene subito
-    flash(f'{nome} è ora fra i clienti a crediti.' if nuovo
-          else f'Modifiche salvate per {nome}.', 'ok')
+    avvisa('{nome} è ora fra i clienti a crediti.' if nuovo
+           else 'Modifiche salvate per {nome}.', 'ok', nome=nome)
     return redirect(url_for('crediti_clienti'))
 
 
@@ -1125,14 +1172,18 @@ def crediti_cliente_elimina(chiave):
         db.crediti_cliente_salva(con, chiave, dict(riga, attivo=0))
         con.close()
         sess.ricarica()
-        flash(f"{riga['nome']} ha {quanti} pacchett{'o' if quanti == 1 else 'i'} nel registro: "
-              "cancellare la scheda perderebbe quella storia. L'ho archiviata — il nome "
-              'resta riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.', 'ok')
+        avvisa(('{nome} ha {quanti} pacchetto nel registro: cancellare la scheda '
+                "perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto "
+                'nel calendario, ma non si aprono più pacchetti nuovi.') if quanti == 1
+               else ('{nome} ha {quanti} pacchetti nel registro: cancellare la scheda '
+                     "perderebbe quella storia. L'ho archiviata — il nome resta "
+                     'riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.'),
+               'ok', nome=riga['nome'], quanti=quanti)
         return redirect(url_for('crediti_clienti'))
     db.crediti_cliente_elimina(con, chiave)
     con.close()
     sess.ricarica()
-    flash(f"{riga['nome']} non è più fra i clienti a crediti.", 'ok')
+    avvisa('{nome} non è più fra i clienti a crediti.', 'ok', nome=riga['nome'])
     return redirect(url_for('crediti_clienti'))
 
 
@@ -1179,11 +1230,15 @@ def banca_pagina():
     movimenti, problemi, fatti = _leggi_banca(con)
     if fatti:
         quali = ' · '.join(f"#{x['numero']} {x['cliente'].split()[0]}" for x in fatti[:6])
-        extra = f" e altri {len(fatti) - 6}" if len(fatti) > 6 else ''
-        flash(f"Ho collegato da solo {len(fatti)} "
-              f"{'versamento' if len(fatti) == 1 else 'versamenti'}, quelli su cui non "
-              f'c\'era niente da decidere: {quali}{extra}. Li trovi qui sotto marcati '
-              "«collegato dall'app»: se sbaglio, Annulla.", 'ok')
+        extra = (lng.t(' e altri {n}', _lingua_app()).format(n=len(fatti) - 6)
+                 if len(fatti) > 6 else '')
+        avvisa(("Ho collegato da solo {quanti} versamento, quello su cui non c'era "
+                'niente da decidere: {quali}{extra}. Lo trovi qui sotto marcato '
+                "«collegato dall'app»: se sbaglio, Annulla.") if len(fatti) == 1
+               else ("Ho collegato da solo {quanti} versamenti, quelli su cui non c'era "
+                     'niente da decidere: {quali}{extra}. Li trovi qui sotto marcati '
+                     "«collegato dall'app»: se sbaglio, Annulla."),
+               'ok', quanti=len(fatti), quali=quali, extra=extra)
     prop = banca.proposte(con, movimenti)
     con.close()
     da_decidere = [p for p in prop if not p['deciso']]
@@ -1203,7 +1258,7 @@ def banca_collega():
     con = get_con()
     m = next((x for x in banca.leggi_cartella()[0] if x['impronta'] == impronta), None)
     if m is None:
-        flash('Quel versamento non è più nei file della cartella.', 'error')
+        avvisa('Quel versamento non è più nei file della cartella.', 'error')
         con.close()
         return redirect(url_for('banca_pagina'))
 
@@ -1215,7 +1270,7 @@ def banca_collega():
                     (impronta, m['data'], m['importo_cents'], m['descrizione'],
                      m['file'], 'ignorato', adesso))
         con.commit()
-        flash('Versamento messo da parte: non è una fattura.', 'ok')
+        avvisa('Versamento messo da parte: non è una fattura.', 'ok')
     elif azione == 'annulla':
         r = con.execute('SELECT invoice_id, invoice_ids, stato_prima FROM movimenti '
                         'WHERE impronta=?', (impronta,)).fetchone()
@@ -1230,7 +1285,7 @@ def banca_collega():
                             (prima[n_] if n_ < len(prima) and prima[n_] else 'emessa', i))
         con.execute('DELETE FROM movimenti WHERE impronta=?', (impronta,))
         con.commit()
-        flash('Collegamento annullato. Il versamento torna fra quelli da decidere.', 'ok')
+        avvisa('Collegamento annullato. Il versamento torna fra quelli da decidere.', 'ok')
     else:
         # un bonifico puo' pagare piu' fatture insieme
         ids = [int(x) for x in (request.form.get('invoice_ids') or '').split(',')
@@ -1257,19 +1312,20 @@ def banca_collega():
                         elenco = ' · '.join(
                             f"{t['client_name']} del {t['date']} ({t['total_cents'] / 100:.2f})"
                             for t in trovate)
-                        flash(f'Il numero {n_} è su più di una fattura e dalla causale non '
-                              f'capisco quale: {elenco}. Rinumerane una e riprova.', 'error')
+                        avvisa('Il numero {n} è su più di una fattura e dalla causale '
+                               'non capisco quale: {elenco}. Rinumerane una e riprova.',
+                               'error', n=n_, elenco=elenco)
                         con.close()
                         return redirect(url_for('banca_pagina'))
                     trovate = suoi
                 if not trovate:
-                    flash(f'La fattura numero {n_} non esiste.', 'error')
+                    avvisa('La fattura numero {n} non esiste.', 'error', n=n_)
                     con.close()
                     return redirect(url_for('banca_pagina'))
                 fatture.append(trovate[0])
 
         if not fatture:
-            flash('Fattura non trovata.', 'error')
+            avvisa('Fattura non trovata.', 'error')
             con.close()
             return redirect(url_for('banca_pagina'))
 
@@ -1277,10 +1333,12 @@ def banca_collega():
         if totale != m['importo_cents'] and not request.form.get('accetta_differenza'):
             differenza = (m['importo_cents'] - totale) / 100
             quali = ', '.join(f"#{f['number']}" for f in fatture)
-            flash(f'Attenzione: {quali} fa {totale / 100:.2f} ma il versamento è di '
-                  f"{m['importo_cents'] / 100:.2f} ({differenza:+.2f}). Non ho collegato "
-                  'niente. Se è giusto lo stesso, rimetti i numeri e spunta la casella.',
-                  'error')
+            avvisa('Attenzione: {quali} fa {somma} ma il versamento è di {importo} '
+                   '({differenza}). Non ho collegato niente. Se è giusto lo stesso, '
+                   'rimetti i numeri e spunta la casella.', 'error',
+                   quali=quali, somma=f'{totale / 100:.2f}',
+                   importo=f"{m['importo_cents'] / 100:.2f}",
+                   differenza=f'{differenza:+.2f}')
             con.close()
             return redirect(url_for('banca_pagina'))
         for f in fatture:
@@ -1296,8 +1354,9 @@ def banca_collega():
         con.commit()
         quali = ', '.join(f"#{f['number']}" for f in fatture)
         quando = datetime.date.fromisoformat(m['data']).strftime('%d.%m.%Y')
-        flash(f"{'Fattura' if len(fatture) == 1 else 'Fatture'} {quali} "
-              f"{'segnata' if len(fatture) == 1 else 'segnate'} pagate il {quando}.", 'ok')
+        avvisa('Fattura {quali} segnata pagata il {data}.' if len(fatture) == 1
+               else 'Fatture {quali} segnate pagate il {data}.', 'ok',
+               quali=quali, data=quando)
     con.close()
     return redirect(url_for('banca_pagina'))
 
@@ -1373,11 +1432,12 @@ def agenda_orari():
     if errori:
         for e in errori:
             err_logger.error('Lettura orari fallita: %s', e)
-        flash('Un calendario non ha risposto: ' + ' · '.join(errori), 'error')
+        avvisa('Un calendario non ha risposto: {guaio}', 'error',
+               guaio=' · '.join(errori))
     if nuovi:
-        flash(f'Orari trovati: {nuovi}.', 'ok')
+        avvisa('Orari trovati: {quanti}.', 'ok', quanti=nuovi)
     elif not errori:
-        flash('Nessun orario nuovo: il calendario non sa altro di quei giorni.', 'ok')
+        avvisa('Nessun orario nuovo: il calendario non sa altro di quei giorni.', 'ok')
     return redirect(url_for('agenda', **request.args.to_dict()))
 
 
@@ -1403,25 +1463,26 @@ def crediti_collega():
     pid = request.form.get('pacchetto', '')
     numero = request.form.get('numero', type=int)
     if not numero:
-        flash('Indica il numero della fattura.', 'error')
+        avvisa('Indica il numero della fattura.', 'error')
         return redirect(url_for('crediti'))
     con = get_con()
     inv = con.execute('SELECT * FROM invoices WHERE number=? AND deleted_at IS NULL',
                       (numero,)).fetchone()
     con.close()
     if not inv:
-        flash(f'Non esiste una fattura #{numero}.', 'error')
+        avvisa('Non esiste una fattura #{n}.', 'error', n=numero)
         return redirect(url_for('crediti'))
     reg = sess.carica()
     try:
         p, _ = sess.collega_fattura(reg, pid, numero)
     except KeyError:
-        flash('Pacchetto inesistente.', 'error')
+        avvisa('Pacchetto inesistente.', 'error')
         return redirect(url_for('crediti'))
     sess.salva(reg)
-    flash(f"Pacchetto {pid} collegato alla fattura #{numero} ({inv['client_name']}): "
-          f"{len(p.get('sessioni', []))} sessioni marcate. "
-          "Il prossimo pacchetto si apre da solo alla prima sessione nuova.", 'ok')
+    avvisa('Pacchetto {pid} collegato alla fattura #{n} ({cliente}): {quante} sessioni '
+           'marcate. Il prossimo pacchetto si apre da solo alla prima sessione nuova.',
+           'ok', pid=pid, n=numero, cliente=inv['client_name'],
+           quante=len(p.get('sessioni', [])))
     return redirect(url_for('crediti'))
 
 
@@ -1448,7 +1509,7 @@ def controlli_correggi():
     inv = con.execute('SELECT * FROM invoices WHERE id=?', (inv_id,)).fetchone()
     if not inv:
         con.close()
-        flash('Fattura non trovata.', 'error')
+        avvisa('Fattura non trovata.', 'error')
         return redirect(url_for('controlli'))
 
     importo_raw = (request.form.get('importo') or '').strip()
@@ -1458,8 +1519,8 @@ def controlli_correggi():
         total_cents = parse_amount(importo_raw)
         if total_cents is None:
             con.close()
-            flash(f'Importo "{importo_raw}" non riconosciuto. Scrivilo come 1\'800.- '
-                  'oppure 1800.00 e riprova.', 'error')
+            avvisa('Importo «{cosa}» non riconosciuto. Scrivilo come 1’800.- oppure '
+                   '1800.00 e riprova.', 'error', cosa=importo_raw)
             return redirect(url_for('controlli'))
     date_iso = None
     if data_raw:
@@ -1467,12 +1528,12 @@ def controlli_correggi():
             date_iso = datetime.date.fromisoformat(data_raw).isoformat()
         except ValueError:
             con.close()
-            flash('Data non valida.', 'error')
+            avvisa('Data non valida.', 'error')
             return redirect(url_for('controlli'))
 
     if total_cents is None and date_iso is None:
         con.close()
-        flash('Non hai inserito nulla da correggere.', 'error')
+        avvisa('Non hai inserito nulla da correggere.', 'error')
         return redirect(url_for('controlli'))
 
     corrections.save_correction(con, inv, total_cents, date_iso,
@@ -1483,8 +1544,9 @@ def controlli_correggi():
         parts.append(f'importo {fmt_chf(total_cents)}')
     if date_iso:
         parts.append(f'data {fmt_date_it(date_iso)}')
-    flash(f"Corretta la fattura #{inv['number'] or '—'} ({inv['client_name']}): "
-          + ', '.join(parts) + '. La correzione resta anche dopo un Reimporta.', 'ok')
+    avvisa('Corretta la fattura #{n} ({cliente}): {cosa}. La correzione resta anche '
+           'dopo un Reimporta.', 'ok', n=inv['number'] or '—',
+           cliente=inv['client_name'], cosa=', '.join(parts))
     return redirect(url_for('controlli'))
 
 
@@ -1498,7 +1560,7 @@ def controlli_annulla_correzione():
     if os.path.isdir(settings['source_folder']):
         importer.import_all(con, settings['source_folder'])
     con.close()
-    flash('Correzione annullata: il dato è tornato come nel file di origine.', 'ok')
+    avvisa('Correzione annullata: il dato è tornato come nel file di origine.', 'ok')
     return redirect(url_for('controlli'))
 
 
@@ -1511,7 +1573,7 @@ def controlli_archivia():
                             request.form.get('msg', ''),
                             (request.form.get('nota') or '').strip())
     con.close()
-    flash('Anomalia archiviata. La trovi in fondo alla pagina se ti serve rivederla.', 'ok')
+    avvisa('Anomalia archiviata. La trovi in fondo alla pagina se ti serve rivederla.', 'ok')
     return redirect(url_for('controlli'))
 
 
@@ -1520,7 +1582,7 @@ def controlli_ripristina():
     con = get_con()
     corrections.unacknowledge(con, request.form.get('key', ''))
     con.close()
-    flash('Anomalia ripristinata: torna nell\'elenco dei controlli.', 'ok')
+    avvisa('Anomalia ripristinata: torna nell\'elenco dei controlli.', 'ok')
     return redirect(url_for('controlli'))
 
 
@@ -1563,7 +1625,7 @@ def reimporta():
     settings = db.get_settings(con)
     msgs = importer.import_all(con, settings['source_folder'])
     con.close()
-    flash('Reimport completato: ' + ' • '.join(msgs), 'ok')
+    avvisa('Reimport completato: {dettaglio}', 'ok', dettaglio=' • '.join(msgs))
     return redirect(url_for('controlli'))
 
 
@@ -1619,7 +1681,7 @@ def impostazioni():
             else:
                 valore = valore.strip()
             db.set_setting(con, k, valore)
-        flash('Impostazioni salvate.', 'ok')
+        avvisa('Impostazioni salvate.', 'ok')
         con.close()
         return redirect(url_for('impostazioni'))
     settings = db.get_settings(con)
@@ -1637,18 +1699,18 @@ def impostazioni_logo():
     file = request.files.get('logo')
     errore = marchio.salva(file.read() if file else b'')
     if errore:
-        flash(errore, 'error')
+        avvisa(errore[0], 'error', **errore[1])
     else:
-        flash('Logo aggiornato. Lo trovi sulle prossime fatture, in PDF e in Word.', 'ok')
+        avvisa('Logo aggiornato. Lo trovi sulle prossime fatture, in PDF e in Word.', 'ok')
     return redirect(url_for('impostazioni'))
 
 
 @app.route('/impostazioni/logo/rimuovi', methods=['POST'])
 def impostazioni_logo_rimuovi():
     if marchio.rimuovi():
-        flash('Logo rimosso: al suo posto torna il segnaposto.', 'ok')
+        avvisa('Logo rimosso: al suo posto torna il segnaposto.', 'ok')
     else:
-        flash('Non c\'era nessun logo da rimuovere.', 'error')
+        avvisa('Non c\'era nessun logo da rimuovere.', 'error')
     return redirect(url_for('impostazioni'))
 
 
@@ -1657,21 +1719,23 @@ def backup_ora():
     dest = _cartella_backup()
     esito = backup.archivia_fuori(dest, motivo='a-richiesta')
     if esito['ok']:
-        flash(f"Copia creata e verificata: {os.path.basename(esito['path'])} "
-              f"({esito['bytes'] // 1024} KB). Il database dentro l'archivio è integro.", 'ok')
+        avvisa('Copia creata e verificata: {file} ({kb} KB). Il database dentro '
+               "l'archivio è integro.", 'ok',
+               file=os.path.basename(esito['path']), kb=esito['bytes'] // 1024)
     else:
-        flash('Copia NON riuscita: ' + esito['errore'], 'error')
+        avvisa('Copia NON riuscita: {guaio}', 'error', guaio=esito['errore'])
     con = get_con()
     sorgente = db.get_settings(con)['source_folder']
     con.close()
     st = backup.archivia_storico(sorgente, dest)
     if st['ok'] and st['saltato']:
-        flash(f"Storico ({st['file']} documenti): invariato dall'ultima copia, "
-              'non ne serviva una nuova.', 'ok')
+        avvisa("Storico ({quanti} documenti): invariato dall'ultima copia, non ne "
+               'serviva una nuova.', 'ok', quanti=st['file'])
     elif st['ok']:
-        flash(f"Storico copiato: {os.path.basename(st['path'])} — {st['file']} documenti.", 'ok')
+        avvisa('Storico copiato: {file} — {quanti} documenti.', 'ok',
+               file=os.path.basename(st['path']), quanti=st['file'])
     else:
-        flash('Copia dello storico NON riuscita: ' + st['errore'], 'error')
+        avvisa('Copia dello storico NON riuscita: {guaio}', 'error', guaio=st['errore'])
     return redirect(url_for('impostazioni'))
 
 
