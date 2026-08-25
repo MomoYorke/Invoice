@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Cestino{% endblock %}
+{% block title %}{{ _('Cestino') }}{% endblock %}
 {% block content %}
-<h1>Cestino e backup</h1>
-<p class="sub">Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano
-   con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.</p>
+<h1>{{ _('Cestino e backup') }}</h1>
+<p class="sub">{{ _('Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.') }}</p>
 
 <div class="panel">
-  <h2>Fatture nel Cestino</h2>
+  <h2>{{ _('Fatture nel Cestino') }}</h2>
   {% if rows %}
   <table>
-    <tr><th>Nr.</th><th>Cliente</th><th>Data</th><th class="num">Importo</th><th>Eliminata il</th><th></th></tr>
+    <tr><th>{{ _('Nr.') }}</th><th>{{ _('Cliente') }}</th><th>{{ _('Data') }}</th><th class="num">{{ _('Importo') }}</th><th>{{ _('Eliminata il') }}</th><th></th></tr>
     {% for r in rows %}
     <tr>
       <td><strong>#{{ r.number or '—' }}</strong></td>
@@ -21,42 +20,40 @@
       <td class="muted">{{ r.deleted_at }}</td>
       <td class="right">
         <form method="post" action="{{ url_for('cestino_ripristina', inv_id=r.id) }}">
-          <button class="btn small">↩︎ Ripristina</button>
+          <button class="btn small">↩︎ {{ _('Ripristina') }}</button>
         </form>
       </td>
     </tr>
     {% endfor %}
   </table>
   <p class="muted" style="font-size:12.5px;margin-top:10px">
-    Il numero di una fattura nel Cestino resta <strong>riservato</strong>: non può essere
-    riassegnato a un'altra fattura per sbaglio.</p>
+    {{ _('Il numero di una fattura nel Cestino resta <strong>riservato</strong>: non può essere riassegnato a un’altra fattura per sbaglio.') | safe }}</p>
   {% else %}
-  <div class="flash ok">Il Cestino è vuoto: nessuna fattura eliminata.</div>
+  <div class="flash ok">{{ _('Il Cestino è vuoto: nessuna fattura eliminata.') }}</div>
   {% endif %}
 </div>
 
 <div class="panel">
-  <h2>Backup automatici del database <span class="muted" style="font-weight:400;font-size:13px">({{ n_backups }} salvati)</span></h2>
+  <h2>{{ _('Backup automatici del database') }} <span class="muted" style="font-weight:400;font-size:13px">({{ _('{n} salvati').format(n=n_backups) }})</span></h2>
   <p class="muted" style="margin-top:-6px">
-    Una copia viene creata da sola a ogni avvio dell'app e <strong>prima</strong> di ogni
-    eliminazione o reimport. Vengono conservate le ultime 40.</p>
+    {{ _('Una copia viene creata da sola a ogni avvio dell’app e <strong>prima</strong> di ogni eliminazione o reimport. Vengono conservate le ultime 40.') | safe }}</p>
   {% if backups %}
   <table>
-    <tr><th>Quando</th><th>Motivo</th><th class="num">Dimensione</th></tr>
+    <tr><th>{{ _('Quando') }}</th><th>{{ _('Motivo') }}</th><th class="num">{{ _('Dimensione') }}</th></tr>
     {% for b in backups %}
     <tr>
       <td>{{ b.when.strftime('%d.%m.%Y %H:%M:%S') }}</td>
-      <td class="muted">{{ b.reason or '—' }}</td>
+      <td class="muted">{{ b.motivo or '—' }}</td>
       <td class="num muted">{{ (b.size / 1024) | round | int }} KB</td>
     </tr>
     {% endfor %}
   </table>
   {% else %}
-  <p class="muted">Nessun backup ancora: ne verrà creato uno al prossimo avvio.</p>
+  <p class="muted">{{ _('Nessun backup ancora: ne verrà creato uno al prossimo avvio.') }}</p>
   {% endif %}
   <form method="post" action="{{ url_for('apri_cartella') }}" class="mt">
     <input type="hidden" name="path" value="{{ trash_dir }}">
-    <button class="btn small secondary">Apri la cartella Cestino nel Finder</button>
+    <button class="btn small secondary">{{ _('Apri la cartella Cestino nel Finder') }}</button>
   </form>
 </div>
 {% endblock %}

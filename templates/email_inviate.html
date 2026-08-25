@@ -1,47 +1,46 @@
 {% extends 'base.html' %}
-{% block title %}Email inviate{% endblock %}
+{% block title %}{{ _('Email inviate') }}{% endblock %}
 {% block content %}
-<h1>Email inviate</h1>
-<p class="sub">Tutto quello che è partito dall'app: le fatture ai clienti, le prove su di te
-   e anche i tentativi andati storti.</p>
+<h1>{{ _('Email inviate') }}</h1>
+<p class="sub">{{ _('Tutto quello che è partito dall’app: le fatture ai clienti, le prove su di te e anche i tentativi andati storti.') }}</p>
 
 <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn small {{ '' if solo else 'secondary' }}" href="{{ url_for('email_inviate') }}">Tutte ({{ conteggi.tutte }})</a>
-  <a class="btn small {{ '' if solo == 'clienti' else 'secondary' }}" href="{{ url_for('email_inviate', solo='clienti') }}">Ai clienti ({{ conteggi.clienti }})</a>
-  <a class="btn small {{ '' if solo == 'prove' else 'secondary' }}" href="{{ url_for('email_inviate', solo='prove') }}">Prove ({{ conteggi.prove }})</a>
+  <a class="btn small {{ '' if solo else 'secondary' }}" href="{{ url_for('email_inviate') }}">{{ _('Tutte ({n})').format(n=conteggi.tutte) }}</a>
+  <a class="btn small {{ '' if solo == 'clienti' else 'secondary' }}" href="{{ url_for('email_inviate', solo='clienti') }}">{{ _('Ai clienti ({n})').format(n=conteggi.clienti) }}</a>
+  <a class="btn small {{ '' if solo == 'prove' else 'secondary' }}" href="{{ url_for('email_inviate', solo='prove') }}">{{ _('Prove ({n})').format(n=conteggi.prove) }}</a>
   {% if conteggi.errori %}
-  <a class="btn small {{ '' if solo == 'errori' else 'secondary' }}" href="{{ url_for('email_inviate', solo='errori') }}">Non partite ({{ conteggi.errori }})</a>
+  <a class="btn small {{ '' if solo == 'errori' else 'secondary' }}" href="{{ url_for('email_inviate', solo='errori') }}">{{ _('Non partite ({n})').format(n=conteggi.errori) }}</a>
   {% endif %}
 </div>
 
 <div class="panel">
 <table>
-  <tr><th>Quando</th><th>A</th><th>Oggetto</th><th>Fattura</th><th>Allegati</th><th>Esito</th><th></th></tr>
+  <tr><th>{{ _('Quando') }}</th><th>{{ _('A') }}</th><th>{{ _('Oggetto') }}</th><th>{{ _('Fattura') }}</th><th>{{ _('Allegati') }}</th><th>{{ _('Esito') }}</th><th></th></tr>
   {% for e in righe %}
   <tr>
     <td style="white-space:nowrap">
       <a href="{{ url_for('email_letta', log_id=e.id) }}">
         <strong>{{ e.sent_at[:10] | dateit }}</strong>
         <span class="muted">{{ e.sent_at[11:16] }}</span></a></td>
-    <td>{{ e.destinatario }}{% if e.prova %} <span class="badge">prova</span>{% endif %}</td>
+    <td>{{ e.destinatario }}{% if e.prova %} <span class="badge">{{ _('prova') }}</span>{% endif %}</td>
     <td class="muted">{{ e.oggetto }}</td>
     <td>{% if e.invoice_id %}<a href="{{ url_for('fattura', inv_id=e.invoice_id) }}">
-          {{ '#' ~ e.fatture if e.fatture else 'apri' }}</a>{% else %}—{% endif %}</td>
+          {{ '#' ~ e.fatture if e.fatture else _('apri') }}</a>{% else %}—{% endif %}</td>
     <td class="muted" style="font-size:12px">{{ e.allegati or '—' }}</td>
     <td>
-      {% if e.esito == 'ok' %}<span class="badge pagata">partita</span>
-      {% else %}<span class="badge">non partita</span>{% endif %}
-      {% if e.cartella %}<span class="muted" style="font-size:11.5px"> · copia in «{{ e.cartella }}»</span>{% endif %}
+      {% if e.esito == 'ok' %}<span class="badge pagata">{{ _('partita') }}</span>
+      {% else %}<span class="badge">{{ _('non partita') }}</span>{% endif %}
+      {% if e.cartella %}<span class="muted" style="font-size:11.5px"> · {{ _('copia in «{dove}»').format(dove=e.cartella) }}</span>{% endif %}
     </td>
-    <td class="right"><a href="{{ url_for('email_letta', log_id=e.id) }}">leggi</a></td>
+    <td class="right"><a href="{{ url_for('email_letta', log_id=e.id) }}">{{ _('leggi') }}</a></td>
   </tr>
   {% if e.motivo %}
-  <tr><td></td><td colspan="6" class="muted" style="font-size:12px;padding-top:0">↳ {{ e.motivo }}</td></tr>
+  <tr><td></td><td colspan="6" class="muted" style="font-size:12px;padding-top:0">↳ {{ _(e.motivo) }}</td></tr>
   {% endif %}
   {% else %}
   <tr><td colspan="7" class="muted">
-    {% if solo %}Nessuna email con questo filtro.
-    {% else %}Ancora nessuna email partita dall'app. Le trovi qui appena ne mandi una.{% endif %}
+    {% if solo %}{{ _('Nessuna email con questo filtro.') }}
+    {% else %}{{ _('Ancora nessuna email partita dall’app. Le trovi qui appena ne mandi una.') }}{% endif %}
   </td></tr>
   {% endfor %}
 </table>
@@ -49,7 +48,6 @@
 
 {% if conteggi.tutte %}
 <p class="muted" style="font-size:12.5px;max-width:760px">
-  Questo elenco è il diario dell'app. Le mail vere restano dove sono sempre state: una copia
-  in «Inviata» sul server e una copia nascosta nella tua posta in arrivo.</p>
+  {{ _('Questo elenco è il diario dell’app. Le mail vere restano dove sono sempre state: una copia in «Inviata» sul server e una copia nascosta nella tua posta in arrivo.') }}</p>
 {% endif %}
 {% endblock %}

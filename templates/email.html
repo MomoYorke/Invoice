@@ -1,64 +1,63 @@
 {% extends 'base.html' %}
-{% block title %}Email fattura #{{ inv.number }}{% endblock %}
+{% block title %}{{ _('Email fattura #{n}').format(n=inv.number) }}{% endblock %}
 {% block content %}
-<h1>Manda la fattura #{{ inv.number }}</h1>
+<h1>{{ _('Manda la fattura #{n}').format(n=inv.number) }}</h1>
 <p class="sub">{{ inv.client_name }} — {{ inv.date | dateit }} — <span class="money">{{ inv.total_cents | chf }}</span></p>
 
 {% if msg.problemi %}
 <div class="panel" style="border-color:#f59e0b;background:#fffbeb;max-width:760px">
   {% for p in msg.problemi %}<p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }} {{ p }}</p>{% endfor %}
   <p class="muted" style="font-size:13px;margin-bottom:0">
-    Gli indirizzi si aggiungono dalla <a href="{{ url_for('clienti') }}">pagina Clienti</a>.</p>
+    {{ _('Gli indirizzi si aggiungono dalla {pagina}.').format(
+       pagina='<a href="%s">%s</a>' % (url_for('clienti'), _('pagina Clienti'))) | safe }}</p>
 </div>
 {% endif %}
 
 {% if inv.sent_at %}
 <div class="panel" style="border-color:#065f46;background:#ecfdf5;max-width:760px">
-  Questa fattura risulta <strong>già inviata</strong> il {{ inv.sent_at[:10] | dateit
-  }}{% if inv.sent_at|length > 10 %} alle {{ inv.sent_at[11:16] }}{% endif %}.
-  Puoi rimandarla, ma controlla di non fare un doppione.
+  {{ _('Questa fattura risulta <strong>già inviata</strong> il {data}{ora}.').format(
+     data=inv.sent_at[:10] | dateit,
+     ora=_(' alle {ora}').format(ora=inv.sent_at[11:16]) if inv.sent_at|length > 10 else '') | safe }}
+  {{ _('Puoi rimandarla, ma controlla di non fare un doppione.') }}
 </div>
 {% endif %}
 
 <form method="post" class="panel" style="max-width:760px">
   <div class="form-grid">
     <div>
-      <label>A</label>
+      <label>{{ _('A') }}</label>
       <input type="text" value="{{ msg.to or '—' }}" disabled>
     </div>
     <div>
-      <label>Da</label>
+      <label>{{ _('Da') }}</label>
       <input type="text" value="{{ settings.email_from }}" disabled>
     </div>
   </div>
 
-  <label>Oggetto</label>
+  <label>{{ _('Oggetto') }}</label>
   <input type="text" name="subject" id="oggetto" value="{{ msg.subject }}">
   <p class="muted" id="nota-mese" style="font-size:12px;margin:4px 0 0"
      {{ '' if msg.usa_mese else 'hidden' }}>
-    {% if msg.mese %}Mese <strong>{{ msg.mese }}</strong>, dedotto dalla fattura.
-    {% else %}{{ icona('avviso', 'ic-mini') }} Il mese non l'ho dedotto: sulla fattura non c'è scritto il periodo e non
-    c'è una mail precedente da cui ripartire. Scrivilo tu al posto di
-    <code>[{{ segnaposto_mese }}]</code> — la prossima volta lo saprò da solo.{% endif %}</p>
+    {% if msg.mese %}{{ _('Mese <strong>{mese}</strong>, dedotto dalla fattura.').format(mese=msg.mese) | safe }}
+    {% else %}{{ icona('avviso', 'ic-mini') }} {{ _('Il mese non l’ho dedotto: sulla fattura non c’è scritto il periodo e non c’è una mail precedente da cui ripartire. Scrivilo tu al posto di {segnaposto} — la prossima volta lo saprò da solo.').format(
+       segnaposto='<code>[%s]</code>' % segnaposto_mese) | safe }}{% endif %}</p>
 
   <div class="mt" style="background:var(--soft,#f8fafc);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
-    <label style="margin-bottom:6px">Modello</label>
+    <label style="margin-bottom:6px">{{ _('Modello') }}</label>
     {% for chiave, nome in modelli %}
     <label style="font-weight:400;display:inline-block;margin-right:16px">
       <input type="radio" name="modello" value="{{ chiave }}" style="width:auto"
              data-oggetto="{{ oggetti[chiave].subject }}"
              data-mese="{{ '1' if oggetti[chiave].usa_mese else '' }}"
-             {{ 'checked' if msg.modello == chiave }}> {{ nome }}
+             {{ 'checked' if msg.modello == chiave }}> {{ _(nome) }}
     </label>
     {% endfor %}
     <button class="btn small secondary" name="azione" value="rigenera" type="submit">
-      Riscrivi con questo modello
+      {{ _('Riscrivi con questo modello') }}
     </button>
     <p class="muted" style="font-size:12px;margin:6px 0 0">
-      Scelto da solo dalle righe della fattura. Cambiando servizio <strong>l'oggetto
-      cambia subito</strong>; il testo invece resta finché non premi «Riscrivi», che
-      perde le modifiche fatte qui sotto. Oggetti e testi si cambiano in
-      <a href="{{ url_for('impostazioni') }}">Impostazioni</a>.</p>
+      {{ _('Scelto da solo dalle righe della fattura. Cambiando servizio <strong>l’oggetto cambia subito</strong>; il testo invece resta finché non premi «Riscrivi», che perde le modifiche fatte qui sotto. Oggetti e testi si cambiano in {impostazioni}.').format(
+         impostazioni='<a href="%s">%s</a>' % (url_for('impostazioni'), _('Impostazioni'))) | safe }}</p>
   </div>
   <script>
     /* l'oggetto segue il servizio scelto: i due sono gia' pronti qui sopra,
@@ -76,21 +75,21 @@
     })();
   </script>
 
-  <label>Testo — quello che il cliente leggerà, riscrivilo pure</label>
+  <label>{{ _('Testo — quello che il cliente leggerà, riscrivilo pure') }}</label>
   <textarea name="body" rows="18" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{ msg.body }}</textarea>
 
   {% if settings.email_copia_a_me == '1' %}
   <p class="muted" style="font-size:12px;margin:6px 0 0">
-    {{ icona('giu', 'ic-mini') }} Ne arriva una copia anche a te, in <strong>{{ settings.smtp_user }}</strong>, in copia
-    nascosta: il cliente non la vede. Si disattiva in Impostazioni.</p>
+    {{ icona('giu', 'ic-mini') }} {{ _('Ne arriva una copia anche a te, in <strong>{dove}</strong>, in copia nascosta: il cliente non la vede. Si disattiva in Impostazioni.').format(
+       dove=settings.smtp_user) | safe }}</p>
   {% endif %}
   <p class="muted" style="font-size:12px;margin:6px 0 0">
-    Allegati: {% for a in msg.allegati %}<strong>{{ a.split('/')|last }}</strong>{% if not loop.last %}, {% endif %}{% else %}<em>nessuno</em>{% endfor %}
+    {{ _('Allegati:') }} {% for a in msg.allegati %}<strong>{{ a.split('/')|last }}</strong>{% if not loop.last %}, {% endif %}{% else %}<em>{{ _('nessuno') }}</em>{% endfor %}
   </p>
 
   {% if altre %}
   <div class="mt" style="border-top:1px solid var(--line);padding-top:12px">
-    <label style="margin-bottom:6px">Nella stessa mail vuoi allegare anche un'altra fattura recente?</label>
+    <label style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente?') }}</label>
     {% for a in altre %}
     <label style="display:block;font-weight:400">
       <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
@@ -100,24 +99,23 @@
     </label>
     {% endfor %}
     <button class="btn small secondary mt" name="azione" value="rigenera" type="submit">
-      Aggiorna allegati e riscrivi il testo
+      {{ _('Aggiorna allegati e riscrivi il testo') }}
     </button>
     <p class="muted" style="font-size:12px">
-      Attenzione: <em>Aggiorna</em> ricostruisce il testo da capo e perde le modifiche che hai fatto qui sopra.
-      Prima gli allegati, poi il testo.</p>
+      {{ _('Attenzione: <em>Aggiorna</em> ricostruisce il testo da capo e perde le modifiche che hai fatto qui sopra. Prima gli allegati, poi il testo.') | safe }}</p>
   </div>
   {% endif %}
 
   <div class="mt" style="border-top:1px solid var(--line);padding-top:14px">
     <button class="btn secondary" name="azione" value="prova" type="submit">
-      Prova su di me ({{ settings.email_test_to }})
+      {{ _('Prova su di me ({dove})').format(dove=settings.email_test_to) }}
     </button>
     <button class="btn" name="azione" value="invia" type="submit"
-            onclick="return confirm('Mandare davvero a {{ msg.to }}?')"
+            onclick='return confirm({{ _("Mandare davvero a {a}?").format(a=msg.to) | tojson }})'
             {{ 'disabled' if msg.problemi }}>
-      Invia a {{ cli.name if cli else inv.client_name }}
+      {{ _('Invia a {chi}').format(chi=cli.name if cli else inv.client_name) }}
     </button>
-    <a class="btn small secondary" href="{{ url_for('fattura', inv_id=inv.id) }}">Torna alla fattura</a>
+    <a class="btn small secondary" href="{{ url_for('fattura', inv_id=inv.id) }}">{{ _('Torna alla fattura') }}</a>
   </div>
 </form>
 {% endblock %}

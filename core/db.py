@@ -345,6 +345,12 @@ def _migra_servizi_riconosciuti(con):
                     (chiave, valore))
 
 
+# Il motivo scritto nel registro quando la riga viene dedotta da una fattura
+# vecchia. Sta nel database in italiano; a tradurlo e' la pagina che lo mostra.
+MOTIVO_RICOSTRUITO = ('riga ricostruita dalla data segnata sulla fattura: '
+                      'destinatario e oggetto non erano stati registrati')
+
+
 def _migra_modelli_email(con):
     """Dalla frase centrale unica ai due modelli, abbonamento e pacchetto.
 
@@ -396,8 +402,7 @@ def _migra_registro_email(con):
             'INSERT INTO email_log(sent_at, destinatario, oggetto, fatture, invoice_id, '
             'prova, esito, motivo) VALUES(?,?,?,?,?,0,?,?)',
             (r['sent_at'], '', '', str(r['number'] or ''), r['id'], 'ok',
-             'riga ricostruita dalla data segnata sulla fattura: '
-             'destinatario e oggetto non erano stati registrati'))
+             MOTIVO_RICOSTRUITO))
     con.execute("INSERT OR REPLACE INTO settings(key, value) VALUES('email_log_ricostruito', ?)",
                 (str(len(righe)),))
 

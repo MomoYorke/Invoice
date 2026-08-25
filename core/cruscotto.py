@@ -27,7 +27,7 @@ def _quando(iso):
         return None
 
 
-def _eta(iso_o_data):
+def _eta(iso_o_data, lingua=None):
     """Da quanto tempo, in parole."""
     q = _quando(iso_o_data) if isinstance(iso_o_data, str) else iso_o_data
     if q is None:
@@ -35,12 +35,14 @@ def _eta(iso_o_data):
     delta = datetime.datetime.now() - q
     ore = delta.total_seconds() / 3600
     if ore < 1:
-        return q, 'pochi minuti fa'
+        return q, L.t('pochi minuti fa', lingua)
     if ore < 24:
         n = int(ore)
-        return q, "un'ora fa" if n == 1 else f'{n} ore fa'
+        return q, (L.t('un’ora fa', lingua) if n == 1
+                   else L.t('{n} ore fa', lingua).format(n=n))
     giorni = int(ore // 24)
-    return q, 'ieri' if giorni == 1 else f'{giorni} giorni fa'
+    return q, (L.t('ieri', lingua) if giorni == 1
+               else L.t('{n} giorni fa', lingua).format(n=giorni))
 
 
 # ------------------------------------------------------------- stato fatture
@@ -92,14 +94,20 @@ def incassi_mancanti(con, ultimo_estratto):
 
 
 # ------------------------------------------------------------------- salute
-def salute(con, settings, cartella_backup=None):
+def salute(con, settings, cartella_backup=None, lingua=None):
     """Lo stato delle reti di sicurezza. Ogni voce dice anche se e' tranquilla."""
     voci = []
     peggio = VERDE
 
+    def t(frase, **valori):
+        """La frase nella lingua dell'app, coi buchi gia' riempiti."""
+        testo = L.t(frase, lingua)
+        return testo.format(**valori) if valori else testo
+
     def aggiungi(nome, valore, dettaglio, stato):
         nonlocal peggio
-        voci.append({'nome': nome, 'valore': valore, 'dettaglio': dettaglio, 'stato': stato})
+        voci.append({'nome': nome, 'valore': valore, 'dettaglio': dettaglio,
+                     'stato': stato})
         if (stato == ROSSO) or (stato == GIALLO and peggio == VERDE):
             peggio = stato
 
@@ -109,75 +117,84 @@ def salute(con, settings, cartella_backup=None):
         'SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL').fetchone()[0]
     ultimo = backup.ultimo_esterno(cartella_backup)
     if ultimo is None and vuota:
-        aggiungi('Copia fuori dal Mac', 'non ancora',
-                 "Se ne fa una da sola appena emetti la prima fattura.", GIALLO)
+        aggiungi(t('Copia fuori dal Mac'), t('non ancora'),
+                 t('Se ne fa una da sola appena emetti la prima fattura.'), GIALLO)
     elif ultimo is None:
-        aggiungi('Copia fuori dal Mac', 'mai fatta',
-                 'Nessuno zip nella cartella di destinazione.', ROSSO)
+        aggiungi(t('Copia fuori dal Mac'), t('mai fatta'),
+                 t('Nessuno zip nella cartella di destinazione.'), ROSSO)
     else:
-        _, eta = _eta(ultimo['when'])
+        _, eta = _eta(ultimo['when'], lingua)
         giorni = (datetime.datetime.now() - ultimo['when']).days
-        aggiungi('Copia fuori dal Mac', eta,
-                 f"{ultimo['name']} · {ultimo['size'] // 1024} KB · verificata alla creazione",
+        aggiungi(t('Copia fuori dal Mac'), eta,
+                 t('{nome} · {kb} KB · verificata alla creazione',
+                   nome=ultimo['name'], kb=ultimo['size'] // 1024),
                  VERDE if giorni < GIORNI_BACKUP_VECCHIO else GIALLO)
 
     quante = len(backup.elenco_esterni(cartella_backup))
-    aggiungi('Copie conservate', f'{quante}',
-             'Le ultime 30, più la prima di ogni mese che non si cancella mai.',
+    aggiungi(t('Copie conservate'), f'{quante}',
+             t('Le ultime 30, più la prima di ogni mese che non si cancella mai.'),
              VERDE if quante else (GIALLO if vuota else ROSSO))
 
     if not (settings.get('calendario_ics') or '').strip():
-        aggiungi('Calendario', 'non collegato',
-                 "Le sessioni vanno registrate a mano finché manca l'indirizzo iCal.", GIALLO)
+        aggiungi(t('Calendario'), t('non collegato'),
+                 t('Le sessioni vanno registrate a mano finché manca l’indirizzo iCal.'),
+                 GIALLO)
     else:
-        q, eta = _eta(settings.get('calendario_ultimo'))
+        q, eta = _eta(settings.get('calendario_ultimo'), lingua)
         if q is None:
-            aggiungi('Calendario', 'mai letto', 'Collegato, ma non ancora interrogato.', GIALLO)
+            aggiungi(t('Calendario'), t('mai letto'),
+                     t('Collegato, ma non ancora interrogato.'), GIALLO)
         else:
             ore = (datetime.datetime.now() - q).total_seconds() / 3600
-            aggiungi('Calendario', eta, 'Si rilegge da solo aprendo la pagina Crediti.',
+            aggiungi(t('Calendario'), eta,
+                     t('Si rilegge da solo aprendo la pagina Crediti.'),
                      VERDE if ore < ORE_CALENDARIO_VECCHIO else GIALLO)
 
     esito = settings.get('autotest_esito', '')
-    q, eta = _eta(settings.get('autotest_quando'))
+    q, eta = _eta(settings.get('autotest_quando'), lingua)
     if not esito:
-        aggiungi('Verifica dei calcoli', 'mai eseguita',
-                 'Si lancia dalla pagina Verifica calcoli.', GIALLO)
+        aggiungi(t('Verifica dei calcoli'), t('mai eseguita'),
+                 t('Si lancia dalla pagina Verifica calcoli.'), GIALLO)
     else:
         passati, totali = (esito.split('/') + ['?'])[:2]
         ok = passati == totali
-        aggiungi('Verifica dei calcoli', f'{esito} controlli',
-                 f'Ultima {eta}.' if eta else '', VERDE if ok else ROSSO)
+        aggiungi(t('Verifica dei calcoli'), t('{esito} controlli', esito=esito),
+                 t('Ultima {eta}.', eta=eta) if eta else '', VERDE if ok else ROSSO)
 
     ultimo_estratto = settings.get('banca_ultimo_estratto') or ''
     if not ultimo_estratto:
-        aggiungi('Estratto conto', 'mai letto',
-                 'Scarica i movimenti dall\'e-banking e mettili in «Estratti conto».', GIALLO)
+        aggiungi(t('Estratto conto'), t('mai letto'),
+                 t('Scarica i movimenti dall’e-banking e mettili in «Estratti conto».'),
+                 GIALLO)
     else:
         try:
             giorni = (datetime.date.today()
                       - datetime.date.fromisoformat(ultimo_estratto)).days
         except ValueError:
             giorni = 999
-        aggiungi('Estratto conto', f'fino al {ultimo_estratto[8:10]}.{ultimo_estratto[5:7]}.'
-                 f'{ultimo_estratto[:4]}',
-                 ('Da lì in poi l\'app non sa chi ti ha pagato: scaricane uno nuovo.'
+        aggiungi(t('Estratto conto'),
+                 t('fino al {data}',
+                   data='%s.%s.%s' % (ultimo_estratto[8:10], ultimo_estratto[5:7],
+                                      ultimo_estratto[:4])),
+                 (t('Da lì in poi l’app non sa chi ti ha pagato: scaricane uno nuovo.')
                   if giorni > GIORNI_ESTRATTO_VECCHIO
-                  else 'I versamenti fino a quella data sono stati esaminati.'),
+                  else t('I versamenti fino a quella data sono stati esaminati.')),
                  VERDE if giorni <= GIORNI_ESTRATTO_VECCHIO else GIALLO)
 
     if not (settings.get('smtp_pass') or ''):
-        aggiungi('Posta', 'senza password',
-                 'Le fatture non possono partire finché manca in Impostazioni.', GIALLO)
+        aggiungi(t('Posta'), t('senza password'),
+                 t('Le fatture non possono partire finché manca in Impostazioni.'),
+                 GIALLO)
     else:
         r = con.execute('SELECT COUNT(*) c FROM email_log '
                         "WHERE esito='errore'").fetchone()['c']
         ultima = con.execute("SELECT sent_at FROM email_log WHERE esito='ok' "
                              'ORDER BY sent_at DESC LIMIT 1').fetchone()
-        _, eta = _eta(ultima['sent_at']) if ultima else (None, None)
-        aggiungi('Posta', 'configurata',
-                 (f'Ultima mail partita {eta}. ' if eta else '')
-                 + (f'{r} tentativi falliti in archivio.' if r else 'Nessun invio fallito.'),
+        _, eta = _eta(ultima['sent_at'], lingua) if ultima else (None, None)
+        aggiungi(t('Posta'), t('configurata'),
+                 (t('Ultima mail partita {eta}. ', eta=eta) if eta else '')
+                 + (t('{n} tentativi falliti in archivio.', n=r) if r
+                    else t('Nessun invio fallito.')),
                  VERDE)
 
     return {'voci': voci, 'stato': peggio, 'spazio': _spazio(con)}

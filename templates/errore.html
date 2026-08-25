@@ -1,34 +1,33 @@
 <!doctype html>
-<html lang="it">
+<html lang="{{ lingua | default('it') }}">
 <head>
 <meta charset="utf-8">
-<title>Ops — Fatture</title>
+<title>{{ _('Ops — Fatture') }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body style="display:block">
 <main style="max-width:720px;margin:60px auto">
-  <h1>Ops, qualcosa è andato storto 😅</h1>
-  <p class="sub">L'app è viva, ma questa pagina ha avuto un problema. Non hai perso nulla:
-     i tuoi dati e le fatture sono al sicuro.</p>
+  <h1>{{ _('Ops, qualcosa è andato storto') }} 😅</h1>
+  <p class="sub">{{ _('L’app è viva, ma questa pagina ha avuto un problema. Non hai perso nulla: i tuoi dati e le fatture sono al sicuro.') }}</p>
 
   <div class="panel">
-    <p><strong>Cosa puoi fare adesso:</strong></p>
+    <p><strong>{{ _('Cosa puoi fare adesso:') }}</strong></p>
     <ul>
-      <li>Torna alla <a href="{{ url_for('dashboard') }}">Dashboard</a> o alle
-          <a href="{{ url_for('fatture') }}">Fatture</a>.</li>
-      <li>Se ricapita spesso, chiudi la finestra del Terminale e riapri
-          <em>Avvia Fatture.command</em>.</li>
+      <li>{{ _('Torna alla {dashboard} o alle {fatture}.').format(
+          dashboard='<a href="%s">%s</a>' % (url_for('dashboard'), _('Dashboard')),
+          fatture='<a href="%s">%s</a>' % (url_for('fatture'), _('Fatture'))) | safe }}</li>
+      <li>{{ _('Se ricapita spesso, chiudi la finestra del Terminale e riapri <em>Avvia Fatture.command</em>.') | safe }}</li>
     </ul>
   </div>
 
   <details class="panel">
-    <summary style="cursor:pointer;font-weight:600">Dettaglio tecnico (utile se me lo mostri)</summary>
-    <p class="muted" style="margin-top:12px">Pagina: <code>{{ path }}</code></p>
+    <summary style="cursor:pointer;font-weight:600">{{ _('Dettaglio tecnico (utile se me lo mostri)') }}</summary>
+    <p class="muted" style="margin-top:12px">{{ _('Pagina:') }} <code>{{ path }}</code></p>
     <p style="color:var(--danger)"><code>{{ error }}</code></p>
-    <p class="muted" style="font-size:12px">Il dettaglio completo è salvato in:<br><code>{{ log_path }}</code></p>
+    <p class="muted" style="font-size:12px">{{ _('Il dettaglio completo è salvato in:') }}<br><code>{{ log_path }}</code></p>
   </details>
 
-  <a class="btn mt" href="{{ url_for('dashboard') }}">← Torna alla Dashboard</a>
+  <a class="btn mt" href="{{ url_for('dashboard') }}">← {{ _('Torna alla Dashboard') }}</a>
 </main>
 </body>
 </html>

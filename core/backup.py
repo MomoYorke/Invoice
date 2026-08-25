@@ -11,10 +11,31 @@ import shutil
 import sqlite3
 import datetime
 
+from . import lingua as L
 from . import db
 
 BACKUP_DIR = os.path.join(os.path.dirname(db.DB_PATH), 'backups')
 KEEP = 40  # quante copie tenere
+
+
+# Il perche' di una copia sta dentro il NOME del file, quindi resta una
+# siglina in italiano per sempre. A renderlo leggibile — e nella lingua
+# giusta — e' chi lo mostra, non chi lo scrive.
+MOTIVI = {'avvio': 'all’avvio dell’app',
+          'manuale': 'chiesta a mano',
+          'prima-reimport': 'prima di reimportare lo storico',
+          'prima-del-ripristino': 'prima di ripristinare una fattura'}
+PRIMA_DI_ELIMINARE = 'prima-eliminazione-'
+
+
+def motivo_in_parole(sigla, lingua=None):
+    """La siglina scritta nel nome del file, detta in parole."""
+    if sigla in MOTIVI:
+        return L.t(MOTIVI[sigla], lingua)
+    if sigla.startswith(PRIMA_DI_ELIMINARE):
+        return L.t('prima di eliminare la #{n}', lingua).format(
+            n=sigla[len(PRIMA_DI_ELIMINARE):])
+    return sigla
 
 
 def make_backup(reason='manuale'):

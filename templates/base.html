@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Fatture{% endblock %} — {{ attivita }}</title>
+<title>{% block title %}{{ _('Fatture') }}{% endblock %} — {{ attivita }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="icon" href="{{ url_for('logo') }}?v={{ logo_versione }}">
 <script>

@@ -856,6 +856,9 @@ def cestino():
                        'ORDER BY deleted_at DESC').fetchall()
     backups = backup.list_backups()
     con.close()
+    lg = _lingua_app()
+    for b in backups[:12]:
+        b['motivo'] = backup.motivo_in_parole(b.get('reason') or '', lg)
     return render_template('cestino.html', rows=rows, backups=backups[:12],
                            n_backups=len(backups), trash_dir=TRASH_DIR)
 
@@ -1495,7 +1498,8 @@ def controlli():
     corr = corrections.corrections_map(con)
     # le reti di sicurezza: stavano in Dashboard, ma non sono cose da guardare
     # ogni mattina — sono cose da controllare quando si controlla
-    salute = cruscotto.salute(con, db.get_settings(con), _cartella_backup())
+    salute = cruscotto.salute(con, db.get_settings(con), _cartella_backup(),
+                              _lingua_app())
     con.close()
     return render_template('controlli.html', issues=issues, archived=archived,
                            corr=corr, n_corr=len(corr), salute=salute)

@@ -785,6 +785,22 @@ def _test_lingua(r):
     _check(r, 'Lingua', 'il tedesco da\' del tu dappertutto, come l\'italiano',
            _tedesco_col_lei(L), [])
 
+    # La rete piu' importante: le altre guardie controllano che ogni _('...')
+    # abbia la sua traduzione, ma nessuna si accorgeva di una pagina che
+    # _() non lo chiama proprio. Sette pagine intere erano rimaste indietro.
+    _check(r, 'Lingua', 'nessuna scritta italiana e\' rimasta fuori da _()',
+           _testo_non_tradotto(), [])
+
+    # Python accetta due volte la stessa chiave in un dizionario e tiene
+    # l'ultima, senza dire niente: la prima traduzione sparirebbe in silenzio.
+    _check(r, 'Lingua', 'nessuna frase compare due volte nei dizionari',
+           _chiavi_doppie(), [])
+
+    # la pagina Verifica scrive il nome della famiglia con _(cat): nessuna
+    # guardia sui template lo vede, perche' li' dentro c'e' una variabile
+    _check(r, 'Lingua', 'ogni famiglia di collaudi ha il nome nelle tre lingue',
+           _famiglie_senza_traduzione(L, r), [])
+
 
 def _pagina_dice_gia_pagata():
     """La pagina Banca avverte quando la fattura era gia' spuntata a mano."""
@@ -862,13 +878,23 @@ def _frasi_restituite_senza_traduzione(L):
     """Le chiavi che i moduli danno indietro e nessuno ha tradotto."""
     from . import marchio
     from . import banca as B
-    frasi = []
+    from . import mailer as M
+    # i nomi dei due modelli di mail: la pagina li scrive con _(nome), quindi
+    # nessuna guardia sui template puo' vederli
+    frasi = [nome for _chiave, nome in M.MODELLI]
     for dati in (b'', b'non e\' un png', b'\x89PNG' + b'x' * marchio.PESO_MAX):
         esito = marchio.salva(dati)
         if esito:
             frasi.append(esito[0])
     frasi += [B.PERCHE_RIFERIMENTO, B.PERCHE_DATA, B.PERCHE_NOME, B.PERCHE_SOLO_IMPORTO,
               B.PERCHE_GRUPPO, B.CARTELLA_ASSENTE]
+    # finisce nel database e la pagina lo traduce quando lo mostra
+    from . import db as _db
+    frasi.append(_db.MOTIVO_RICOSTRUITO)
+    # il perche' di una copia: la sigla sta nel nome del file, le parole no
+    from . import backup as _bk
+    frasi += [_bk.motivo_in_parole(sigla) for sigla in _bk.MOTIVI]
+    frasi.append(_bk.motivo_in_parole(_bk.PRIMA_DI_ELIMINARE + '7').replace('7', '{n}'))
     return sorted(f for f in frasi if f not in L.TESTI['en'])
 
 
@@ -893,6 +919,91 @@ def _frasi_senza_traduzione(L):
             if frase and frase not in L.TESTI['en']:
                 fuori.append((pagina, frase))
     return sorted(set(fuori))
+
+
+# Le pagine sono scritte in italiano e ogni parola che l'utente legge deve
+# passare per _(). Restano fuori solo queste: nomi propri, esempi buoni in
+# ogni lingua e il nome vero di un file.
+TESTO_CHE_PUO_RESTARE = frozenset((
+    'Anna',                          # un nome d'esempio
+    '8000 Zürich',                   # un indirizzo svizzero d'esempio
+    'https://calendar.google.com/calendar/ical/.../basic.ics',
+    'Avvia Fatture.command',         # il nome vero del file da cliccare
+    'vs',                            # si scrive cosi' in tutte e tre
+))
+PAROLE_CHE_PUO_RESTARE = frozenset(('CHF', 'KB', 'MB', 'PDF', 'ok'))
+
+_ATTRIBUTI_LETTI = re.compile(r'\b(?:placeholder|title|alt)\s*=\s*"([^"]*)"')
+_FINESTRELLE = re.compile(r"\b(?:confirm|alert)\(\s*'([^']*)'")
+_SOLO_SEGNAPOSTI = re.compile(r'^(?:\{\w+\}|\s|,)+$')
+_PAROLA = re.compile(r'[A-Za-zÀ-ÿ]{2,}')
+_ETICHETTA_PALLINO = re.compile(r"""pallino\(\s*'[^']*'\s*,\s*('([^']*)'|"([^"]*)")""")
+
+
+def _pagina_come_la_legge_chi_guarda(testo):
+    """La pagina senza le parti che l'utente non vede: commenti, codice,
+    e tutto quello che sta dentro {{ }} o {% %} — li' dentro ci sono i dati
+    e le _() gia' tradotte."""
+    testo = re.sub(r'\{#.*?#\}', ' ', testo, flags=re.S)
+    testo = re.sub(r'<script\b.*?</script>', ' ', testo, flags=re.S | re.I)
+    testo = re.sub(r'<style\b.*?</style>', ' ', testo, flags=re.S | re.I)
+    testo = re.sub(r'\{%.*?%\}', '\n', testo, flags=re.S)
+    return re.sub(r'\{\{.*?\}\}', ' ', testo, flags=re.S)
+
+
+def _frammenti_visibili(testo):
+    """Ogni pezzo di scritta che finisce sotto gli occhi di chi usa l'app."""
+    ripulito = _pagina_come_la_legge_chi_guarda(testo)
+    for pezzo in _ATTRIBUTI_LETTI.findall(ripulito):
+        yield pezzo
+    # le finestrelle «sei sicuro?» stanno dentro il codice, che qui sopra
+    # e' stato buttato via: si ripescano dal testo di partenza
+    for pezzo in _FINESTRELLE.findall(re.sub(r'\{\{.*?\}\}', ' ', testo, flags=re.S)):
+        yield pezzo
+    # l'etichetta del pallino colorato sta dentro {{ }}, dove le regole qui
+    # sopra non guardano: e' pero' una scritta che si legge passandoci sopra
+    for pezzo in _ETICHETTA_PALLINO.finditer(testo):
+        yield pezzo.group(2) if pezzo.group(2) is not None else pezzo.group(3)
+    for riga in re.sub(r'<[^>]*>', '\n', ripulito).split('\n'):
+        yield riga
+
+
+def _testo_non_tradotto():
+    """[(pagina, scritta)] per ogni frase che la pagina mostra senza _()."""
+    fuori = []
+    for pagina, testo in _sorgenti_pagine():
+        for pezzo in _frammenti_visibili(testo):
+            pezzo = ' '.join(pezzo.split())
+            if not pezzo or pezzo in TESTO_CHE_PUO_RESTARE:
+                continue
+            if _SOLO_SEGNAPOSTI.match(pezzo):
+                continue            # <code>{mese}</code>: si scrive cosi' e basta
+            if [p for p in _PAROLA.findall(pezzo) if p not in PAROLE_CHE_PUO_RESTARE]:
+                fuori.append((pagina, pezzo[:70]))
+    return sorted(set(fuori))
+
+
+def _famiglie_senza_traduzione(L, risultati):
+    """Le categorie che la pagina Verifica mostrerebbe ancora in italiano."""
+    return sorted({cat for cat, _d, _o, _t in risultati if cat not in L.TESTI['en']})
+
+
+def _chiavi_doppie():
+    """[(riga, frase)] per ogni chiave scritta due volte in lingua.py."""
+    import ast
+    import collections
+    perc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lingua.py')
+    with io.open(perc, encoding='utf-8') as f:
+        albero = ast.parse(f.read())
+    fuori = []
+    for nodo in ast.walk(albero):
+        if not isinstance(nodo, ast.Dict):
+            continue
+        viste = collections.Counter(
+            k.value for k in nodo.keys
+            if isinstance(k, ast.Constant) and isinstance(k.value, str))
+        fuori += [(nodo.lineno, frase) for frase, n in viste.items() if n > 1]
+    return sorted(fuori)
 
 
 def _segnaposti_sbagliati(L):
@@ -1549,7 +1660,7 @@ def _test_cruscotto(r):
            next(v['ora_nota'] for v in voci if v['tipo'] == 'crediti'), False)
     _check(r, 'Cruscotto', 'un tempo di un\'ora si dice al singolare',
            C._eta((datetime.datetime.now() - datetime.timedelta(hours=1)).isoformat())[1],
-           "un'ora fa")
+           'un’ora fa')
     con.close()
 
     _test_incassi(r)

@@ -61,7 +61,6 @@ TESTI = {
         'Banca': 'Bank',
         'Commercialista': 'Accountant',
         'Controlli': 'Checks',
-        'Verifica calcoli': 'Calculation check',
         'Cestino': 'Trash',
         'Impostazioni': 'Settings',
         'Primi passi': 'First steps',
@@ -187,7 +186,6 @@ TESTI = {
         "Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.":
             "Delete invoice #{n}? The files go to the app's Trash.",
         'Inviata per email il {data}': 'Sent by email on {data}',
-        ' alle {ora}': ' at {ora}',
         'Origine:': 'Origin:',
         'creata con questa app': 'created in this app',
         'importata dallo storico ({file})': 'imported from the history ({file})',
@@ -794,6 +792,262 @@ TESTI = {
         'Dimensione': 'Size',
         'Mi fermo qui. Il server ha già rifiutato la password due volte e al terzo tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra {restano} minuti, oppure correggi prima la password in Impostazioni: salvarla azzera questa pausa.':
             'I am stopping here. The server has already refused the password twice, and on the third try it blocks your IP address for a good while. Try again in {restano} minutes, or fix the password in Settings first: saving it clears this pause.',
+
+        # --- Cestino, Controlli, Manda la fattura, Email, Verifica, Ops ---
+        'Cestino e backup': 'Trash and backups',
+        'Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.':
+            'Nothing is ever really destroyed. Deleted invoices stay here and come back with one click; the database is copied automatically before every risky operation.',
+        'Fatture nel Cestino': 'Invoices in the Trash',
+        'Eliminata il': 'Deleted on',
+        'Motivo': 'Reason',
+        'Ripristina': 'Restore',
+        'Il numero di una fattura nel Cestino resta <strong>riservato</strong>: non può essere riassegnato a un’altra fattura per sbaglio.':
+            'The number of an invoice in the Trash stays <strong>reserved</strong>: it cannot be given to another invoice by mistake.',
+        'Il Cestino è vuoto: nessuna fattura eliminata.':
+            'The Trash is empty: no invoice deleted.',
+        'Backup automatici del database': 'Automatic database backups',
+        '{n} salvati': '{n} saved',
+        'Una copia viene creata da sola a ogni avvio dell’app e <strong>prima</strong> di ogni eliminazione o reimport. Vengono conservate le ultime 40.':
+            'A copy is made by itself every time the app starts and <strong>before</strong> every deletion or re-import. The last 40 are kept.',
+        'Nessun backup ancora: ne verrà creato uno al prossimo avvio.':
+            'No backup yet: one will be made at the next start.',
+        'Apri la cartella Cestino nel Finder': 'Open the Trash folder in Finder',
+        'Verifiche su numerazione e dati delle fatture. Il controllo viene rifatto da zero ogni volta che apri o ricarichi questa pagina.':
+            'Checks on invoice numbering and data. The check is redone from scratch every time you open or reload this page.',
+        'Un’anomalia da sistemare.': 'One anomaly to sort out.',
+        '{n} anomalie da sistemare.': '{n} anomalies to sort out.',
+        'Correggi i dati mancanti, oppure archivia con “So già” quelle che sono fatti storici.':
+            'Fill in what is missing, or file away with “I know” the ones that are simply history.',
+        'numero doppio': 'duplicate number',
+        'numero saltato': 'skipped number',
+        'dato mancante': 'missing value',
+        'Correggi': 'Correct',
+        'So già': 'I know',
+        'Importo della fattura': 'Invoice amount',
+        'es. 110.- oppure 1’800.00': 'e.g. 110.- or 1’800.00',
+        'Data della fattura': 'Invoice date',
+        'Nota (facoltativa)': 'Note (optional)',
+        'es. importo preso dal PDF cartaceo': 'e.g. amount taken from the paper PDF',
+        'Salva correzione': 'Save correction',
+        'La correzione viene salvata a parte e <strong>resta anche se premi “Reimporta”</strong>. Il file originale nella cartella storica non viene toccato.':
+            'The correction is stored separately and <strong>survives “Re-import”</strong>. The original file in the historical folder is never touched.',
+        'Perché va bene così? (facoltativo)': 'Why is this fine? (optional)',
+        'es. fattura mai emessa / numero saltato per errore nel 2025':
+            'e.g. invoice never issued / number skipped by mistake in 2025',
+        'Archivia anomalia': 'File this away',
+        'Nessun problema: numerazione e dati delle fatture sono in ordine.':
+            'No problems: invoice numbering and data are in order.',
+        'Correzioni manuali attive ({n})': 'Manual corrections in force ({n})',
+        'Dati che hai inserito tu. Vengono ri-applicati automaticamente dopo ogni Reimporta.':
+            'Values you typed in yourself. They are re-applied automatically after every re-import.',
+        'numero → #{n}': 'number → #{n}',
+        'Annullare questa correzione? Il dato tornerà come nel file originale.':
+            'Undo this correction? The value goes back to what the original file says.',
+        'Anomalie archiviate ({n})': 'Filed-away anomalies ({n})',
+        'Le hai marcate come “so già”. Non compaiono più nei controlli.':
+            'You marked these “I know”. They no longer show up in the checks.',
+        'Le reti di sicurezza': 'The safety nets',
+        'tutto a posto': 'all fine',
+        'da guardare': 'worth a look',
+        'problema': 'problem',
+        'Copie di sicurezza, calendario, verifica dei calcoli, estratto conto, posta: lavorano da sole e non si fanno notare. Vanno guardate proprio per questo — il giorno che smettono, senza un posto dove guardare non se ne accorge nessuno.':
+            'Backups, calendar, calculation check, bank statement, mail: they work on their own and never draw attention to themselves. That is exactly why they need a place to be looked at — the day one of them stops, without such a place nobody would notice.',
+        'a posto': 'fine',
+        'da tenere d’occhio': 'keep an eye on it',
+        'da sistemare': 'to sort out',
+        'Occupato: database {db} KB · fatture {fat} MB · copie locali {cop} MB · testo delle email {mail} KB.':
+            'Space used: database {db} KB · invoices {fat} MB · local copies {cop} MB · email text {mail} KB.',
+        'Reimporta lo storico': 'Re-import the history',
+        'Rilegge la cartella dello storico (solo lettura) e aggiorna i dati importati. Le fatture create con l’app e le tue correzioni manuali non vengono toccate.':
+            'Reads the historical folder again (read-only) and refreshes the imported data. Invoices made with the app and your manual corrections are left alone.',
+        'Reimporta adesso': 'Re-import now',
+        'Email fattura #{n}': 'Email for invoice #{n}',
+        'Manda la fattura #{n}': 'Send invoice #{n}',
+        'Gli indirizzi si aggiungono dalla {pagina}.': 'Addresses are added on the {pagina}.',
+        'pagina Clienti': 'Clients page',
+        'Questa fattura risulta <strong>già inviata</strong> il {data}{ora}.':
+            'This invoice is recorded as <strong>already sent</strong> on {data}{ora}.',
+        ' alle {ora}': ' at {ora}',
+        'Puoi rimandarla, ma controlla di non fare un doppione.':
+            'You can send it again, but check you are not making a duplicate.',
+        'A': 'To',
+        'Da': 'From',
+        'Oggetto': 'Subject',
+        'Mese <strong>{mese}</strong>, dedotto dalla fattura.':
+            'Month <strong>{mese}</strong>, worked out from the invoice.',
+        'Il mese non l’ho dedotto: sulla fattura non c’è scritto il periodo e non c’è una mail precedente da cui ripartire. Scrivilo tu al posto di {segnaposto} — la prossima volta lo saprò da solo.':
+            'I could not work out the month: the invoice does not name the period and there is no earlier email to start from. Write it yourself in place of {segnaposto} — next time I will know it on my own.',
+        'Modello': 'Template',
+        'Riscrivi con questo modello': 'Rewrite with this template',
+        'Scelto da solo dalle righe della fattura. Cambiando servizio <strong>l’oggetto cambia subito</strong>; il testo invece resta finché non premi «Riscrivi», che perde le modifiche fatte qui sotto. Oggetti e testi si cambiano in {impostazioni}.':
+            'Picked on its own from the invoice lines. Changing the service <strong>changes the subject right away</strong>; the text instead stays until you press «Rewrite», which loses the changes made below. Subjects and texts are edited in {impostazioni}.',
+        'Testo — quello che il cliente leggerà, riscrivilo pure':
+            'Text — what the client will read; feel free to rewrite it',
+        'Ne arriva una copia anche a te, in <strong>{dove}</strong>, in copia nascosta: il cliente non la vede. Si disattiva in Impostazioni.':
+            'A copy reaches you too, at <strong>{dove}</strong>, as a blind copy: the client does not see it. You can switch this off in Settings.',
+        'Allegati:': 'Attachments:',
+        'nessuno': 'none',
+        'Nella stessa mail vuoi allegare anche un’altra fattura recente?':
+            'Do you want to attach another recent invoice to the same email?',
+        'Aggiorna allegati e riscrivi il testo': 'Update attachments and rewrite the text',
+        'Attenzione: <em>Aggiorna</em> ricostruisce il testo da capo e perde le modifiche che hai fatto qui sopra. Prima gli allegati, poi il testo.':
+            'Careful: <em>Update</em> rebuilds the text from scratch and loses the changes you made above. Attachments first, text after.',
+        'Prova su di me ({dove})': 'Test on me ({dove})',
+        'Mandare davvero a {a}?': 'Really send to {a}?',
+        'Invia a {chi}': 'Send to {chi}',
+        'Torna alla fattura': 'Back to the invoice',
+        'Tutto quello che è partito dall’app: le fatture ai clienti, le prove su di te e anche i tentativi andati storti.':
+            'Everything that left the app: invoices to clients, tests on yourself, and the attempts that went wrong too.',
+        'Tutte ({n})': 'All ({n})',
+        'Ai clienti ({n})': 'To clients ({n})',
+        'Prove ({n})': 'Tests ({n})',
+        'Non partite ({n})': 'Did not go out ({n})',
+        'Allegati': 'Attachments',
+        'Esito': 'Outcome',
+        'prova': 'test',
+        'apri': 'open',
+        'partita': 'sent',
+        'non partita': 'not sent',
+        'copia in «{dove}»': 'copy in «{dove}»',
+        'leggi': 'read',
+        'Nessuna email con questo filtro.': 'No email matches this filter.',
+        'Ancora nessuna email partita dall’app. Le trovi qui appena ne mandi una.':
+            'No email has left the app yet. They appear here as soon as you send one.',
+        'Questo elenco è il diario dell’app. Le mail vere restano dove sono sempre state: una copia in «Inviata» sul server e una copia nascosta nella tua posta in arrivo.':
+            'This list is the app’s own diary. The real emails stay where they have always been: one copy in «Sent» on the server and a blind copy in your inbox.',
+        'Email del {data}': 'Email of {data}',
+        'La mail come è partita': 'The email exactly as it went out',
+        '{data} alle {ora}': '{data} at {ora}',
+        'prova su di te': 'test on yourself',
+        '<strong>non è partita</strong>': '<strong>it did not go out</strong>',
+        'Ccn': 'Bcc',
+        'la copia nascosta a te, il cliente non l’ha vista':
+            'the blind copy to you; the client did not see it',
+        'Copia in': 'Copy in',
+        '«{dove}» sul server': '«{dove}» on the server',
+        'Testo': 'Text',
+        'Di questa mail il testo non è stato registrato: è stata spedita prima che l’app cominciasse a tenerne copia.':
+            'The text of this email was not recorded: it went out before the app started keeping copies.',
+        'Tutte le email': 'All emails',
+        'Apri il PDF allegato': 'Open the attached PDF',
+        'Ops — Fatture': 'Oops — Invoices',
+        'Ops, qualcosa è andato storto': 'Oops, something went wrong',
+        'L’app è viva, ma questa pagina ha avuto un problema. Non hai perso nulla: i tuoi dati e le fatture sono al sicuro.':
+            'The app is alive, but this page ran into trouble. You have lost nothing: your data and your invoices are safe.',
+        'Cosa puoi fare adesso:': 'What you can do now:',
+        'Torna alla {dashboard} o alle {fatture}.':
+            'Go back to the {dashboard} or to {fatture}.',
+        'Se ricapita spesso, chiudi la finestra del Terminale e riapri <em>Avvia Fatture.command</em>.':
+            'If it keeps happening, close the Terminal window and open <em>Avvia Fatture.command</em> again.',
+        'Dettaglio tecnico (utile se me lo mostri)':
+            'Technical detail (useful if you show it to me)',
+        'Pagina:': 'Page:',
+        'Il dettaglio completo è salvato in:': 'The full detail is saved in:',
+        'Torna alla Dashboard': 'Back to the Dashboard',
+        'Verifica': 'Check',
+        'Verifica calcoli': 'Calculation check',
+        'Controllo completo del motore matematico e riconciliazione di tutte le fatture create con l’app.':
+            'A full check of the maths engine and a reconciliation of every invoice made with the app.',
+        '<strong>Tutto corretto.</strong> {ok}/{tot} test di calcolo superati e {ric} fatture riconciliate senza anomalie.':
+            '<strong>All correct.</strong> {ok}/{tot} calculation tests passed and {ric} invoices reconciled with no anomalies.',
+        '<strong>Attenzione:</strong> ci sono controlli non superati. Guarda i dettagli qui sotto in rosso.':
+            '<strong>Careful:</strong> some checks did not pass. Look at the details below in red.',
+        'Test del motore di calcolo': 'Tests of the calculation engine',
+        '{ok} su {tot} superati — moltiplicazioni, arrotondamenti, formati importi, andata e ritorno.':
+            '{ok} of {tot} passed — multiplications, rounding, amount formats, round trip.',
+        'Riconciliazione fatture': 'Invoice reconciliation',
+        'Per ogni fattura creata con l’app: <em>somma delle righe = totale salvato = importo sul PDF</em>.':
+            'For every invoice made with the app: <em>sum of the lines = saved total = amount on the PDF</em>.',
+        'Nota: la lettura del PDF non è disponibile; verifico comunque righe e totale salvato.':
+            'Note: reading the PDF is not available; I check the lines and the saved total anyway.',
+        '<strong>Fattura #{n}</strong> ({chi}):': '<strong>Invoice #{n}</strong> ({chi}):',
+        '{n} fatture controllate, tutti gli importi coincidono al centesimo.':
+            '{n} invoices checked, every amount matches to the cent.',
+        'Cosa garantisce tutto questo': 'What all this guarantees',
+        'I calcoli usano <strong>centesimi interi</strong>: niente errori di arrotondamento.':
+            'The maths works in <strong>whole cents</strong>: no rounding errors.',
+        'Ogni fattura, appena creata, viene <strong>riletta dal file vero</strong> e confermata al centesimo prima di essere salvata.':
+            'Every invoice, right after it is made, is <strong>read back from the real file</strong> and confirmed to the cent before being saved.',
+        'Se un importo non coincidesse, la fattura <strong>non verrebbe salvata</strong> e ti verrebbe detto perché.':
+            'If an amount did not match, the invoice <strong>would not be saved</strong> and you would be told why.',
+        'Rilancia la verifica': 'Run the check again',
+
+        # --- le reti di sicurezza e il tempo passato ---
+        'Copia fuori dal Mac': 'Copy off the Mac',
+        'non ancora': 'not yet',
+        'Se ne fa una da sola appena emetti la prima fattura.':
+            'One is made by itself as soon as you issue your first invoice.',
+        'mai fatta': 'never made',
+        'Nessuno zip nella cartella di destinazione.': 'No zip in the destination folder.',
+        '{nome} · {kb} KB · verificata alla creazione':
+            '{nome} · {kb} KB · checked when it was made',
+        'Copie conservate': 'Copies kept',
+        'Le ultime 30, più la prima di ogni mese che non si cancella mai.':
+            'The last 30, plus the first of each month, which is never deleted.',
+        'Calendario': 'Calendar',
+        'non collegato': 'not connected',
+        'Le sessioni vanno registrate a mano finché manca l’indirizzo iCal.':
+            'Sessions have to be recorded by hand while the iCal address is missing.',
+        'mai letto': 'never read',
+        'Collegato, ma non ancora interrogato.': 'Connected, but not queried yet.',
+        'Si rilegge da solo aprendo la pagina Crediti.':
+            'It reads itself again when you open the Credits page.',
+        'Verifica dei calcoli': 'Calculation check',
+        'mai eseguita': 'never run',
+        'Si lancia dalla pagina Verifica calcoli.':
+            'You start it from the Calculation check page.',
+        '{esito} controlli': '{esito} checks',
+        'Ultima {eta}.': 'Last one {eta}.',
+        'Estratto conto': 'Bank statement',
+        'Scarica i movimenti dall’e-banking e mettili in «Estratti conto».':
+            'Download the transactions from e-banking and put them in «Estratti conto».',
+        'fino al {data}': 'up to {data}',
+        'Da lì in poi l’app non sa chi ti ha pagato: scaricane uno nuovo.':
+            'From then on the app does not know who paid you: download a new one.',
+        'I versamenti fino a quella data sono stati esaminati.':
+            'Payments up to that date have been examined.',
+        'Posta': 'Mail',
+        'senza password': 'no password',
+        'Le fatture non possono partire finché manca in Impostazioni.':
+            'Invoices cannot go out while it is missing in Settings.',
+        'configurata': 'set up',
+        'Ultima mail partita {eta}. ': 'Last email went out {eta}. ',
+        '{n} tentativi falliti in archivio.': '{n} failed attempts on file.',
+        'Nessun invio fallito.': 'No failed sends.',
+        'pochi minuti fa': 'a few minutes ago',
+        'un’ora fa': 'an hour ago',
+        '{n} ore fa': '{n} hours ago',
+        'ieri': 'yesterday',
+        '{n} giorni fa': '{n} days ago',
+        'riga ricostruita dalla data segnata sulla fattura: destinatario e oggetto non erano stati registrati':
+            'line rebuilt from the date written on the invoice: recipient and subject had not been recorded',
+
+        # --- le famiglie di collaudi, sulla pagina Verifica ---
+        'Lettura importi': 'Reading amounts',
+        'Quantità × prezzo': 'Quantity × price',
+        'Arrotondamento': 'Rounding',
+        'Formato CHF': 'CHF format',
+        'Formato fattura': 'Invoice format',
+        'Andata e ritorno': 'Round trip',
+        'Somma righe': 'Sum of the lines',
+        'Coerenza interna': 'Internal consistency',
+        'Oggetto email': 'Email subject',
+        'Intestazione fattura': 'Invoice heading',
+        'Marchio': 'Logo',
+        'Servizi': 'Services',
+        'Icone': 'Icons',
+        'Menu': 'Menu',
+        'Finestra stretta': 'Narrow window',
+        'Cruscotto': 'Dashboard panels',
+        'Incassi': 'Money in',
+        'Intestatario': 'Invoice recipient',
+
+        # --- il perche' di una copia di sicurezza ---
+        'all’avvio dell’app': 'when the app starts',
+        'chiesta a mano': 'asked for by hand',
+        'prima di reimportare lo storico': 'before re-importing the history',
+        'prima di ripristinare una fattura': 'before restoring an invoice',
+        'prima di eliminare la #{n}': 'before deleting #{n}',
     },
     'de': {
         # --- Menü ---
@@ -808,7 +1062,6 @@ TESTI = {
         'Banca': 'Bank',
         'Commercialista': 'Treuhänder',
         'Controlli': 'Prüfungen',
-        'Verifica calcoli': 'Rechenprüfung',
         'Cestino': 'Papierkorb',
         'Impostazioni': 'Einstellungen',
         'Primi passi': 'Erste Schritte',
@@ -937,7 +1190,6 @@ TESTI = {
         "Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.":
             'Rechnung #{n} löschen? Die Dateien landen im Papierkorb der App.',
         'Inviata per email il {data}': 'Per E-Mail versendet am {data}',
-        ' alle {ora}': ' um {ora}',
         'Origine:': 'Herkunft:',
         'creata con questa app': 'in dieser App erstellt',
         'importata dallo storico ({file})': 'aus der Historie importiert ({file})',
@@ -1549,6 +1801,263 @@ TESTI = {
         'Dimensione': 'Grösse',
         'Mi fermo qui. Il server ha già rifiutato la password due volte e al terzo tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra {restano} minuti, oppure correggi prima la password in Impostazioni: salvarla azzera questa pausa.':
             'Ich höre hier auf. Der Server hat das Passwort schon zweimal abgelehnt, und beim dritten Versuch sperrt er deine IP-Adresse für eine ganze Weile. Versuch es in {restano} Minuten nochmals, oder korrigier zuerst das Passwort in den Einstellungen: das Speichern hebt diese Pause auf.',
+
+        # --- Cestino, Controlli, Manda la fattura, Email, Verifica, Ops ---
+        'Cestino e backup': 'Papierkorb und Backups',
+        'Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.':
+            'Nichts wird je wirklich zerstört. Gelöschte Rechnungen bleiben hier und kommen mit einem Klick zurück; die Datenbank wird vor jedem riskanten Schritt automatisch kopiert.',
+        'Fatture nel Cestino': 'Rechnungen im Papierkorb',
+        'Eliminata il': 'Gelöscht am',
+        'Motivo': 'Grund',
+        'Ripristina': 'Wiederherstellen',
+        'Il numero di una fattura nel Cestino resta <strong>riservato</strong>: non può essere riassegnato a un’altra fattura per sbaglio.':
+            'Die Nummer einer Rechnung im Papierkorb bleibt <strong>reserviert</strong>: sie kann nicht versehentlich einer anderen Rechnung gegeben werden.',
+        'Il Cestino è vuoto: nessuna fattura eliminata.':
+            'Der Papierkorb ist leer: keine Rechnung gelöscht.',
+        'Backup automatici del database': 'Automatische Backups der Datenbank',
+        '{n} salvati': '{n} gespeichert',
+        'Una copia viene creata da sola a ogni avvio dell’app e <strong>prima</strong> di ogni eliminazione o reimport. Vengono conservate le ultime 40.':
+            'Eine Kopie entsteht bei jedem Start der App von selbst und <strong>vor</strong> jedem Löschen oder Neuimport. Die letzten 40 werden aufbewahrt.',
+        'Nessun backup ancora: ne verrà creato uno al prossimo avvio.':
+            'Noch kein Backup: beim nächsten Start entsteht eines.',
+        'Apri la cartella Cestino nel Finder': 'Den Papierkorb-Ordner im Finder öffnen',
+        'Verifiche su numerazione e dati delle fatture. Il controllo viene rifatto da zero ogni volta che apri o ricarichi questa pagina.':
+            'Prüfungen zu Nummerierung und Rechnungsdaten. Die Prüfung läuft jedes Mal neu, wenn du diese Seite öffnest oder neu lädst.',
+        'Un’anomalia da sistemare.': 'Eine Auffälligkeit zu klären.',
+        '{n} anomalie da sistemare.': '{n} Auffälligkeiten zu klären.',
+        'Correggi i dati mancanti, oppure archivia con “So già” quelle che sono fatti storici.':
+            'Trag nach, was fehlt, oder leg mit „Weiss ich“ die ab, die einfach Geschichte sind.',
+        'numero doppio': 'doppelte Nummer',
+        'numero saltato': 'übersprungene Nummer',
+        'dato mancante': 'fehlender Wert',
+        'Correggi': 'Korrigieren',
+        'So già': 'Weiss ich',
+        'Importo della fattura': 'Rechnungsbetrag',
+        'es. 110.- oppure 1’800.00': 'z. B. 110.- oder 1’800.00',
+        'Data della fattura': 'Rechnungsdatum',
+        'Nota (facoltativa)': 'Notiz (optional)',
+        'es. importo preso dal PDF cartaceo': 'z. B. Betrag aus dem Papier-PDF',
+        'Salva correzione': 'Korrektur speichern',
+        'La correzione viene salvata a parte e <strong>resta anche se premi “Reimporta”</strong>. Il file originale nella cartella storica non viene toccato.':
+            'Die Korrektur wird separat gespeichert und <strong>überlebt „Neu importieren“</strong>. Die Originaldatei im Archivordner wird nie angerührt.',
+        'Perché va bene così? (facoltativo)': 'Warum ist das so in Ordnung? (optional)',
+        'es. fattura mai emessa / numero saltato per errore nel 2025':
+            'z. B. Rechnung nie gestellt / Nummer 2025 versehentlich übersprungen',
+        'Archivia anomalia': 'Auffälligkeit ablegen',
+        'Nessun problema: numerazione e dati delle fatture sono in ordine.':
+            'Keine Probleme: Nummerierung und Rechnungsdaten sind in Ordnung.',
+        'Correzioni manuali attive ({n})': 'Aktive manuelle Korrekturen ({n})',
+        'Dati che hai inserito tu. Vengono ri-applicati automaticamente dopo ogni Reimporta.':
+            'Werte, die du selbst eingetragen hast. Sie werden nach jedem Neuimport automatisch wieder angewendet.',
+        'numero → #{n}': 'Nummer → #{n}',
+        'Annullare questa correzione? Il dato tornerà come nel file originale.':
+            'Diese Korrektur rückgängig machen? Der Wert kehrt zu dem zurück, was in der Originaldatei steht.',
+        'Anomalie archiviate ({n})': 'Abgelegte Auffälligkeiten ({n})',
+        'Le hai marcate come “so già”. Non compaiono più nei controlli.':
+            'Die hast du als „weiss ich“ markiert. Sie tauchen in den Kontrollen nicht mehr auf.',
+        'Le reti di sicurezza': 'Die Sicherheitsnetze',
+        'tutto a posto': 'alles in Ordnung',
+        'da guardare': 'anschauen',
+        'problema': 'Problem',
+        'Copie di sicurezza, calendario, verifica dei calcoli, estratto conto, posta: lavorano da sole e non si fanno notare. Vanno guardate proprio per questo — il giorno che smettono, senza un posto dove guardare non se ne accorge nessuno.':
+            'Backups, Kalender, Rechenprüfung, Kontoauszug, Post: sie arbeiten von selbst und machen nie auf sich aufmerksam. Genau darum brauchen sie einen Ort zum Nachschauen — an dem Tag, an dem eines aufhört, merkt es sonst niemand.',
+        'a posto': 'in Ordnung',
+        'da tenere d’occhio': 'im Auge behalten',
+        'da sistemare': 'zu klären',
+        'Occupato: database {db} KB · fatture {fat} MB · copie locali {cop} MB · testo delle email {mail} KB.':
+            'Belegt: Datenbank {db} KB · Rechnungen {fat} MB · lokale Kopien {cop} MB · E-Mail-Texte {mail} KB.',
+        'Reimporta lo storico': 'Archiv neu importieren',
+        'Rilegge la cartella dello storico (solo lettura) e aggiorna i dati importati. Le fatture create con l’app e le tue correzioni manuali non vengono toccate.':
+            'Liest den Archivordner erneut (nur lesend) und frischt die importierten Daten auf. Mit der App erstellte Rechnungen und deine manuellen Korrekturen bleiben unangetastet.',
+        'Reimporta adesso': 'Jetzt neu importieren',
+        'Email fattura #{n}': 'E-Mail zu Rechnung #{n}',
+        'Manda la fattura #{n}': 'Rechnung #{n} senden',
+        'Gli indirizzi si aggiungono dalla {pagina}.':
+            'Adressen trägst du auf der {pagina} ein.',
+        'pagina Clienti': 'Kunden-Seite',
+        'Questa fattura risulta <strong>già inviata</strong> il {data}{ora}.':
+            'Diese Rechnung gilt als <strong>bereits gesendet</strong> am {data}{ora}.',
+        ' alle {ora}': ' um {ora}',
+        'Puoi rimandarla, ma controlla di non fare un doppione.':
+            'Du kannst sie nochmals senden, aber prüf, dass kein Duplikat entsteht.',
+        'A': 'An',
+        'Da': 'Von',
+        'Oggetto': 'Betreff',
+        'Mese <strong>{mese}</strong>, dedotto dalla fattura.':
+            'Monat <strong>{mese}</strong>, aus der Rechnung hergeleitet.',
+        'Il mese non l’ho dedotto: sulla fattura non c’è scritto il periodo e non c’è una mail precedente da cui ripartire. Scrivilo tu al posto di {segnaposto} — la prossima volta lo saprò da solo.':
+            'Den Monat konnte ich nicht herleiten: auf der Rechnung steht kein Zeitraum und es gibt keine frühere E-Mail als Ausgangspunkt. Schreib ihn selbst anstelle von {segnaposto} — beim nächsten Mal weiss ich ihn von allein.',
+        'Modello': 'Vorlage',
+        'Riscrivi con questo modello': 'Mit dieser Vorlage neu schreiben',
+        'Scelto da solo dalle righe della fattura. Cambiando servizio <strong>l’oggetto cambia subito</strong>; il testo invece resta finché non premi «Riscrivi», che perde le modifiche fatte qui sotto. Oggetti e testi si cambiano in {impostazioni}.':
+            'Von selbst aus den Rechnungszeilen gewählt. Ein anderer Dienst <strong>ändert den Betreff sofort</strong>; der Text dagegen bleibt, bis du «Neu schreiben» drückst — das verwirft die Änderungen unten. Betreffzeilen und Texte änderst du in {impostazioni}.',
+        'Testo — quello che il cliente leggerà, riscrivilo pure':
+            'Text — das, was der Kunde liest; schreib ihn ruhig um',
+        'Ne arriva una copia anche a te, in <strong>{dove}</strong>, in copia nascosta: il cliente non la vede. Si disattiva in Impostazioni.':
+            'Eine Kopie geht auch an dich, an <strong>{dove}</strong>, als Blindkopie: der Kunde sieht sie nicht. Abschalten kannst du das in den Einstellungen.',
+        'Allegati:': 'Anhänge:',
+        'nessuno': 'keine',
+        'Nella stessa mail vuoi allegare anche un’altra fattura recente?':
+            'Willst du derselben E-Mail noch eine andere aktuelle Rechnung anhängen?',
+        'Aggiorna allegati e riscrivi il testo': 'Anhänge aktualisieren und Text neu schreiben',
+        'Attenzione: <em>Aggiorna</em> ricostruisce il testo da capo e perde le modifiche che hai fatto qui sopra. Prima gli allegati, poi il testo.':
+            'Achtung: <em>Aktualisieren</em> baut den Text von vorne auf und verwirft deine Änderungen von oben. Zuerst die Anhänge, dann der Text.',
+        'Prova su di me ({dove})': 'Test an mich ({dove})',
+        'Mandare davvero a {a}?': 'Wirklich an {a} senden?',
+        'Invia a {chi}': 'An {chi} senden',
+        'Torna alla fattura': 'Zurück zur Rechnung',
+        'Tutto quello che è partito dall’app: le fatture ai clienti, le prove su di te e anche i tentativi andati storti.':
+            'Alles, was aus der App gegangen ist: Rechnungen an Kunden, Tests an dich selbst und auch die Versuche, die schiefgingen.',
+        'Tutte ({n})': 'Alle ({n})',
+        'Ai clienti ({n})': 'An Kunden ({n})',
+        'Prove ({n})': 'Tests ({n})',
+        'Non partite ({n})': 'Nicht rausgegangen ({n})',
+        'Allegati': 'Anhänge',
+        'Esito': 'Ergebnis',
+        'prova': 'Test',
+        'apri': 'öffnen',
+        'partita': 'gesendet',
+        'non partita': 'nicht gesendet',
+        'copia in «{dove}»': 'Kopie in «{dove}»',
+        'leggi': 'lesen',
+        'Nessuna email con questo filtro.': 'Keine E-Mail mit diesem Filter.',
+        'Ancora nessuna email partita dall’app. Le trovi qui appena ne mandi una.':
+            'Noch keine E-Mail ist aus der App gegangen. Sobald du eine sendest, steht sie hier.',
+        'Questo elenco è il diario dell’app. Le mail vere restano dove sono sempre state: una copia in «Inviata» sul server e una copia nascosta nella tua posta in arrivo.':
+            'Diese Liste ist das Tagebuch der App. Die echten E-Mails bleiben, wo sie immer waren: eine Kopie in «Gesendet» auf dem Server und eine Blindkopie in deinem Posteingang.',
+        'Email del {data}': 'E-Mail vom {data}',
+        'La mail come è partita': 'Die E-Mail, so wie sie rausging',
+        '{data} alle {ora}': '{data} um {ora}',
+        'prova su di te': 'Test an dich selbst',
+        '<strong>non è partita</strong>': '<strong>sie ist nicht rausgegangen</strong>',
+        'Ccn': 'Bcc',
+        'la copia nascosta a te, il cliente non l’ha vista':
+            'die Blindkopie an dich; der Kunde hat sie nicht gesehen',
+        'Copia in': 'Kopie in',
+        '«{dove}» sul server': '«{dove}» auf dem Server',
+        'Testo': 'Text',
+        'Di questa mail il testo non è stato registrato: è stata spedita prima che l’app cominciasse a tenerne copia.':
+            'Der Text dieser E-Mail wurde nicht festgehalten: sie ging raus, bevor die App Kopien aufbewahrte.',
+        'Tutte le email': 'Alle E-Mails',
+        'Apri il PDF allegato': 'Angehängtes PDF öffnen',
+        'Ops — Fatture': 'Hoppla — Rechnungen',
+        'Ops, qualcosa è andato storto': 'Hoppla, etwas ist schiefgegangen',
+        'L’app è viva, ma questa pagina ha avuto un problema. Non hai perso nulla: i tuoi dati e le fatture sono al sicuro.':
+            'Die App lebt, aber diese Seite hatte ein Problem. Du hast nichts verloren: deine Daten und deine Rechnungen sind sicher.',
+        'Cosa puoi fare adesso:': 'Was du jetzt tun kannst:',
+        'Torna alla {dashboard} o alle {fatture}.':
+            'Geh zurück zum {dashboard} oder zu den {fatture}.',
+        'Se ricapita spesso, chiudi la finestra del Terminale e riapri <em>Avvia Fatture.command</em>.':
+            'Wenn das öfter passiert, schliess das Terminal-Fenster und öffne <em>Avvia Fatture.command</em> erneut.',
+        'Dettaglio tecnico (utile se me lo mostri)':
+            'Technisches Detail (nützlich, wenn du es mir zeigst)',
+        'Pagina:': 'Seite:',
+        'Il dettaglio completo è salvato in:': 'Das vollständige Detail liegt in:',
+        'Torna alla Dashboard': 'Zurück zur Übersicht',
+        'Verifica': 'Prüfung',
+        'Verifica calcoli': 'Rechenprüfung',
+        'Controllo completo del motore matematico e riconciliazione di tutte le fatture create con l’app.':
+            'Eine vollständige Prüfung des Rechenwerks und ein Abgleich jeder mit der App erstellten Rechnung.',
+        '<strong>Tutto corretto.</strong> {ok}/{tot} test di calcolo superati e {ric} fatture riconciliate senza anomalie.':
+            '<strong>Alles korrekt.</strong> {ok}/{tot} Rechenprüfungen bestanden und {ric} Rechnungen ohne Auffälligkeiten abgeglichen.',
+        '<strong>Attenzione:</strong> ci sono controlli non superati. Guarda i dettagli qui sotto in rosso.':
+            '<strong>Achtung:</strong> einige Prüfungen sind nicht bestanden. Schau dir die roten Details unten an.',
+        'Test del motore di calcolo': 'Prüfungen des Rechenwerks',
+        '{ok} su {tot} superati — moltiplicazioni, arrotondamenti, formati importi, andata e ritorno.':
+            '{ok} von {tot} bestanden — Multiplikationen, Rundungen, Betragsformate, hin und zurück.',
+        'Riconciliazione fatture': 'Rechnungsabgleich',
+        'Per ogni fattura creata con l’app: <em>somma delle righe = totale salvato = importo sul PDF</em>.':
+            'Für jede mit der App erstellte Rechnung: <em>Summe der Zeilen = gespeicherte Summe = Betrag auf dem PDF</em>.',
+        'Nota: la lettura del PDF non è disponibile; verifico comunque righe e totale salvato.':
+            'Hinweis: das PDF lässt sich nicht lesen; Zeilen und gespeicherte Summe prüfe ich trotzdem.',
+        '<strong>Fattura #{n}</strong> ({chi}):': '<strong>Rechnung #{n}</strong> ({chi}):',
+        '{n} fatture controllate, tutti gli importi coincidono al centesimo.':
+            '{n} Rechnungen geprüft, jeder Betrag stimmt auf den Rappen.',
+        'Cosa garantisce tutto questo': 'Was das alles garantiert',
+        'I calcoli usano <strong>centesimi interi</strong>: niente errori di arrotondamento.':
+            'Gerechnet wird in <strong>ganzen Rappen</strong>: keine Rundungsfehler.',
+        'Ogni fattura, appena creata, viene <strong>riletta dal file vero</strong> e confermata al centesimo prima di essere salvata.':
+            'Jede Rechnung wird gleich nach dem Erstellen <strong>aus der echten Datei zurückgelesen</strong> und auf den Rappen genau bestätigt, bevor sie gespeichert wird.',
+        'Se un importo non coincidesse, la fattura <strong>non verrebbe salvata</strong> e ti verrebbe detto perché.':
+            'Stimmt ein Betrag nicht, <strong>wird die Rechnung nicht gespeichert</strong> und du erfährst, warum.',
+        'Rilancia la verifica': 'Prüfung erneut starten',
+
+        # --- le reti di sicurezza e il tempo passato ---
+        'Copia fuori dal Mac': 'Kopie ausserhalb des Macs',
+        'non ancora': 'noch nicht',
+        'Se ne fa una da sola appena emetti la prima fattura.':
+            'Eine entsteht von selbst, sobald du die erste Rechnung stellst.',
+        'mai fatta': 'nie gemacht',
+        'Nessuno zip nella cartella di destinazione.': 'Kein Zip im Zielordner.',
+        '{nome} · {kb} KB · verificata alla creazione':
+            '{nome} · {kb} KB · beim Erstellen geprüft',
+        'Copie conservate': 'Aufbewahrte Kopien',
+        'Le ultime 30, più la prima di ogni mese che non si cancella mai.':
+            'Die letzten 30, dazu die erste jedes Monats, die nie gelöscht wird.',
+        'Calendario': 'Kalender',
+        'non collegato': 'nicht verbunden',
+        'Le sessioni vanno registrate a mano finché manca l’indirizzo iCal.':
+            'Sitzungen musst du von Hand erfassen, solange die iCal-Adresse fehlt.',
+        'mai letto': 'nie gelesen',
+        'Collegato, ma non ancora interrogato.': 'Verbunden, aber noch nicht abgefragt.',
+        'Si rilegge da solo aprendo la pagina Crediti.':
+            'Er liest sich neu ein, wenn du die Guthaben-Seite öffnest.',
+        'Verifica dei calcoli': 'Rechenprüfung',
+        'mai eseguita': 'nie ausgeführt',
+        'Si lancia dalla pagina Verifica calcoli.':
+            'Du startest sie auf der Seite Rechenprüfung.',
+        '{esito} controlli': '{esito} Prüfungen',
+        'Ultima {eta}.': 'Letzte {eta}.',
+        'Estratto conto': 'Kontoauszug',
+        'Scarica i movimenti dall’e-banking e mettili in «Estratti conto».':
+            'Lade die Bewegungen aus dem E-Banking und leg sie in «Estratti conto» ab.',
+        'fino al {data}': 'bis {data}',
+        'Da lì in poi l’app non sa chi ti ha pagato: scaricane uno nuovo.':
+            'Ab dann weiss die App nicht, wer dich bezahlt hat: lad einen neuen herunter.',
+        'I versamenti fino a quella data sono stati esaminati.':
+            'Die Zahlungen bis zu diesem Datum sind geprüft.',
+        'Posta': 'Post',
+        'senza password': 'ohne Passwort',
+        'Le fatture non possono partire finché manca in Impostazioni.':
+            'Rechnungen können nicht rausgehen, solange es in den Einstellungen fehlt.',
+        'configurata': 'eingerichtet',
+        'Ultima mail partita {eta}. ': 'Letzte E-Mail ging {eta} raus. ',
+        '{n} tentativi falliti in archivio.': '{n} fehlgeschlagene Versuche im Archiv.',
+        'Nessun invio fallito.': 'Keine fehlgeschlagenen Sendungen.',
+        'pochi minuti fa': 'vor ein paar Minuten',
+        'un’ora fa': 'vor einer Stunde',
+        '{n} ore fa': 'vor {n} Stunden',
+        'ieri': 'gestern',
+        '{n} giorni fa': 'vor {n} Tagen',
+        'riga ricostruita dalla data segnata sulla fattura: destinatario e oggetto non erano stati registrati':
+            'Zeile aus dem Datum auf der Rechnung rekonstruiert: Empfänger und Betreff waren nicht erfasst',
+
+        # --- le famiglie di collaudi, sulla pagina Verifica ---
+        'Lettura importi': 'Beträge lesen',
+        'Quantità × prezzo': 'Menge × Preis',
+        'Arrotondamento': 'Rundung',
+        'Formato CHF': 'CHF-Format',
+        'Formato fattura': 'Rechnungsformat',
+        'Andata e ritorno': 'Hin und zurück',
+        'Somma righe': 'Summe der Zeilen',
+        'Coerenza interna': 'Innere Stimmigkeit',
+        'Oggetto email': 'E-Mail-Betreff',
+        'Intestazione fattura': 'Rechnungskopf',
+        'Marchio': 'Logo',
+        'Servizi': 'Dienstleistungen',
+        'Icone': 'Symbole',
+        'Menu': 'Menü',
+        'Finestra stretta': 'Schmales Fenster',
+        'Cruscotto': 'Übersichtsfelder',
+        'Incassi': 'Eingänge',
+        'Intestatario': 'Rechnungsempfänger',
+
+        # --- il perche' di una copia di sicurezza ---
+        'all’avvio dell’app': 'beim Start der App',
+        'chiesta a mano': 'von Hand angefordert',
+        'prima di reimportare lo storico': 'vor dem Neuimport des Archivs',
+        'prima di ripristinare una fattura': 'vor dem Wiederherstellen einer Rechnung',
+        'prima di eliminare la #{n}': 'vor dem Löschen von #{n}',
     },
 }
 
