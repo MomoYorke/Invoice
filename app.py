@@ -32,6 +32,7 @@ from core import servizi as srv
 from core import benvenuto as ben
 from core import icone
 from core import menu
+from core import lingua as lng
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 # La cartella delle fatture si puo' deviare con FATTURE_DIR: serve per provare
@@ -139,14 +140,39 @@ def inject_globals():
         restano = 0
     con.close()
     riga1, riga2 = marchio.due_righe(nome)
+    # «_» traduce nella lingua dell'app. Le pagine scrivono _('Fatture') e
+    # ottengono l'italiano, l'inglese o il tedesco senza sapere quale sia.
+    codice = lng.normalizza(impostazioni.get('lingua'))
     return {'all_years': years, 'current_year': datetime.date.today().year,
             'attivita': nome or 'La tua attività',
             'marchio_riga1': riga1, 'marchio_riga2': riga2,
             'logo_versione': marchio.versione(),
+            '_': lambda frase: lng.t(frase, codice),
+            'lingua': codice, 'lingue': lng.LINGUE,
             'menu_gruppi': menu.GRUPPI, 'primi_passi_restano': restano,
             'calendario_nome': impostazioni.get('calendario_nome') or 'il calendario delle sessioni',
             'calendario_storico_nome': (impostazioni.get('calendario_storico_nome')
                                         or 'il calendario storico')}
+
+
+@app.route('/lingua/<codice>')
+def cambia_lingua(codice):
+    """Cambia la lingua dell'app e torna dov'eri.
+
+    Solo la lingua dell'APP: quella dei documenti sta sul cliente, perche' la
+    fattura la legge lui. Un codice che non conosciamo torna all'italiano
+    invece di rompere la pagina.
+    """
+    con = get_con()
+    db.set_setting(con, 'lingua', lng.normalizza(codice))
+    con.commit()
+    con.close()
+    # si torna alla pagina di prima, ma solo se e' una pagina di questa app:
+    # un indirizzo esterno nel referrer non deve poterci mandare altrove
+    dove = request.referrer or ''
+    if not dove.startswith(request.host_url):
+        dove = url_for('dashboard')
+    return redirect(dove)
 
 
 # ---------------------------------------------------------------- dashboard

@@ -94,6 +94,7 @@ def run_all():
     _test_servizi(r)
     _test_servizi_riconosciuti(r)
     _test_da_fare(r)
+    _test_lingua(r)
     _test_primi_passi(r)
     _test_icone(r)
     _test_menu(r)
@@ -687,6 +688,39 @@ def _db_finto():
         con.execute('INSERT INTO invoices(id, number, deleted_at) VALUES(?,?,NULL)', (i, i))
         con.execute('INSERT INTO items(invoice_id, description) VALUES(?,?)', (i, d))
     return con
+
+
+def _test_lingua(r):
+    """Le tre lingue.
+
+    Il controllo che conta e' l'ultimo: ogni voce di menu deve esistere in
+    tutte le lingue. Senza, il giorno che si aggiunge una pagina il menu esce
+    metA' in italiano e meta' in tedesco, e nessuno se ne accorge finche' non
+    lo vede un utente.
+    """
+    from . import lingua as L
+    from . import menu as M
+
+    _check(r, 'Lingua', 'le lingue sono tre', L.CODICI, ('it', 'en', 'de'))
+    _check(r, 'Lingua', "un codice che non esiste torna all'italiano",
+           L.normalizza('klingon'), 'it')
+    _check(r, 'Lingua', 'senza lingua si resta in italiano',
+           L.t('Fatture', None), 'Fatture')
+    _check(r, 'Lingua', 'una frase mai tradotta resta in italiano invece di sparire',
+           L.t('Frase che nessuno ha tradotto', 'de'), 'Frase che nessuno ha tradotto')
+    _check(r, 'Lingua', 'tradurre in inglese funziona', L.t('Fatture', 'en'), 'Invoices')
+    _check(r, 'Lingua', 'tradurre in tedesco funziona', L.t('Fatture', 'de'), 'Rechnungen')
+
+    # nessuna voce di menu senza traduzione, in nessuna lingua
+    da_tradurre = {etichetta for _t, voci in M.GRUPPI for _k, etichetta, _i, _a in voci}
+    da_tradurre |= {titolo for titolo, _v in M.GRUPPI if titolo}
+    da_tradurre.add(M.PRIMI_PASSI[1])
+    for cod in ('en', 'de'):
+        _check(r, 'Lingua', 'ogni voce del menu esiste in %s' % cod,
+               sorted(f for f in da_tradurre if f not in L.TESTI[cod]), [])
+    _check(r, 'Lingua', 'inglese e tedesco conoscono le stesse frasi',
+           L.mancanti('en') + L.mancanti('de'), [])
+
 
 
 def _db_fatture_finto(righe):

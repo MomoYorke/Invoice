@@ -291,7 +291,8 @@ def da_fare(con, settings, registro=None):
         voci.append({
             'chiave': 'incassare', 'icona': 'soldi',
             'titolo': 'Da incassare',
-            'quante': len(aperte), 'unita': 'fatture',
+            'quante': len(aperte),
+            'unita': 'fatture' if len(aperte) != 1 else 'fattura',
             'importo': sum(r['total_cents'] or 0 for r in aperte),
             'dettaglio': (f'{tardi} ferme da oltre {GIORNI_PAZIENZA} giorni'
                           if tardi else 'nessuna in ritardo, sono tutte recenti'),
@@ -304,7 +305,9 @@ def da_fare(con, settings, registro=None):
         voci.append({
             'chiave': 'spedire', 'icona': 'email',
             'titolo': 'Fatte e non ancora spedite',
-            'quante': stato['da_mandare'], 'unita': 'fatture', 'importo': None,
+            'quante': stato['da_mandare'],
+            'unita': 'fatture' if stato['da_mandare'] != 1 else 'fattura',
+            'importo': None,
             'dettaglio': "sono nell'app ma non sono partite per email",
             'urgenza': ATTESA,
             'link': ('fatture', {'invio': 'da-mandare', 'anno': ''}),
@@ -315,7 +318,9 @@ def da_fare(con, settings, registro=None):
         voci.append({
             'chiave': 'crediti', 'icona': 'crediti',
             'titolo': 'Pacchetti finiti',
-            'quante': len(finiti), 'unita': 'clienti', 'importo': None,
+            'quante': len(finiti),
+            'unita': 'clienti' if len(finiti) != 1 else 'cliente',
+            'importo': None,
             'dettaglio': ', '.join(finiti[:4]) + (' e altri' if len(finiti) > 4 else '')
                          + ' — va emessa la prossima fattura',
             'urgenza': RITARDO,

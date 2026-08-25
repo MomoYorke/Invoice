@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="{{ lingua }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,8 +11,8 @@
   try { if (localStorage.getItem('em-privacy') === '1')
           document.documentElement.classList.add('privacy'); } catch (e) {}
   function _aggiornaOcchi(on) {
-    var t = on ? 'Importi nascosti — clicca per mostrarli'
-               : 'Nascondi gli importi (screenshot, luogo pubblico)';
+    var t = on ? {{ _('Importi nascosti — clicca per mostrarli') | tojson }}
+               : {{ _('Nascondi gli importi (screenshot, luogo pubblico)') | tojson }};
     document.querySelectorAll('.privacy-toggle').forEach(function (el) {
       el.setAttribute('title', t);
       el.setAttribute('aria-label', t);
@@ -41,32 +41,41 @@
   <nav>
     {% if primi_passi_restano %}
       <a href="{{ url_for('benvenuto') }}" class="primi {{ 'active' if request.endpoint == 'benvenuto' }}"
-         title="Primi passi — {{ primi_passi_restano }} da fare">
-        {{ icona('bussola') }}<span>Primi passi</span>
+         title="{{ _('Primi passi') }} — {{ primi_passi_restano }}">
+        {{ icona('bussola') }}<span>{{ _('Primi passi') }}</span>
         <em class="conta">{{ primi_passi_restano }}</em>
       </a>
     {% endif %}
     {% for titolo, voci in menu_gruppi %}
-      {% if titolo %}<h3>{{ titolo }}</h3>{% endif %}
+      {% if titolo %}<h3>{{ _(titolo) }}</h3>{% endif %}
       {% for endpoint, etichetta, disegno, attivo in voci %}
-        <a href="{{ url_for(endpoint) }}" title="{{ etichetta }}"
+        <a href="{{ url_for(endpoint) }}" title="{{ _(etichetta) }}"
            class="{{ 'active' if request.endpoint in attivo }}">
-          {{ icona(disegno) }}<span>{{ etichetta }}</span>
+          {{ icona(disegno) }}<span>{{ _(etichetta) }}</span>
         </a>
       {% endfor %}
     {% endfor %}
   </nav>
   <button type="button" class="privacy-mini privacy-toggle no-blur" onclick="toggleRiservato()"
-          aria-pressed="false" title="Nascondi gli importi (screenshot, luogo pubblico)">
+          aria-pressed="false" title="{{ _('Nascondi gli importi (screenshot, luogo pubblico)') }}">
     {% include '_occhio.html' %}
   </button>
-  <div class="sidebar-foot">App locale · dati sul tuo Mac</div>
+  <div class="sidebar-foot">{{ _('App locale · dati sul tuo Mac') }}</div>
 </aside>
 <main>
-  <button type="button" id="indietro" class="indietro no-blur" hidden
-          onclick="history.back()" title="Torna alla schermata precedente">
-    <span aria-hidden="true">←</span> Indietro
-  </button>
+  <div class="barra-alta">
+    <button type="button" id="indietro" class="indietro no-blur" hidden
+            onclick="history.back()" title="{{ _('Torna alla schermata precedente') }}">
+      <span aria-hidden="true">←</span> {{ _('Indietro') }}
+    </button>
+    <div class="scelta-lingua" role="group" aria-label="{{ _('Lingua') }}">
+      {% for cod, nome in lingue %}
+        <a href="{{ url_for('cambia_lingua', codice=cod) }}" title="{{ nome }}"
+           class="{{ 'attiva' if cod == lingua }}"
+           {{ 'aria-current="true"' | safe if cod == lingua }}>{{ cod | upper }}</a>
+      {% endfor %}
+    </div>
+  </div>
   <script>
     /* il tasto compare solo se c'è davvero una schermata dell'app a cui tornare:
        così non porta mai fuori dall'app né resta lì inerte */

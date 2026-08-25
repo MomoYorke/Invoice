@@ -157,6 +157,9 @@ DEFAULT_SETTINGS = {
     # Servono alla dashboard, per raggruppare il fatturato, e all'email, per
     # nominare il servizio e scegliere il testo. Vuoti = l'app non prova a
     # indovinare: meglio non nominare il servizio che nominarne uno sbagliato.
+    # la lingua dell'APP (menu, pagine, messaggi). Quella dei DOCUMENTI sta
+    # sul singolo cliente: la fattura la legge lui, non chi la scrive.
+    'lingua': 'it',
     'servizi_abbonamento': '',
     'servizi_pacchetto': '',
     # copia completa fuori dal disco dell'app (iCloud): database,
@@ -280,6 +283,12 @@ def _migrate(con):
         # conto puo' arrivare il nome del marito, della moglie, di un'azienda.
         # Piu' nomi separati da punto e virgola.
         con.execute('ALTER TABLE clients ADD COLUMN paga_come TEXT DEFAULT ""')
+    if 'lingua' not in cli:
+        # I documenti finora uscivano in inglese per tutti: i clienti che ci
+        # sono gia' restano in inglese, cosi' nessuno si ritrova a mandare una
+        # fattura in un'altra lingua senza averlo chiesto. I clienti nuovi
+        # ereditano la lingua dell'app.
+        con.execute("ALTER TABLE clients ADD COLUMN lingua TEXT DEFAULT 'en'")
     if 'abbonamento' not in cli:
         # clienti con ordine permanente: nell'email va la frase sullo standing order
         con.execute('ALTER TABLE clients ADD COLUMN abbonamento INTEGER DEFAULT 0')

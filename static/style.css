@@ -386,3 +386,16 @@ h2.sezione { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
   .riga-valore { min-width: 0; padding-right: 14px; }
   .riga-numero { font-size: 18px; }
 }
+
+/* --- la barra in alto: Indietro a sinistra, la lingua a destra.
+       Il tastino resta piccolo apposta: si usa una volta e poi non serve piu' --- */
+.barra-alta { display: flex; align-items: center; justify-content: space-between;
+              gap: 12px; margin-bottom: 6px; min-height: 30px; }
+.scelta-lingua { display: flex; gap: 2px; margin-left: auto; background: #e8edf2;
+                 border-radius: 999px; padding: 3px; }
+.scelta-lingua a { font-size: 11.5px; font-weight: 600; letter-spacing: .04em;
+                   color: var(--muted); text-decoration: none; padding: 4px 10px;
+                   border-radius: 999px; line-height: 1; }
+.scelta-lingua a:hover { color: var(--ink); }
+.scelta-lingua a.attiva { background: var(--card); color: var(--ink);
+                          box-shadow: 0 1px 2px rgba(15,23,42,.12); }
