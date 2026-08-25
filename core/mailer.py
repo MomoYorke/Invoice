@@ -26,14 +26,8 @@ import mimetypes
 from email.message import EmailMessage
 
 from .money import fmt_chf
-from .stats import SERVICE_RULES
+from . import servizi as srv
 
-# come si chiama il servizio nell'email (in inglese, come la fattura)
-NOMI_SERVIZIO = {
-    'Running coaching': 'Running Coaching',
-    'Coaching online': 'Online Coaching',
-    'Personal training': 'Personal Training',
-}
 FRASE_ABBONAMENTO = (
     "If you have already completed this month's payment by standing order, "
     "you can simply keep the attached document for your records.\n")
@@ -56,12 +50,6 @@ MODELLI = (
     ('pt', 'Pacchetto di sedute'),
 )
 NOMI_MODELLO = dict(MODELLI)
-# a quale modello appartiene ciascun servizio
-MODELLO_DI_SERVIZIO = {
-    'Running Coaching': 'coaching',
-    'Online Coaching': 'coaching',
-    'Personal Training': 'pt',
-}
 
 
 # --- il mese nell'oggetto ---------------------------------------------------
@@ -169,9 +157,18 @@ def oggetto_modello(settings, modello):
     return settings.get('email_oggetto_' + modello, '') or ''
 
 
-def modello_di(descrizioni):
+def _riconosciuto(descrizioni, settings):
+    """(nome, modello) della prima riga riconosciuta. ('', '') se nessuna."""
+    for desc in descrizioni or ():
+        nome, modello = srv.riconosci(desc, settings)
+        if nome:
+            return (nome, modello)
+    return ('', '')
+
+
+def modello_di(descrizioni, settings):
     """Quale dei due modelli usare, dedotto dalle righe della fattura."""
-    return MODELLO_DI_SERVIZIO.get(servizio_di(descrizioni), 'pt')
+    return _riconosciuto(descrizioni, settings)[1] or 'pt'
 
 
 def testo_modello(settings, modello):
@@ -190,20 +187,17 @@ def nome_di_battesimo(nome_completo):
     return parti[0] if parti else ''
 
 
-def servizio_di(descrizioni):
+def servizio_di(descrizioni, settings):
     """Il servizio da nominare nell'email, dedotto dalle righe della fattura.
     Vuoto se nessuna regola riconosce le righe.
 
-    Usa le stesse regole della dashboard (SERVICE_RULES), cosi' non esistono
-    due logiche da tenere allineate.
+    Usa le stesse regole della dashboard, quelle scritte in Impostazioni,
+    cosi' non esistono due logiche da tenere allineate.
     """
-    for desc in descrizioni or ():
-        for rx, etichetta in SERVICE_RULES:
-            if rx.search(desc or ''):
-                return NOMI_SERVIZIO.get(etichetta, etichetta)
-    # Nessuna regola ha riconosciuto le righe: chi usa l'app vende altro.
-    # Stringa vuota, e l'apertura usa la versione che il servizio non lo nomina.
-    return ''
+    # Nessuna regola riconosce le righe: chi usa l'app vende altro, o non ha
+    # ancora scritto i suoi servizi. Stringa vuota, e l'apertura usa la
+    # versione che il servizio non lo nomina.
+    return _riconosciuto(descrizioni, settings)[0]
 
 
 def allegato_di(inv, settings):
@@ -245,11 +239,11 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
     abbonato = bool(cliente['abbonamento']) if cliente and 'abbonamento' in cliente.keys() else False
     tono = (cliente['tono'] if cliente and 'tono' in cliente.keys() else '') or 'informale'
     if modello not in NOMI_MODELLO:
-        modello = modello_di(descrizioni)
+        modello = modello_di(descrizioni, settings)
     corpo = testo_modello(settings, modello) if corpo is None else corpo
     corpo = (corpo or '').strip()
 
-    servizio = servizio_di(descrizioni)
+    servizio = servizio_di(descrizioni, settings)
     if len(allegati) > 1:
         apertura = APERTURA_MULTIPLA.format(quante=QUANTE.get(len(allegati), len(allegati)))
     elif servizio:

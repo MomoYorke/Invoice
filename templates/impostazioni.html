@@ -29,6 +29,25 @@
     fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più.
     Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende
     l'ultima fattura di quel cliente e sposta il periodo avanti di un mese.</span>
+  <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px">
+    <label style="margin-bottom:2px">Servizi che l'app deve riconoscere</label>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">
+      A cosa servono: la Dashboard raggruppa il fatturato per servizio, e l'email nomina
+      il servizio e sceglie il testo giusto. Una riga per servizio, così:
+      <code>Nome del servizio = parola, parola</code> — le parole sono quelle che compaiono
+      nelle righe delle tue fatture. Senza <code>=</code>, il nome fa anche da parola.
+      Vince la prima riga che riconosce, e gli abbonamenti si provano per primi.
+      <strong>Se lasci vuoto</strong>, l'app non prova a indovinare: l'email non nomina il
+      servizio e la Dashboard mette tutto in «Altro».</p>
+    <label style="font-size:13px">In abbonamento — si rinnova ogni mese</label>
+    <textarea name="servizi_abbonamento" rows="3"
+              style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
+              placeholder="per esempio:&#10;Fisioterapia = fisioterapia, seduta&#10;Coaching = coaching">{{ settings.servizi_abbonamento }}</textarea>
+    <label style="font-size:13px">A pacchetto — si compra una volta e si consuma</label>
+    <textarea name="servizi_pacchetto" rows="3"
+              style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
+              placeholder="per esempio:&#10;Pacchetto sedute = pacchetto, sedute, session">{{ settings.servizi_pacchetto }}</textarea>
+  </div>
   <label>Cartella storico (solo lettura)</label>
   <input type="text" name="source_folder" value="{{ settings.source_folder }}"
          placeholder="vuoto: nessuno storico da importare">

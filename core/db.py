@@ -151,6 +151,14 @@ DEFAULT_SETTINGS = {
     # i servizi proposti sopra le righe della fattura, uno per riga. Vuoto =
     # l'app propone le descrizioni che hai gia' usato di piu'.
     'servizi': '',
+    # Quali servizi l'app riconosce nelle righe della fattura, e a quale
+    # modello di email appartengono. Una riga per servizio:
+    #     Nome del servizio = parola, parola
+    # Servono alla dashboard, per raggruppare il fatturato, e all'email, per
+    # nominare il servizio e scegliere il testo. Vuoti = l'app non prova a
+    # indovinare: meglio non nominare il servizio che nominarne uno sbagliato.
+    'servizi_abbonamento': '',
+    'servizi_pacchetto': '',
     # copia completa fuori dal disco dell'app (iCloud): database,
     # registro sessioni e PDF delle fatture in un unico zip datato
     # Posta: si spedisce dal proprio server, non da Gmail. Se il tuo dominio
@@ -259,7 +267,7 @@ def _migrate(con):
     if 'email' not in cli:
         con.execute('ALTER TABLE clients ADD COLUMN email TEXT DEFAULT ""')
     if 'tono' not in cli:
-        # con chi ci si da' del tu si chiude 'Best, Ema'; con gli altri
+        # con chi ci si da' del tu si chiude col saluto confidenziale; con
         # il saluto formale invece del confidenziale
         con.execute("ALTER TABLE clients ADD COLUMN tono TEXT DEFAULT 'informale'")
     if 'intestatario' not in cli:
@@ -278,6 +286,7 @@ def _migrate(con):
     _migra_modelli_email(con)
     _migra_oggetti_email(con)
     _migra_registro_email(con)
+    _migra_servizi_riconosciuti(con)
     mov = {r['name'] for r in con.execute('PRAGMA table_info(movimenti)')}
     if 'stato_prima' not in mov:
         con.execute('ALTER TABLE movimenti ADD COLUMN stato_prima TEXT DEFAULT ""')
@@ -296,6 +305,35 @@ def _migrate(con):
             # il testo della mail: si tiene per poterla rileggere dall'app
             con.execute(f'ALTER TABLE email_log ADD COLUMN {colonna} TEXT DEFAULT ""')
     con.commit()
+
+
+def _migra_servizi_riconosciuti(con):
+    """Le regole che riconoscono i servizi escono dal programma ed entrano
+    nelle Impostazioni.
+
+    Erano tre servizi scritti nel codice: quelli di chi l'app l'ha scritta per
+    se'. Chi ha gia' fatturato se li ritrova scritti come erano, cosi' non
+    cambia niente e ora puo' correggerli; chi installa da zero parte con gli
+    elenchi vuoti e ci mette i propri, invece di ereditare il mestiere di un
+    altro.
+
+    Gira prima che le impostazioni di partenza vengano inserite, quindi scrive
+    lei la riga: dopo, l'INSERT OR IGNORE la lascia dov'e'."""
+    gia = con.execute(
+        "SELECT 1 FROM settings WHERE key IN ('servizi_abbonamento', 'servizi_pacchetto')"
+        " AND value <> '' LIMIT 1").fetchone()
+    if gia:
+        return
+    if not con.execute('SELECT 1 FROM invoices LIMIT 1').fetchone():
+        return   # installazione nuova: gli elenchi restano vuoti
+    for chiave, valore in (
+            ('servizi_abbonamento',
+             'Running Coaching = running coaching\nOnline Coaching = coaching online'),
+            ('servizi_pacchetto',
+             'Personal Training = session, personal training, allenament, '
+             'add-on, credit, crediti')):
+        con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)',
+                    (chiave, valore))
 
 
 def _migra_modelli_email(con):

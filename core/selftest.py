@@ -92,6 +92,7 @@ def run_all():
     _test_marchio(r)
     _test_clienti_crediti(r)
     _test_servizi(r)
+    _test_servizi_riconosciuti(r)
     _test_primi_passi(r)
     _test_icone(r)
     _test_menu(r)
@@ -111,7 +112,14 @@ class _Finta(dict):
 def _test_email(r):
     """Il testo dell'email si costruisce senza toccare la rete: si puo' provare."""
     from . import mailer
-    from .db import DEFAULT_SETTINGS as S
+    from .db import DEFAULT_SETTINGS
+
+    # Chi usa l'app ha scritto i suoi servizi in Impostazioni: e' il caso
+    # normale. Le regole non sono piu' nel programma, quindi vanno date.
+    S = dict(DEFAULT_SETTINGS,
+             servizi_abbonamento='Running Coaching = running coaching\n'
+                                 'Online Coaching = coaching online',
+             servizi_pacchetto='Personal Training = session, personal training')
 
     inv = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
                  client_name='Chiara De Santis')
@@ -144,16 +152,16 @@ def _test_email(r):
     # i due modelli: sceglierli da soli e poterli forzare a mano
     prove = dict(S, email_corpo_coaching='TESTO-COACHING', email_corpo_pt='TESTO-PT')
     _check(r, 'Email', 'running coaching → modello coaching',
-           mailer.modello_di(['Monthly abo: running coaching']), 'coaching')
+           mailer.modello_di(['Monthly abo: running coaching'], S), 'coaching')
     _check(r, 'Email', 'coaching online → modello coaching',
-           mailer.modello_di(['Coaching online - August']), 'coaching')
+           mailer.modello_di(['Coaching online - August'], S), 'coaching')
     _check(r, 'Email', 'righe di un pacchetto → modello «pacchetto»',
-           mailer.modello_di(['10 Sessions Pack – Personal Training']), 'pt')
+           mailer.modello_di(['10 Sessions Pack – Personal Training'], S), 'pt')
 
     # chi fa un altro mestiere: nessuna regola riconosce le sue righe, e
     # l'email non deve inventargli un servizio che non vende
     _check(r, 'Email', 'servizio non riconosciuto: non se ne inventa uno',
-           mailer.servizio_di(['Pacchetto 10 sedute di fisioterapia']), '')
+           mailer.servizio_di(['Pacchetto 10 sedute di fisioterapia'], S), '')
     _check(r, 'Email', "servizio ignoto: l'apertura non lo nomina",
            mailer.componi(inv, pacchetto, S, ['Pacchetto 10 sedute'])['body'].split('\n')[2],
            'Please find attached your invoice.')
@@ -678,6 +686,77 @@ def _db_finto():
         con.execute('INSERT INTO invoices(id, number, deleted_at) VALUES(?,?,NULL)', (i, i))
         con.execute('INSERT INTO items(invoice_id, description) VALUES(?,?)', (i, d))
     return con
+
+
+def _test_servizi_riconosciuti(r):
+    """Quali servizi l'app riconosce nelle righe della fattura.
+
+    Prima erano tre, scritti nel programma: quelli di chi l'app l'aveva
+    scritta per se'. Chiunque altro si vedeva chiamare il proprio lavoro col
+    nome del suo. Adesso le regole sono un'impostazione, e questi controlli
+    servono a due cose: che chi le scrive ottenga quello che si aspetta, e che
+    chi non le ha ancora scritte non si veda inventare niente.
+    """
+    from . import servizi as S
+    from . import mailer, db
+
+    mio = {'servizi_abbonamento': 'Running Coaching = running coaching\n'
+                                  'Online Coaching = coaching online',
+           'servizi_pacchetto': 'Personal Training = session, personal training'}
+
+    # --- come si legge una riga ---
+    _check(r, 'Servizi', 'la riga «Nome = parole» si legge tutta',
+           S._regola('Fisioterapia = seduta, fisio'), ('Fisioterapia', ['seduta', 'fisio']))
+    _check(r, 'Servizi', 'senza «=» il nome fa anche da parola',
+           S._regola('Osteopatia'), ('Osteopatia', ['osteopatia']))
+    _check(r, 'Servizi', 'una riga vuota non e\' una regola', S._regola('   '), None)
+    _check(r, 'Servizi', 'gli spazi attorno alle parole non contano',
+           S._regola('Massaggio =  a ,  b '), ('Massaggio', ['a', 'b']))
+
+    # --- l'ordine: gli abbonamenti si provano per primi ---
+    _check(r, 'Servizi', 'prima gli abbonamenti, poi i pacchetti',
+           [n for n, _m, _p in S.regole(mio)],
+           ['Running Coaching', 'Online Coaching', 'Personal Training'])
+    _check(r, 'Servizi', 'ogni servizio porta con se\' il suo modello',
+           [m for _n, m, _p in S.regole(mio)], ['coaching', 'coaching', 'pt'])
+
+    # --- riconoscere ---
+    _check(r, 'Servizi', 'riconosce l\'abbonamento e sa che e\' un abbonamento',
+           S.riconosci('Monthly abo: running coaching (August)', mio),
+           ('Running Coaching', 'coaching'))
+    _check(r, 'Servizi', 'riconosce il pacchetto',
+           S.riconosci('10 Sessions Pack', mio), ('Personal Training', 'pt'))
+    _check(r, 'Servizi', 'le maiuscole non contano',
+           S.riconosci('COACHING ONLINE - agosto', mio), ('Online Coaching', 'coaching'))
+    _check(r, 'Servizi', 'quello che non e\' scritto non viene riconosciuto',
+           S.riconosci('Consulenza nutrizionale', mio), (None, None))
+    _check(r, 'Servizi', 'senza regole scritte non si indovina niente',
+           S.riconosci('Monthly abo: running coaching', {}), (None, None))
+    _check(r, 'Servizi', 'una riga vuota non riconosce niente',
+           S.riconosci('', mio), (None, None))
+
+    # --- un altro mestiere, con le sue parole ---
+    fisio = {'servizi_abbonamento': 'Riabilitazione = riabilitazione',
+             'servizi_pacchetto': 'Fisioterapia = seduta, sedute, fisioterapia'}
+    _check(r, 'Servizi', 'un fisioterapista riconosce le proprie righe',
+           S.riconosci('Pacchetto 10 sedute di fisioterapia', fisio),
+           ('Fisioterapia', 'pt'))
+    _check(r, 'Servizi', 'e le sue righe non diventano quelle di un altro',
+           S.riconosci('Pacchetto 10 sedute di fisioterapia', mio), (None, None))
+
+    # --- e l'email che ne esce ---
+    inv = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
+                 client_name='Sofia Ferrari')
+    cli = _Finta(name='Sofia Ferrari', email='s@esempio.ch', abbonamento=0, tono='informale')
+    imp = dict(db.DEFAULT_SETTINGS, **fisio)
+    corpo = mailer.componi(inv, cli, imp, ['Pacchetto 10 sedute di fisioterapia'])['body']
+    _check(r, 'Servizi', 'il fisioterapista fattura a nome suo, non di un altro',
+           'Please find attached your invoice for Fisioterapia.' in corpo, True)
+    vuote = mailer.componi(inv, cli, dict(db.DEFAULT_SETTINGS),
+                           ['Pacchetto 10 sedute di fisioterapia'])['body']
+    _check(r, 'Servizi', 'senza regole l\'email non nomina nessun servizio',
+           'Please find attached your invoice.' in vuote, True)
+
 
 
 def _test_primi_passi(r):

@@ -56,6 +56,13 @@ def passi(con, settings):
          'perche': "L'app la scrive in Word e in PDF, controlla che i due documenti "
                    "dicano lo stesso importo, e la mette in archivio.",
          'dove': 'nuova', 'bottone': 'Fai la prima fattura'},
+        {'chiave': 'servizi', 'obbligatorio': False,
+         'titolo': 'Come si chiamano i tuoi servizi',
+         'fatto': valorizzato('servizi_abbonamento') or valorizzato('servizi_pacchetto'),
+         'perche': 'Serve a due cose: la Dashboard raggruppa il fatturato per servizio, '
+                   "e l'email nomina il servizio giusto. Finché è vuoto l'app non prova "
+                   "a indovinare: mette tutto in «Altro» e nell'email non lo nomina.",
+         'dove': 'impostazioni', 'bottone': 'Scrivi i tuoi servizi'},
         {'chiave': 'posta', 'obbligatorio': False,
          'titolo': 'La posta',
          'fatto': valorizzato('smtp_host', 'smtp_user', 'smtp_pass'),

@@ -91,3 +91,55 @@ def avanza_periodo(descrizione, mesi=1):
         fuori += descrizione[ultimo:m.start()] + f'{nuova.day:02d}{sep}{nuova.month:02d}{sep}{anno}'
         ultimo = m.end()
     return fuori + descrizione[ultimo:]
+
+
+# --- Riconoscere il servizio di una riga di fattura -------------------------
+#
+# Prima queste regole stavano scritte nel programma, ed erano i tre servizi di
+# chi l'app l'ha scritta per se'. Adesso stanno nelle Impostazioni: due elenchi,
+# uno per gli abbonamenti e uno per i pacchetti, una riga per servizio.
+#
+#     Nome del servizio = parola, parola, parola
+#
+# Le parole sono quelle che compaiono nelle righe della fattura. Senza «=», il
+# nome fa anche da parola. L'ordine conta: vince la prima regola che riconosce,
+# e gli abbonamenti si provano prima perche' le loro parole sono piu' precise.
+
+MODELLI_SERVIZIO = (('servizi_abbonamento', 'coaching'),
+                    ('servizi_pacchetto', 'pt'))
+
+
+def _regola(riga):
+    """«Nome = a, b» -> ('Nome', ['a', 'b']). None se la riga non dice niente."""
+    nome, _uguale, parole = (riga or '').partition('=')
+    nome = nome.strip()
+    if not nome:
+        return None
+    chiavi = [p.strip().lower() for p in parole.split(',') if p.strip()]
+    return (nome, chiavi or [nome.lower()])
+
+
+def regole(settings):
+    """[(nome, modello, parole)] nell'ordine in cui vanno provate."""
+    fuori = []
+    for chiave, modello in MODELLI_SERVIZIO:
+        for riga in ((settings or {}).get(chiave) or '').splitlines():
+            r = _regola(riga)
+            if r:
+                fuori.append((r[0], modello, r[1]))
+    return fuori
+
+
+def riconosci(descrizione, settings):
+    """(nome, modello) della prima regola che riconosce la riga.
+
+    (None, None) se non la riconosce nessuna: e' un risultato buono quanto gli
+    altri. Chi usa l'app vende quello che vende, e inventargli un servizio che
+    non ha e' peggio che non nominarlo."""
+    testo = (descrizione or '').lower()
+    if not testo:
+        return (None, None)
+    for nome, modello, parole in regole(settings):
+        if any(p in testo for p in parole):
+            return (nome, modello)
+    return (None, None)

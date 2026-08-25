@@ -9,6 +9,8 @@ Tutti i calcoli in centesimi interi.
 import datetime
 import re
 
+from . import servizi
+
 LEGACY_YEARS = (2022, 2023)
 
 
@@ -54,12 +56,6 @@ def by_client(con, year=None):
     return [(r['name'], r['t'], r['n']) for r in rows]
 
 
-SERVICE_RULES = [
-    (re.compile(r'running\s*coaching', re.I), 'Running coaching'),
-    (re.compile(r'coaching\s*online', re.I), 'Coaching online'),
-    (re.compile(r'session|personal\s*training|\bpt\b|allenament|add-?on|credits?|crediti',
-                re.I), 'Personal training'),
-]
 # Righe che NON sono un servizio venduto:
 # - sconti: sul documento hanno importo positivo ma vanno SOTTRATTI
 #   (es. 2'050 - 50 = 2'000). Non fanno voce a se': lo sconto si
@@ -70,14 +66,24 @@ OMAGGI = re.compile(r'gift|bring a friend|referral|free|omaggio|gratis', re.I)
 NON_DETTAGLIATO = 'Non dettagliato'
 
 
-def _etichetta(desc):
-    for rx, nome in SERVICE_RULES:
-        if rx.search(desc):
-            return nome
-    return 'Altro'
+def regole_servizi(con):
+    """Le regole di riconoscimento, come le ha scritte chi usa l'app.
+
+    Stavano nel programma: erano i servizi di una persona sola. Ora sono due
+    righe di impostazioni, e chi fa un altro mestiere ci mette il suo."""
+    fuori = {}
+    for k in ('servizi_abbonamento', 'servizi_pacchetto'):
+        r = con.execute('SELECT value FROM settings WHERE key=?', (k,)).fetchone()
+        fuori[k] = (r[0] if r else '') or ''
+    return fuori
 
 
-def _servizio_dedotto(con, inv_id, client_name, cents):
+def _etichetta(desc, regole):
+    nome, _modello = servizi.riconosci(desc, regole)
+    return nome or 'Altro'
+
+
+def _servizio_dedotto(con, inv_id, client_name, cents, regole):
     """Servizio di una fattura senza righe di dettaglio.
 
     Deduce SOLO quando non c'e' margine di errore: tutte le altre fatture
@@ -94,7 +100,7 @@ def _servizio_dedotto(con, inv_id, client_name, cents):
         d = r['d'] or ''
         if SCONTI.search(d) or OMAGGI.search(d):
             continue
-        trovati.add(_etichetta(d))
+        trovati.add(_etichetta(d, regole))
     if len(trovati) == 1:
         etichetta = trovati.pop()
         if etichetta != 'Altro':
@@ -112,6 +118,7 @@ def by_service(con, year):
       servizio quando e' deducibile senza ambiguita', altrimenti
       finiscono in 'Non dettagliato'.
     """
+    regole = regole_servizi(con)
     buckets = {}
 
     def aggiungi(label, cents):
@@ -134,7 +141,7 @@ def by_service(con, year):
             if OMAGGI.search(desc):
                 locali['Omaggi'] = locali.get('Omaggi', 0) + val
                 continue
-            e = _etichetta(desc)
+            e = _etichetta(desc, regole)
             locali[e] = locali.get(e, 0) + val
         if sconto:
             # lo sconto si scala dal servizio piu' consistente della fattura
@@ -150,7 +157,8 @@ def by_service(con, year):
     for inv in con.execute('SELECT id, client_name, COALESCE(total_cents,0) t FROM invoices '
                            'WHERE year=? AND deleted_at IS NULL', (year,)):
         if inv['id'] not in righe and inv['t']:
-            aggiungi(_servizio_dedotto(con, inv['id'], inv['client_name'], inv['t']), inv['t'])
+            aggiungi(_servizio_dedotto(con, inv['id'], inv['client_name'], inv['t'], regole),
+                     inv['t'])
 
     return sorted((kv for kv in buckets.items() if kv[1] != 0), key=lambda kv: -kv[1])
 

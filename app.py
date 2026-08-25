@@ -1561,7 +1561,8 @@ def impostazioni():
                 db.set_setting(con, 'smtp_fallimenti', '0')
                 db.set_setting(con, 'smtp_pausa_fino', '')
             elif k in ('email_body', 'email_corpo_coaching', 'email_corpo_pt',
-                       'email_saluto_informale', 'email_saluto_formale', 'servizi'):
+                       'email_saluto_informale', 'email_saluto_formale', 'servizi',
+                       'servizi_abbonamento', 'servizi_pacchetto'):
                 # il testo va tenuto com'e': negli a capo in fondo a un saluto
                 # c'e' lo spazio prima della firma, e toglierli lo rovina
                 valore = valore.replace('\r\n', '\n')

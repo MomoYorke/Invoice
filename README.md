@@ -9,7 +9,7 @@ scrivi lì finisce sulle fatture — in PDF e in Word — e in cima all'app.
 
 ## La prima volta
 
-L'app si apre su **Primi passi**: sette cose, in ordine, con scritto a cosa
+L'app si apre su **Primi passi**: otto cose, in ordine, con scritto a cosa
 servono e un pulsante che ti porta dove si fanno.
 
 Due sono indispensabili — i dati di chi emette la fattura e l'IBAN — e finché
@@ -193,6 +193,43 @@ Chi paga a sessione singola o a fattura mensile qui non va messo.
 - Stati: *In corso* · *In esaurimento* (2 o meno rimasti) · **Crediti terminati**
   (pacchetto finito: emetti la prossima fattura).
 - Il registro è `sessions.json` (copia di sicurezza a ogni salvataggio in `data/backups/`).
+
+## Quali servizi riconosce l'app
+
+L'app deve capire, guardando le righe di una fattura, **quale servizio hai venduto**:
+serve alla Dashboard per raggruppare il fatturato, e all'email per nominare il
+servizio e scegliere il testo giusto.
+
+Le regole le scrivi tu, in **Impostazioni → Servizi che l'app deve riconoscere**.
+Una riga per servizio:
+
+```
+Nome del servizio = parola, parola
+```
+
+Le parole sono quelle che compaiono nelle righe delle tue fatture. Senza `=`, il
+nome fa anche da parola. Ci sono due elenchi, e la differenza conta perché decide
+quale testo va nell'email:
+
+| Elenco | Cos'è | Nell'email |
+|---|---|---|
+| **In abbonamento** | si rinnova ogni mese | «this month's invoice», e nell'oggetto va il mese |
+| **A pacchetto** | si compra una volta e si consuma | «your invoice», senza mese |
+
+Vince la **prima riga che riconosce**, e gli abbonamenti si provano per primi: se una
+parola compare in tutti e due gli elenchi, metti quella più precisa in alto.
+
+Un fisioterapista, per esempio:
+
+```
+In abbonamento:  Riabilitazione = riabilitazione
+A pacchetto:     Fisioterapia = seduta, sedute, fisioterapia
+```
+
+**Se lasci gli elenchi vuoti** l'app non prova a indovinare: nella Dashboard il
+fatturato finisce tutto in *Altro*, e l'email dice «Please find attached your
+invoice.» senza nominare niente. È voluto: nominare un servizio sbagliato in una
+mail che va al cliente è peggio che non nominarlo.
 
 ## Come leggere "per tipo di servizio"
 La somma delle voci coincide sempre col fatturato dell'anno:
