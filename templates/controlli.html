@@ -135,6 +135,36 @@
 {% endif %}
 
 <div class="panel mt" style="max-width:620px">
+  <h2>Le reti di sicurezza
+    <span class="badge {{ 'pagata' if salute.stato == 'ok' else '' }}"
+          style="font-weight:400;font-size:11.5px;vertical-align:middle">
+      {{ 'tutto a posto' if salute.stato == 'ok' else ('da guardare' if salute.stato == 'attenzione' else 'problema') }}
+    </span>
+  </h2>
+  <p class="muted" style="font-size:12.5px;margin-top:0">Copie di sicurezza, calendario,
+    verifica dei calcoli, estratto conto, posta: lavorano da sole e non si fanno notare.
+    Vanno guardate proprio per questo — il giorno che smettono, senza un posto dove
+    guardare non se ne accorge nessuno.</p>
+  <table>
+    {% for v in salute.voci %}
+    <tr>
+      <td style="width:20px">{{ pallino('verde', 'a posto') if v.stato == 'ok'
+      else (pallino('giallo', 'da tenere d\'occhio') if v.stato == 'attenzione'
+      else pallino('rosso', 'da sistemare')) }}</td>
+      <td>{{ v.nome }}<br><span class="muted" style="font-size:11.5px">{{ v.dettaglio }}</span></td>
+      <td class="num" style="white-space:nowrap">{{ v.valore }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted" style="font-size:12px;margin-bottom:0">
+    Occupato: database {{ (salute.spazio.database / 1024) | round | int }} KB ·
+    fatture {{ (salute.spazio.fatture / 1024 / 1024) | round(1) }} MB ·
+    copie locali {{ (salute.spazio.backup_locali / 1024 / 1024) | round(1) }} MB ·
+    testo delle email {{ salute.spazio.email_kb }} KB.
+  </p>
+</div>
+
+<div class="panel">
   <h2>Reimporta lo storico</h2>
   <p class="muted">Rilegge la cartella dello storico (solo lettura) e aggiorna i dati importati.
      Le fatture create con l'app e le tue correzioni manuali non vengono toccate.</p>

@@ -162,32 +162,49 @@ def dashboard():
     year = request.args.get('anno', type=int) or datetime.date.today().year
     k = stats.kpis(con, year)
     months = stats.monthly(con, year)
+    settings = db.get_settings(con)
+    try:
+        registro = sess.carica()
+    except Exception as e:                      # il registro non deve poter
+        err_logger.error('Registro non letto: %s', e)       # spegnere la Dashboard
+        registro = None
+    cose = cruscotto.da_fare(con, settings, registro)
+    try:
+        novita = cruscotto.attivita(con, registro if registro is not None else {})
+    except Exception as e:
+        err_logger.error('Attività non costruita: %s', e)
+        novita = []
+    con.close()
+    return render_template('dashboard.html', k=k, year=year, months=months,
+                           cose=cose, novita=novita, restano=ben.da_fare(passi))
+
+
+@app.route('/performance')
+def performance():
+    """Come sta andando: i numeri che si guardano, non quelli su cui si agisce.
+
+    Stavano tutti sulla Dashboard, e la Dashboard non riusciva piu' a dire
+    quale fosse la cosa da fare. Qui hanno lo spazio per essere grafici veri.
+    """
+    con = get_con()
+    year = request.args.get('anno', type=int) or datetime.date.today().year
+    k = stats.kpis(con, year)
+    months = stats.monthly(con, year)
     months_prev = stats.monthly(con, year - 1)
     yearly = stats.revenue_by_year(con)
     clients = stats.by_client(con, year)[:8]
     services = stats.by_service(con, year)
-    recent = con.execute(
-        'SELECT * FROM invoices WHERE deleted_at IS NULL ORDER BY COALESCE(number,0) DESC, date DESC LIMIT 6').fetchall()
+    stato = cruscotto.stato_fatture(con, year)
     max_month = max(months + months_prev + [1])
     max_year_v = max([v['invoiced'] for v in yearly.values()] + [1])
     max_client = max([c[1] for c in clients] + [1])
-    settings = db.get_settings(con)
-    stato = cruscotto.stato_fatture(con, year)
-    salute = cruscotto.salute(con, settings, _cartella_backup())
-    mancanti = cruscotto.incassi_mancanti(con, settings.get('banca_ultimo_estratto'))
-    try:
-        novita = cruscotto.attivita(con, sess.carica())
-    except Exception as e:                      # il registro non deve poter
-        err_logger.error('Attività non costruita: %s', e)   # spegnere la Dashboard
-        novita = []
+    max_service = max([s[1] for s in services] + [1])
     con.close()
-    return render_template('dashboard.html', k=k, year=year, months=months,
+    return render_template('performance.html', k=k, year=year, months=months,
                            months_prev=months_prev, mesi=MESI_S, yearly=yearly,
-                           clients=clients, services=services, recent=recent,
+                           clients=clients, services=services, stato=stato,
                            max_month=max_month, max_year_v=max_year_v,
-                           max_client=max_client, stato=stato, salute=salute,
-                           novita=novita, mancanti=mancanti,
-                           restano=ben.da_fare(passi),
+                           max_client=max_client, max_service=max_service,
                            legacy_years=stats.LEGACY_YEARS)
 
 
@@ -1385,9 +1402,12 @@ def controlli():
     issues = stats.health(con)
     archived = corrections.acknowledged_list(con)
     corr = corrections.corrections_map(con)
+    # le reti di sicurezza: stavano in Dashboard, ma non sono cose da guardare
+    # ogni mattina — sono cose da controllare quando si controlla
+    salute = cruscotto.salute(con, db.get_settings(con), _cartella_backup())
     con.close()
     return render_template('controlli.html', issues=issues, archived=archived,
-                           corr=corr, n_corr=len(corr))
+                           corr=corr, n_corr=len(corr), salute=salute)
 
 
 @app.route('/controlli/correggi', methods=['POST'])

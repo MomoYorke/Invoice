@@ -18,6 +18,7 @@ piu' dove si e'.
 GRUPPI = [
     (None, [
         ('dashboard', 'Dashboard', 'cruscotto', ('dashboard',)),
+        ('performance', 'Performance', 'grafico', ('performance',)),
     ]),
     ('Fatturare', [
         ('nuova', 'Nuova fattura', 'nuova', ('nuova',)),

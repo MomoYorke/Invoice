@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard{% endblock %}
 {% set ICONE = {'fattura': 'fattura', 'email': 'email', 'errore': 'avviso',
-                 'sessione': 'agenda', 'crediti': 'crediti'} %}
+                'sessione': 'agenda', 'crediti': 'crediti'} %}
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
   <h1>Dashboard</h1>
@@ -10,11 +10,6 @@
     {% include '_occhio.html' %}
   </button>
 </div>
-<p class="sub">La tua situazione economica a colpo d'occhio.
-  <select onchange="location='?anno='+this.value" style="width:auto;margin-left:8px">
-    {% for y in all_years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
-  </select>
-</p>
 
 {% if restano %}
 <div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -24,241 +19,68 @@
 </div>
 {% endif %}
 
-<div class="cards">
-  <div class="card">
-    <div class="label">Fatturato {{ year }}{{ ' (ad oggi)' if year == current_year }}</div>
-    <div class="value">{{ k.ytd | chf }}</div>
+{# --- un numero solo, grande: quanto hai fatturato quest'anno --- #}
+{% set max_month = (months | max) or 1 %}
+<div class="hero">
+  <div>
+    <div class="hero-label">Fatturato {{ year }} ad oggi</div>
+    <div class="hero-value">{{ k.ytd | chf }}</div>
     {% if k.growth_bp is not none %}
-      <div class="hint">
-        <span class="{{ 'up' if k.growth_bp >= 0 else 'down' }}">
-          {{ '▲' if k.growth_bp >= 0 else '▼' }} {{ '%+.1f' % (k.growth_bp / 100) }}%
-        </span> vs stesso periodo {{ year - 1 }}
-      </div>
+    <div class="hero-delta">
+      <span class="{{ 'up' if k.growth_bp >= 0 else 'down' }}">{{ '▲' if k.growth_bp >= 0 else '▼' }}
+        {{ '%+.1f' % (k.growth_bp / 100) }}%</span> rispetto allo stesso periodo del {{ year - 1 }}
+    </div>
     {% endif %}
   </div>
-  {% if k.projection %}
-  <div class="card">
-    <div class="label">Proiezione fine {{ year }}</div>
-    <div class="value">{{ k.projection | chf }}</div>
-    <div class="hint">al ritmo attuale (media giornaliera)</div>
-  </div>
-  {% endif %}
-  <div class="card">
-    <div class="label">Incassato / Da incassare</div>
-    <div class="value">{{ k.paid | chf(false) }}</div>
-    <div class="hint">aperto: <strong>{{ k.open | chf }}</strong></div>
-  </div>
-  <div class="card">
-    <div class="label">Fattura media · N. fatture</div>
-    <div class="value">{{ k.avg | chf(false) if k.avg else '—' }}</div>
-    <div class="hint">{{ k.count }} fatture nel {{ year }}</div>
-  </div>
-  {% if k.top_client %}
-  <div class="card">
-    <div class="label">Miglior cliente {{ year }}</div>
-    <div class="value" style="font-size:18px">{{ k.top_client[0] }}</div>
-    <div class="hint">{{ k.top_client[1] | chf }}</div>
-  </div>
-  {% endif %}
-</div>
-
-<div class="grid2">
-  <div class="panel">
-    <h2>Stato fatture {{ year }}</h2>
-    <table>
-      <tr>
-        <td><a href="{{ url_for('fatture', anno=year) }}">Emesse</a></td>
-        <td class="num"><strong>{{ stato.totali }}</strong></td>
-      </tr>
-      <tr>
-        <td><a href="{{ url_for('fatture', anno=year, stato='pagata') }}">Pagate</a></td>
-        <td class="num"><strong>{{ stato.pagate }}</strong></td>
-      </tr>
-      <tr>
-        <td><a href="{{ url_for('fatture', anno=year, stato='emessa') }}">Da incassare</a></td>
-        <td class="num"><strong>{{ stato.da_incassare }}</strong></td>
-      </tr>
-      <tr>
-        <td><a href="{{ url_for('fatture', anno=year, invio='inviate') }}">Spedite per email</a></td>
-        <td class="num"><strong>{{ stato.inviate }}</strong></td>
-      </tr>
-      <tr>
-        <td><a href="{{ url_for('fatture', anno=year, invio='da-mandare') }}">Fatte con l'app, non ancora spedite</a></td>
-        <td class="num"><strong>{{ stato.da_mandare }}</strong></td>
-      </tr>
-    </table>
-    <p class="muted" style="font-size:12px;margin-bottom:0">
-      Le fatture storiche (documenti Word) non si spediscono dall'app: non entrano
-      nell'ultimo conteggio.</p>
-
-    <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
-      <label style="margin-bottom:6px">Incassi</label>
-      {% if mancanti.in_ritardo %}
-      <p style="margin:0 0 6px">{{ pallino('rosso') }} <strong>{{ mancanti.in_ritardo | length }}</strong>
-         {{ 'fattura' if mancanti.in_ritardo|length == 1 else 'fatture' }} senza incasso,
-         e il versamento sarebbe già dovuto comparire nell'estratto:</p>
-      <table style="margin-top:0">
-        {% for r in mancanti.in_ritardo %}
-        <tr>
-          <td><a href="{{ url_for('fattura', inv_id=r.id) }}">#{{ r.number }}</a>
-              {{ r.client_name }}</td>
-          <td class="muted">{{ r.date | dateit }}</td>
-          <td class="num">{{ r.total_cents | chf(false) }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-      {% else %}
-      <p style="margin:0">{{ pallino('verde') }} Nessun incasso mancante fra quelli che l'estratto può già
-         mostrare.</p>
-      {% endif %}
-      {% if mancanti.da_verificare %}
-      <p class="muted" style="font-size:12px;margin:6px 0 0">
-        Altre <strong>{{ mancanti.da_verificare | length }}</strong> sono troppo recenti
-        per saperlo: il pagamento comparirà in un estratto che non hai ancora scaricato.
-        {% if mancanti.limite %}Il confine è il {{ mancanti.limite | dateit }}.{% endif %}</p>
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>Salute dell'app
-      <span class="badge {{ 'pagata' if salute.stato == 'ok' else '' }}"
-            style="font-weight:400;font-size:11.5px;vertical-align:middle">
-        {{ 'tutto a posto' if salute.stato == 'ok' else ('da guardare' if salute.stato == 'attenzione' else 'problema') }}
-      </span>
-    </h2>
-    <table>
-      {% for v in salute.voci %}
-      <tr>
-        <td style="width:20px">{{ pallino('verde', 'a posto') if v.stato == 'ok'
-        else (pallino('giallo', 'da tenere d\'occhio') if v.stato == 'attenzione'
-        else pallino('rosso', 'da sistemare')) }}</td>
-        <td>{{ v.nome }}<br><span class="muted" style="font-size:11.5px">{{ v.dettaglio }}</span></td>
-        <td class="num" style="white-space:nowrap">{{ v.valore }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-    <p class="muted" style="font-size:12px;margin-bottom:0">
-      Occupato: database {{ (salute.spazio.database / 1024) | round | int }} KB ·
-      fatture {{ (salute.spazio.fatture / 1024 / 1024) | round(1) }} MB ·
-      copie locali {{ (salute.spazio.backup_locali / 1024 / 1024) | round(1) }} MB ·
-      testo delle email {{ salute.spazio.email_kb }} KB.
-      <a href="{{ url_for('impostazioni') }}">Impostazioni</a> ·
-      <a href="{{ url_for('verifica') }}">Verifica calcoli</a>
-    </p>
-  </div>
-</div>
-
-<div class="grid2">
-  <div class="panel">
-    <h2>Andamento mensile {{ year }} <span class="muted" style="font-weight:400;font-size:13px">vs {{ year - 1 }}</span></h2>
-    {% if year in legacy_years %}
-      <p class="muted">Per il {{ year }} lo storico è per totali annui (da Excel), senza dettaglio mensile.</p>
-    {% else %}
-    <svg viewBox="0 0 560 230" width="100%">
+  <div class="hero-spark">
+    <svg viewBox="0 0 248 62" width="248" height="62" aria-hidden="true" focusable="false">
       {% for m in range(12) %}
-        {% set h = (months[m] / max_month * 170) | round(1) %}
-        {% set hp = (months_prev[m] / max_month * 170) | round(1) %}
-        <rect x="{{ 20 + m * 45 }}" y="{{ 190 - hp }}" width="14" height="{{ hp }}" fill="#cbd5e1" rx="2"/>
-        <rect x="{{ 36 + m * 45 }}" y="{{ 190 - h }}" width="14" height="{{ h }}" fill="#0f766e" rx="2"/>
-        <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ mesi[m] }}</text>
-        {% if months[m] > 0 %}
-        <text x="{{ 43 + m * 45 }}" y="{{ 185 - h }}" class="bar-label bar-value" text-anchor="middle">{{ (months[m] // 100) }}</text>
-        {% endif %}
+        {% set h = (months[m] / max_month * 46) | round(1) %}
+        <rect x="{{ 2 + m * 20.5 }}" y="{{ 54 - (h if h > 2 else 2) }}" width="13"
+              height="{{ h if h > 2 else 2 }}" rx="2"
+              fill="{{ 'var(--accent)' if months[m] else '#e2e8f0' }}"/>
       {% endfor %}
     </svg>
-    <div class="legend">
-      <span><span class="dot" style="background:#0f766e"></span>{{ year }}</span>
-      <span><span class="dot" style="background:#cbd5e1"></span>{{ year - 1 }}</span>
-      <span class="muted">valori in CHF</span>
-    </div>
-    {% endif %}
+    <div class="hero-spark-label">gen — dic {{ year }}</div>
   </div>
-
-  <div class="panel">
-    <h2>Fatturato per anno</h2>
-    <svg viewBox="0 0 560 230" width="100%">
-      {% set years_list = yearly.items() | list %}
-      {% set n = years_list | length %}
-      {% set bw = (500 / n) if n else 500 %}
-      {% for y, v in years_list %}
-        {% set h = (v.invoiced / max_year_v * 165) | round(1) %}
-        <rect x="{{ 30 + loop.index0 * bw + bw * 0.18 }}" y="{{ 190 - h }}" width="{{ bw * 0.64 }}" height="{{ h }}"
-              fill="{{ '#94a3b8' if v.legacy else '#10b981' }}" rx="4"/>
-        <text x="{{ 30 + loop.index0 * bw + bw * 0.5 }}" y="205" class="bar-label" text-anchor="middle">{{ y }}</text>
-        <text x="{{ 30 + loop.index0 * bw + bw * 0.5 }}" y="{{ 183 - h }}" class="bar-label bar-value" text-anchor="middle">{{ "{:,}".format(v.invoiced // 100).replace(',', "'") }}</text>
-      {% endfor %}
-    </svg>
-    <div class="legend">
-      <span><span class="dot" style="background:#10b981"></span>da fatture</span>
-      <span><span class="dot" style="background:#94a3b8"></span>da Excel storico (2022–23)</span>
-    </div>
+  <div class="hero-link">
+    <a class="btn small secondary" href="{{ url_for('performance', anno=year) }}">
+      {{ icona('grafico', 'ic-mini') }} Vedi le performance</a>
   </div>
 </div>
 
-<div class="grid2">
-  <div class="panel">
-    <h2>Top clienti {{ year }}</h2>
-    <table>
-      {% for name, tot, n in clients %}
-      <tr>
-        <td>{{ name }}</td>
-        <td class="muted">{{ n ~ ' fatt.' if n else '' }}</td>
-        <td style="width:40%">
-          <div style="background:#e2e8f0;border-radius:6px;height:10px">
-            <div style="background:#0f766e;width:{{ (tot / max_client * 100) | round(1) }}%;height:10px;border-radius:6px"></div>
-          </div>
-        </td>
-        <td class="num"><strong>{{ tot | chf(false) }}</strong></td>
-      </tr>
-      {% endfor %}
-    </table>
+{# --- le cose che chiedono qualcosa a te --- #}
+<h2 class="sezione">Da fare</h2>
+<div class="panel elenco-da-fare">
+  {% for c in cose %}
+  <a class="riga-da-fare {{ c.urgenza }}" href="{{ url_for(c.link[0], **c.link[1]) }}">
+    <span class="segno"></span>
+    <span class="riga-icona">{{ icona(c.icona, 'ic') }}</span>
+    <span class="riga-testo">
+      <strong>{{ c.titolo }}</strong>
+      <span class="muted">{{ c.dettaglio }}</span>
+    </span>
+    <span class="riga-valore">
+      {% if c.importo %}
+        <span class="riga-numero money">{{ c.importo | chf(false) }}</span>
+        <span class="riga-sotto">{{ c.quante }} {{ c.unita }}</span>
+      {% elif c.quante %}
+        <span class="riga-numero">{{ c.quante }}</span>
+        <span class="riga-sotto">{{ c.unita }}</span>
+      {% endif %}
+    </span>
+  </a>
+  {% else %}
+  <div class="tutto-fatto">
+    {{ icona('spunta', 'ic') }}
+    <span>Niente in sospeso. Tutte le fatture sono partite e non aspetti soldi da nessuno.</span>
   </div>
-
-  <div class="panel">
-    <h2>Per tipo di servizio {{ year }}</h2>
-    {% if services %}
-    <table>
-      {% set tot_srv = services | sum(attribute=1) %}
-      {% set max_srv = services | map(attribute=1) | map('abs') | max %}
-      {% for name, v in services %}
-      <tr>
-        <td>{{ name }}</td>
-        <td style="width:40%">
-          <div style="background:#e2e8f0;border-radius:6px;height:10px">
-            <div style="background:{{ '#b91c1c' if v < 0 else '#10b981' }};width:{{ ((v | abs) / max_srv * 100) | round(1) if max_srv else 0 }}%;height:10px;border-radius:6px"></div>
-          </div>
-        </td>
-        <td class="num"><strong>{{ v | chf(false) }}</strong></td>
-        <td class="num muted">{{ (v / tot_srv * 100) | round(0) | int if tot_srv else 0 }}%</td>
-      </tr>
-      {% endfor %}
-      <tr>
-        <td class="muted" style="font-size:12.5px">Totale (coincide col fatturato)</td>
-        <td></td>
-        <td class="num"><strong>{{ tot_srv | chf(false) }}</strong></td>
-        <td></td>
-      </tr>
-    </table>
-    {% else %}<p class="muted">Nessun dettaglio servizi per quest'anno.</p>{% endif %}
-
-    <h2>Ultime fatture</h2>
-    <table>
-      {% for r in recent %}
-      <tr>
-        <td><a href="{{ url_for('fattura', inv_id=r.id) }}">#{{ r.number or '—' }}</a></td>
-        <td>{{ r.client_name }}</td>
-        <td class="muted">{{ r.date | dateit }}</td>
-        <td class="num">{{ r.total_cents | chf(false) }}</td>
-        <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
+  {% endfor %}
 </div>
 
+{# --- cos'è successo da quando non guardavi --- #}
+<h2 class="sezione">Ultime cose</h2>
 <div class="panel">
-  <h2>È successo questo</h2>
   {% if novita %}
   <table>
     {% for n in novita %}
@@ -270,11 +92,8 @@
     </tr>
     {% endfor %}
   </table>
-  <p class="muted" style="font-size:12px;margin-bottom:0">
-    Fatture create e spedite, sessioni registrate dal calendario, pacchetti arrivati a zero:
-    tutto insieme, dal più recente.</p>
   {% else %}
-  <p class="muted">Ancora niente da raccontare.</p>
+  <p class="muted" style="margin:0">Ancora niente da raccontare.</p>
   {% endif %}
 </div>
 {% endblock %}

@@ -93,6 +93,7 @@ def run_all():
     _test_clienti_crediti(r)
     _test_servizi(r)
     _test_servizi_riconosciuti(r)
+    _test_da_fare(r)
     _test_primi_passi(r)
     _test_icone(r)
     _test_menu(r)
@@ -686,6 +687,112 @@ def _db_finto():
         con.execute('INSERT INTO invoices(id, number, deleted_at) VALUES(?,?,NULL)', (i, i))
         con.execute('INSERT INTO items(invoice_id, description) VALUES(?,?)', (i, d))
     return con
+
+
+def _db_fatture_finto(righe):
+    """Un database in memoria con le sole colonne che il «Da fare» guarda."""
+    import sqlite3
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(
+        'CREATE TABLE invoices(id INTEGER PRIMARY KEY, number INTEGER, client_name TEXT,'
+        ' date TEXT, total_cents INTEGER, status TEXT, paid_at TEXT, deleted_at TEXT,'
+        ' year INTEGER, sent_at TEXT, source TEXT);'
+        'CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT);')
+    for i, r in enumerate(righe, 1):
+        con.execute('INSERT INTO invoices(id, number, client_name, date, total_cents, status,'
+                    ' paid_at, deleted_at, year, sent_at, source) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    (i, i, r.get('cliente', 'X'), r['data'], r.get('cents', 10000),
+                     r.get('stato', 'emessa'), r.get('paid_at'), r.get('deleted_at'),
+                     int(r['data'][:4]), r.get('sent_at'), r.get('source', 'app')))
+    return con
+
+
+def _test_da_fare(r):
+    """La lista «Da fare» della Dashboard.
+
+    Prima la Dashboard mostrava nove riquadri dello stesso peso, e la cosa da
+    fare andava cercata. Adesso e' una lista sola, e ogni voce e' un'azione. Il
+    punto delicato e' che il numero deve corrispondere a quello che si vede
+    cliccando: un contatore che dice 6 e apre una pagina con 3 righe fa perdere
+    fiducia in tutti gli altri numeri della pagina.
+    """
+    import datetime
+    from . import cruscotto as C
+
+    oggi = datetime.date.today()
+    ieri = (oggi - datetime.timedelta(days=1)).isoformat()
+    vecchia = (oggi - datetime.timedelta(days=200)).isoformat()
+
+    def voce(cose, chiave):
+        return next((c for c in cose if c['chiave'] == chiave), None)
+
+    # --- niente da fare: la lista e' vuota, e va bene cosi' ---
+    con = _db_fatture_finto([{'data': ieri, 'stato': 'pagata', 'paid_at': ieri,
+                              'sent_at': ieri}])
+    vuoto = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Da fare', 'tutto a posto: nessuna voce', vuoto, [])
+
+    # --- il numero e' quello delle fatture aperte, non quello della banca ---
+    con = _db_fatture_finto([
+        {'data': ieri, 'stato': 'emessa', 'cents': 100000, 'sent_at': ieri},
+        {'data': ieri, 'stato': 'emessa', 'cents': 20000, 'sent_at': ieri},
+        # pagata ma senza riscontro in banca: NON e' una cosa da fare
+        {'data': ieri, 'stato': 'pagata', 'cents': 500000, 'sent_at': ieri},
+    ])
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    inc = voce(cose, 'incassare')
+    _check(r, 'Da fare', 'conta le fatture aperte, non quelle senza riscontro in banca',
+           inc['quante'], 2)
+    _check(r, 'Da fare', "l'importo e' la somma di quelle aperte", inc['importo'], 120000)
+    _check(r, 'Da fare', 'il link porta esattamente a quelle contate',
+           inc['link'], ('fatture', {'stato': 'emessa', 'anno': ''}))
+    _check(r, 'Da fare', 'fatture recenti: in attesa, non in ritardo',
+           inc['urgenza'], C.ATTESA)
+
+    # --- una vecchia, con l'estratto aggiornato: quella e' in ritardo ---
+    con = _db_fatture_finto([{'data': vecchia, 'stato': 'emessa', 'cents': 30000,
+                              'sent_at': vecchia}])
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Da fare', 'ferma da mesi con estratto aggiornato: in ritardo',
+           voce(cose, 'incassare')['urgenza'], C.RITARDO)
+
+    # --- senza estratto non si accusa nessuno di ritardo ---
+    con = _db_fatture_finto([{'data': vecchia, 'stato': 'emessa', 'cents': 30000,
+                              'sent_at': vecchia}])
+    cose = C.da_fare(con, {'banca_ultimo_estratto': ''}, None)
+    _check(r, 'Da fare', 'senza estratto nessuna accusa di ritardo',
+           voce(cose, 'incassare')['urgenza'], C.ATTESA)
+    _check(r, 'Da fare', "senza estratto compare 'caricane uno'",
+           voce(cose, 'estratto') is not None, True)
+
+    # --- fatta con l'app e mai spedita ---
+    con = _db_fatture_finto([{'data': oggi.isoformat(), 'stato': 'pagata',
+                              'paid_at': oggi.isoformat(), 'source': 'app'}])
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Da fare', 'una fattura mai spedita si fa notare',
+           voce(cose, 'spedire')['quante'], 1)
+    # una storica importata non e' "da spedire": non e' mai partita dall'app
+    con = _db_fatture_finto([{'data': oggi.isoformat(), 'stato': 'pagata',
+                              'paid_at': oggi.isoformat(), 'source': 'import'}])
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Da fare', 'una fattura storica non conta come da spedire',
+           voce(cose, 'spedire'), None)
+
+    # --- l'estratto vecchio ---
+    _check(r, 'Da fare', 'estratto di ieri: non si dice niente',
+           C._estratto_vecchio(ieri), '')
+    _check(r, 'Da fare', 'estratto di 200 giorni fa: si dice',
+           '200 giorni fa' in C._estratto_vecchio(vecchia), True)
+    _check(r, 'Da fare', 'una data storta non fa saltare la Dashboard',
+           C._estratto_vecchio('non-una-data'), '')
+
+    # --- i crediti non devono poter spegnere la Dashboard ---
+    _check(r, 'Da fare', 'senza registro crediti, nessuna voce e nessun errore',
+           C._crediti_finiti(None), [])
+    _check(r, 'Da fare', 'un registro incomprensibile non fa saltare niente',
+           C._crediti_finiti('non-un-registro'), [])
+
 
 
 def _test_servizi_riconosciuti(r):

@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Performance{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+  <h1>Performance</h1>
+  <button type="button" class="privacy-btn privacy-toggle no-blur" onclick="toggleRiservato()"
+          aria-pressed="false" title="Nascondi gli importi (screenshot, luogo pubblico)">
+    {% include '_occhio.html' %}
+  </button>
+</div>
+<p class="sub">Come sta andando l'attività.
+  <select onchange="location='?anno='+this.value" style="width:auto;margin-left:8px">
+    {% for y in all_years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
+  </select>
+</p>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Fatturato {{ year }}{{ ' (ad oggi)' if year == current_year }}</div>
+    <div class="value">{{ k.ytd | chf }}</div>
+    {% if k.growth_bp is not none %}
+      <div class="hint">
+        <span class="{{ 'up' if k.growth_bp >= 0 else 'down' }}">
+          {{ '▲' if k.growth_bp >= 0 else '▼' }} {{ '%+.1f' % (k.growth_bp / 100) }}%
+        </span> vs stesso periodo {{ year - 1 }}
+      </div>
+    {% endif %}
+  </div>
+  {% if k.projection %}
+  <div class="card">
+    <div class="label">Proiezione fine {{ year }}</div>
+    <div class="value">{{ k.projection | chf }}</div>
+    <div class="hint">al ritmo attuale (media giornaliera)</div>
+  </div>
+  {% endif %}
+  <div class="card">
+    <div class="label">Fattura media</div>
+    <div class="value">{{ k.avg | chf(false) if k.avg else '—' }}</div>
+    <div class="hint">{{ k.count }} fatture nel {{ year }}</div>
+  </div>
+  {% if k.top_client %}
+  <div class="card">
+    <div class="label">Miglior cliente {{ year }}</div>
+    <div class="value" style="font-size:18px">{{ k.top_client[0] }}</div>
+    <div class="hint">{{ k.top_client[1] | chf }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Andamento mensile {{ year }} <span class="muted" style="font-weight:400;font-size:13px">vs {{ year - 1 }}</span></h2>
+  {% if year in legacy_years %}
+    <p class="muted">Per il {{ year }} lo storico è per totali annui (da Excel), senza dettaglio mensile.</p>
+  {% else %}
+  <svg viewBox="0 0 560 230" width="100%">
+    {% for m in range(12) %}
+      {% set h = (months[m] / max_month * 170) | round(1) %}
+      {% set hp = (months_prev[m] / max_month * 170) | round(1) %}
+      <rect x="{{ 20 + m * 45 }}" y="{{ 190 - hp }}" width="14" height="{{ hp }}" fill="#cbd5e1" rx="2"/>
+      <rect x="{{ 36 + m * 45 }}" y="{{ 190 - h }}" width="14" height="{{ h }}" fill="#0f766e" rx="2"/>
+      <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ mesi[m] }}</text>
+      {% if months[m] > 0 %}
+      <text x="{{ 43 + m * 45 }}" y="{{ 185 - h }}" class="bar-label bar-value" text-anchor="middle">{{ (months[m] // 100) }}</text>
+      {% endif %}
+    {% endfor %}
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#0f766e"></span>{{ year }}</span>
+    <span><span class="dot" style="background:#cbd5e1"></span>{{ year - 1 }}</span>
+    <span class="muted">valori in CHF</span>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Fatturato per anno</h2>
+  <svg viewBox="0 0 560 230" width="100%">
+    {% set years_list = yearly.items() | list %}
+    {% set n = years_list | length %}
+    {% set bw = (500 / n) if n else 500 %}
+    {% for y, v in years_list %}
+      {% set h = (v.invoiced / max_year_v * 165) | round(1) %}
+      <rect x="{{ 30 + loop.index0 * bw + bw * 0.18 }}" y="{{ 190 - h }}" width="{{ bw * 0.64 }}" height="{{ h }}"
+            fill="{{ '#94a3b8' if v.legacy else '#10b981' }}" rx="4"/>
+      <text x="{{ 30 + loop.index0 * bw + bw * 0.5 }}" y="205" class="bar-label" text-anchor="middle">{{ y }}</text>
+      <text x="{{ 30 + loop.index0 * bw + bw * 0.5 }}" y="{{ 183 - h }}" class="bar-label bar-value" text-anchor="middle">{{ "{:,}".format(v.invoiced // 100).replace(',', "'") }}</text>
+    {% endfor %}
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#10b981"></span>da fatture</span>
+    <span><span class="dot" style="background:#94a3b8"></span>da Excel storico (2022–23)</span>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <h2>Top clienti {{ year }}</h2>
+    <table>
+      {% for name, tot, n in clients %}
+      <tr>
+        <td>{{ name }}</td>
+        <td class="muted">{{ n ~ ' fatt.' if n else '' }}</td>
+        <td style="width:40%">
+          <div style="background:#e2e8f0;border-radius:6px;height:10px">
+            <div style="background:#0f766e;width:{{ (tot / max_client * 100) | round(1) }}%;height:10px;border-radius:6px"></div>
+          </div>
+        </td>
+        <td class="num"><strong>{{ tot | chf(false) }}</strong></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Per tipo di servizio {{ year }}</h2>
+    {% if services %}
+    <table>
+      {% set tot_srv = services | sum(attribute=1) %}
+      {% for name, v in services %}
+      <tr>
+        <td>{{ name }}</td>
+        <td style="width:40%">
+          <div style="background:#e2e8f0;border-radius:6px;height:10px">
+            <div style="background:{{ '#b91c1c' if v < 0 else '#10b981' }};width:{{ ((v | abs) / max_service * 100) | round(1) }}%;height:10px;border-radius:6px"></div>
+          </div>
+        </td>
+        <td class="num"><strong>{{ v | chf(false) }}</strong></td>
+        <td class="num muted">{{ (v / tot_srv * 100) | round(0) | int if tot_srv else 0 }}%</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td class="muted" style="font-size:12.5px">Totale (coincide col fatturato)</td>
+        <td></td>
+        <td class="num"><strong>{{ tot_srv | chf(false) }}</strong></td>
+        <td></td>
+      </tr>
+    </table>
+    {% else %}
+    <p class="muted">Nessun dettaglio servizi per quest'anno. I servizi si scrivono in
+      <a href="{{ url_for('impostazioni') }}">Impostazioni</a>.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Stato fatture {{ year }}</h2>
+  <table>
+    <tr><td><a href="{{ url_for('fatture', anno=year) }}">Emesse</a></td><td class="num">{{ stato.totali }}</td></tr>
+    <tr><td><a href="{{ url_for('fatture', anno=year, stato='pagata') }}">Pagate</a></td><td class="num">{{ stato.pagate }}</td></tr>
+    <tr><td><a href="{{ url_for('fatture', anno=year, stato='emessa') }}">Da incassare</a></td><td class="num">{{ stato.da_incassare }}</td></tr>
+    <tr><td><a href="{{ url_for('fatture', anno=year, invio='inviate') }}">Spedite per email</a></td><td class="num">{{ stato.inviate }}</td></tr>
+    <tr><td><a href="{{ url_for('fatture', anno=year, invio='da-mandare') }}">Fatte con l'app, non ancora spedite</a></td><td class="num">{{ stato.da_mandare }}</td></tr>
+  </table>
+</div>
+{% endblock %}

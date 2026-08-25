@@ -254,3 +254,109 @@ def attivita(con, reg, quante=12):
 
     voci.sort(key=lambda v: v['quando'] or '', reverse=True)
     return voci[:quante]
+
+
+# ------------------------------------------------------------------ da fare
+# La Dashboard risponde a una domanda sola: che cosa richiede la mia attenzione
+# adesso. Percio' ogni voce qui e' un'AZIONE, non un'informazione: ha un numero,
+# un importo quando ha senso, e il posto dove si va a farla. Le informazioni
+# belle da guardare stanno in Performance, le reti di sicurezza in Controlli.
+#
+# Se la lista viene vuota e' un buon risultato, e deve sembrarlo: nessun
+# riquadro d'allarme spento, una riga sola che dice che non c'e' niente.
+
+RITARDO, ATTESA, CALMO = 'ritardo', 'attesa', 'calmo'
+
+
+def da_fare(con, settings, registro=None):
+    """Le cose in sospeso, dalla piu' urgente alla meno.
+
+    Non ci mettiamo i versamenti da confermare: per contarli bisognerebbe
+    rileggere i file degli estratti a ogni apertura della Dashboard. Al loro
+    posto una cosa che costa una lettura sola e dice la stessa cosa, cioe' da
+    quanto l'app non sa piu' chi ti ha pagato.
+    """
+    voci = []
+
+    # Le fatture ancora aperte secondo il loro stato, non secondo la banca: il
+    # numero deve corrispondere a quello che si vede cliccando. Il riscontro
+    # bancario serve solo a dire QUALI sono in ritardo.
+    aperte = con.execute(
+        'SELECT id, total_cents FROM invoices '
+        "WHERE deleted_at IS NULL AND status <> 'pagata'").fetchall()
+    if aperte:
+        mancanti = incassi_mancanti(con, settings.get('banca_ultimo_estratto'))
+        in_ritardo = {r['id'] for r in mancanti['in_ritardo']}
+        tardi = sum(1 for r in aperte if r['id'] in in_ritardo)
+        voci.append({
+            'chiave': 'incassare', 'icona': 'soldi',
+            'titolo': 'Da incassare',
+            'quante': len(aperte), 'unita': 'fatture',
+            'importo': sum(r['total_cents'] or 0 for r in aperte),
+            'dettaglio': (f'{tardi} ferme da oltre {GIORNI_PAZIENZA} giorni'
+                          if tardi else 'nessuna in ritardo, sono tutte recenti'),
+            'urgenza': RITARDO if tardi else ATTESA,
+            'link': ('fatture', {'stato': 'emessa', 'anno': ''}),
+        })
+
+    stato = stato_fatture(con, datetime.date.today().year)
+    if stato['da_mandare']:
+        voci.append({
+            'chiave': 'spedire', 'icona': 'email',
+            'titolo': 'Fatte e non ancora spedite',
+            'quante': stato['da_mandare'], 'unita': 'fatture', 'importo': None,
+            'dettaglio': "sono nell'app ma non sono partite per email",
+            'urgenza': ATTESA,
+            'link': ('fatture', {'invio': 'da-mandare', 'anno': ''}),
+        })
+
+    finiti = _crediti_finiti(registro)
+    if finiti:
+        voci.append({
+            'chiave': 'crediti', 'icona': 'crediti',
+            'titolo': 'Pacchetti finiti',
+            'quante': len(finiti), 'unita': 'clienti', 'importo': None,
+            'dettaglio': ', '.join(finiti[:4]) + (' e altri' if len(finiti) > 4 else '')
+                         + ' — va emessa la prossima fattura',
+            'urgenza': RITARDO,
+            'link': ('crediti', {}),
+        })
+
+    vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'))
+    if vecchio:
+        voci.append({
+            'chiave': 'estratto', 'icona': 'banca',
+            'titolo': 'Estratto conto da aggiornare',
+            'quante': None, 'unita': '', 'importo': None,
+            'dettaglio': vecchio,
+            'urgenza': ATTESA,
+            'link': ('banca_pagina', {}),
+        })
+
+    return voci
+
+
+def _crediti_finiti(registro):
+    """I clienti che hanno consumato il pacchetto: vanno rifatturati."""
+    if registro is None:
+        return []
+    try:
+        from . import sessions
+        return [r.get('cliente') or r.get('chiave')
+                for r in sessions.vista_crediti(registro) if r.get('terminati')]
+    except Exception:
+        return []          # i crediti non devono poter spegnere la Dashboard
+
+
+def _estratto_vecchio(ultimo):
+    """Da quanto l'app non sa piu' chi ti ha pagato. '' se e' aggiornato."""
+    if not ultimo:
+        return "non ne hai ancora caricato nessuno: l'app non sa chi ti ha pagato"
+    try:
+        giorni = (datetime.date.today() - datetime.date.fromisoformat(ultimo)).days
+    except ValueError:
+        return ''
+    if giorni <= GIORNI_ESTRATTO_VECCHIO:
+        return ''
+    return (f"l'ultimo arriva al {ultimo[8:10]}.{ultimo[5:7]}.{ultimo[:4]}, "
+            f'{giorni} giorni fa')

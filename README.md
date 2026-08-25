@@ -59,11 +59,23 @@ Le voci sono divise in gruppi, nell'ordine in cui le cose capitano davvero:
 
 | Gruppo | Voci | Quando lo apri |
 |---|---|---|
-| — | Dashboard | ogni volta |
+| — | Dashboard · Performance | ogni volta |
 | **Fatturare** | Nuova fattura · Fatture · Email inviate | tutte le settimane |
-| **Chi alleni** | Clienti · Crediti · Agenda | tutte le settimane |
+| **Chi segui** | Clienti · Crediti · Agenda | tutte le settimane |
 | **Incassi e fisco** | Banca · Commercialista | ogni tanto |
 | **L'app** | Controlli · Verifica calcoli · Cestino · Impostazioni | quando serve |
+
+**Dashboard e Performance rispondono a due domande diverse**, ed è per questo
+che sono due pagine. La *Dashboard* dice **cosa devi fare adesso**: quanto hai
+fatturato quest'anno, e sotto la lista delle cose in sospeso — da incassare, da
+spedire, pacchetti finiti, estratto conto da aggiornare. Ogni voce porta
+esattamente alle righe che ha contato. Quando non c'è niente in sospeso lo dice,
+e va bene così. La *Performance* dice **come stai andando**: andamento mensile,
+fatturato per anno, migliori clienti, ripartizione per servizio.
+
+Le reti di sicurezza — copie, calendario, verifica dei calcoli, posta — stanno in
+**Controlli**: non sono cose da guardare ogni mattina, sono cose da controllare
+quando si controlla.
 
 Finché resta qualcosa dei **primi passi**, in cima al menu compare la voce
 *Primi passi* con quante cose mancano; quando non ne manca più nessuna sparisce
