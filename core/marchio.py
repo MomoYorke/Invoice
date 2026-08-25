@@ -119,8 +119,8 @@ def due_righe(nome):
     parole in grande, il resto sotto in piccolo.
 
     «Anna Rossi Personal Training» -> «Anna Rossi» / «Personal Training»
-    «Studio Bianchi Fitness»       -> «Studio Bianchi» / «Fitness»
-    «FitLab»                       -> «FitLab» / «»
+    «Studio Bianchi Fisioterapia»  -> «Studio Bianchi» / «Fisioterapia»
+    «Centro Vitale»                -> «Centro Vitale» / «»
     Non e' furba, ma non sbaglia mai in modo brutto: al massimo mette una
     parola nella riga sbagliata."""
     parole = (nome or '').split()

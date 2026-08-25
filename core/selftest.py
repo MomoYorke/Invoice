@@ -131,7 +131,7 @@ def _test_email(r):
     m2 = mailer.componi(inv, pacchetto, S, ['10 Sessions Pack – Personal Training'])
     _check(r, 'Email', 'pacchetto: NON dice "this month\'s"',
            "this month's" in m2['body'], False)
-    _check(r, 'Email', 'pacchetto: "your invoice for Personal Training"',
+    _check(r, 'Email', "pacchetto: l'apertura nomina il servizio",
            'your invoice for Personal Training' in m2['body'], True)
     _check(r, 'Email', 'tono formale: si firma per esteso',
            'Best regards,' in m2['body'], True)
@@ -147,8 +147,19 @@ def _test_email(r):
            mailer.modello_di(['Monthly abo: running coaching']), 'coaching')
     _check(r, 'Email', 'coaching online → modello coaching',
            mailer.modello_di(['Coaching online - August']), 'coaching')
-    _check(r, 'Email', 'sessioni di personal training → modello pt',
+    _check(r, 'Email', 'righe di un pacchetto → modello «pacchetto»',
            mailer.modello_di(['10 Sessions Pack – Personal Training']), 'pt')
+
+    # chi fa un altro mestiere: nessuna regola riconosce le sue righe, e
+    # l'email non deve inventargli un servizio che non vende
+    _check(r, 'Email', 'servizio non riconosciuto: non se ne inventa uno',
+           mailer.servizio_di(['Pacchetto 10 sedute di fisioterapia']), '')
+    _check(r, 'Email', "servizio ignoto: l'apertura non lo nomina",
+           mailer.componi(inv, pacchetto, S, ['Pacchetto 10 sedute'])['body'].split('\n')[2],
+           'Please find attached your invoice.')
+    _check(r, 'Email', "servizio noto: l'apertura lo nomina come prima",
+           mailer.componi(inv, pacchetto, S, ['10 Sessions Pack'])['body'].split('\n')[2],
+           'Please find attached your invoice for Personal Training.')
     _check(r, 'Email', 'il modello dedotto finisce nel testo',
            'TESTO-COACHING' in mailer.componi(inv, mensile, prove,
                                               ['Monthly abo: running coaching'])['body'], True)
@@ -286,20 +297,20 @@ def _test_oggetto(r):
     # --- l'oggetto vero e proprio ---
     coaching = mailer.componi(inv, cli, S, ['abo 13.08.26 \u2013 12.09.26'],
                               modello='coaching', mese='Aug/Sept')
-    _check(r, 'Oggetto email', 'coaching: oggetto col mese dentro',
+    _check(r, 'Oggetto email', 'abbonamento: oggetto col mese dentro',
            coaching['subject'],
-           'Online Running Coaching \u2013 [Aug/Sept] \u2013 EM Personal Training')
+           'Invoice \u2013 [Aug/Sept]')
     pt = mailer.componi(inv, cli, S, ['10 Sessions Pack'], modello='pt')
-    _check(r, 'Oggetto email', 'personal training: oggetto del pacchetto',
+    _check(r, 'Oggetto email', 'pacchetto di sedute: oggetto senza mese',
            pt['subject'],
-           'Invoice \u2013 Personal Training Package \u2013 EM Personal Training')
+           'Invoice')
     _check(r, 'Oggetto email', 'cambiare servizio cambia l\'oggetto',
            coaching['subject'] != pt['subject'], True)
     senza = mailer.componi(inv, cli, S, ['abo'], modello='coaching', mese='')
     _check(r, 'Oggetto email', 'mese ignoto: resta «[month]» da riempire a mano',
            '[month]' in senza['subject'], True)
     _check(r, 'Oggetto email', 'e l\'app lo segnala', senza['mese_mancante'], True)
-    _check(r, 'Oggetto email', 'col personal training il mese non manca mai',
+    _check(r, 'Oggetto email', 'col pacchetto il mese non manca mai',
            pt['mese_mancante'], False)
 
 
@@ -421,9 +432,9 @@ def _test_marchio(r):
     from . import marchio, docgen
     from .db import DEFAULT_SETTINGS
 
-    for nome, atteso in (('Studio Bianchi Personal Training', ('Studio Bianchi', 'Personal Training')),
-                         ('Anna Rossi Fitness', ('Anna Rossi', 'Fitness')),
-                         ('FitLab', ('FitLab', '')),
+    for nome, atteso in (('Studio Bianchi Fisioterapia', ('Studio Bianchi', 'Fisioterapia')),
+                         ('Anna Rossi Personal Training', ('Anna Rossi', 'Personal Training')),
+                         ('Centro Vitale', ('Centro Vitale', '')),
                          ('', ('La tua attività', ''))):
         _check(r, 'Marchio', 'il nome «%s» si spezza bene' % (nome or 'vuoto'),
                marchio.due_righe(nome), atteso)
@@ -845,7 +856,7 @@ def _test_menu(r):
            acceso.get('crediti_clienti'), 'crediti')
 
     _check(r, 'Menu', 'le voci stanno in gruppi con un titolo',
-           [t for t, _ in M.GRUPPI if t], ['Fatturare', 'Chi alleni', 'Incassi e fisco', "L'app"])
+           [t for t, _ in M.GRUPPI if t], ['Fatturare', 'Chi segui', 'Incassi e fisco', "L'app"])
     _check(r, 'Menu', 'la Dashboard sta in cima, fuori dai gruppi',
            M.GRUPPI[0][0] is None and M.GRUPPI[0][1][0][0] == 'dashboard', True)
     _check(r, 'Menu', 'i primi passi stanno fuori dai gruppi fissi',
@@ -1177,7 +1188,7 @@ def _test_incassi(r):
 
 
 def _test_intestatario(r):
-    """Chi si allena e chi riceve la fattura possono essere due persone diverse."""
+    """Chi fa le sedute e chi riceve la fattura possono essere due persone diverse."""
     import sqlite3
     from . import db as _db
     from .db import SCHEMA

@@ -245,8 +245,8 @@ def _crea_fattura(con):
         flash('Seleziona un cliente.', 'error')
         return redirect(url_for('nuova'))
     addr_lines = [l for l in ([client['address1']] + (client['address2'] or '').split('\n')) if l]
-    # Chi si allena e chi riceve la fattura possono essere due persone diverse
-    # (si allena una persona, la fattura è intestata a un'altra).
+    # Chi fa le sedute e chi riceve la fattura possono essere due persone
+    # diverse (viene una persona, la fattura è intestata a un'altra).
     # Il nome sul documento e nel registro è l'intestatario; il nome del file
     # resta quello del cliente, così i documenti restano in fila con i vecchi.
     intestatario = (client['intestatario'] or '').strip() or client['name']

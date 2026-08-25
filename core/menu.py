@@ -6,7 +6,7 @@ Tredici voci una sotto l'altra sono un elenco, non un menu: chi arriva
 dall'esterno le legge tutte ogni volta perche' niente gli dice quali servono
 tutti i giorni e quali una volta l'anno. Qui sono divise in gruppi con un
 titolo, nell'ordine in cui capitano davvero: prima si fa la fattura, poi si
-guarda chi alleni, poi si controllano gli incassi, e in fondo le cose
+guarda chi segui, poi si controllano gli incassi, e in fondo le cose
 dell'app.
 
 «attivo» elenca le pagine che devono accendere quella voce: la scheda di una
@@ -24,7 +24,7 @@ GRUPPI = [
         ('fatture', 'Fatture', 'fattura', ('fatture', 'fattura', 'fattura_email')),
         ('email_inviate', 'Email inviate', 'email', ('email_inviate', 'email_letta')),
     ]),
-    ('Chi alleni', [
+    ('Chi segui', [
         ('clienti', 'Clienti', 'clienti', ('clienti',)),
         ('crediti', 'Crediti', 'crediti', ('crediti', 'crediti_pacchetto', 'crediti_clienti')),
         ('agenda', 'Agenda', 'agenda', ('agenda',)),

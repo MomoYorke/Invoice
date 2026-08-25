@@ -41,6 +41,10 @@ FRASE_ABBONAMENTO = (
 # dieci sessioni non e' mensile e dirlo sarebbe sbagliato
 APERTURA_MENSILE = "Please find attached this month's invoice for {servizio}."
 APERTURA_SEMPLICE = "Please find attached your invoice for {servizio}."
+# Se il servizio non si riconosce (chi usa l'app vende altro), la frase resta
+# corretta senza nominarlo: meglio non dirlo che dirlo sbagliato.
+APERTURA_MENSILE_ANONIMA = "Please find attached this month's invoice."
+APERTURA_SEMPLICE_ANONIMA = "Please find attached your invoice."
 APERTURA_MULTIPLA = "Attached are {quante} invoices."
 QUANTE = {2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
 
@@ -48,8 +52,8 @@ QUANTE = {2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
 # dell'impostazione che li contiene ('email_corpo_coaching', 'email_corpo_pt'),
 # cosi' non esiste una seconda tabella da tenere allineata.
 MODELLI = (
-    ('coaching', 'Running / Online coaching'),
-    ('pt', 'Personal training'),
+    ('coaching', 'Abbonamento'),
+    ('pt', 'Pacchetto di sedute'),
 )
 NOMI_MODELLO = dict(MODELLI)
 # a quale modello appartiene ciascun servizio
@@ -188,6 +192,7 @@ def nome_di_battesimo(nome_completo):
 
 def servizio_di(descrizioni):
     """Il servizio da nominare nell'email, dedotto dalle righe della fattura.
+    Vuoto se nessuna regola riconosce le righe.
 
     Usa le stesse regole della dashboard (SERVICE_RULES), cosi' non esistono
     due logiche da tenere allineate.
@@ -196,7 +201,9 @@ def servizio_di(descrizioni):
         for rx, etichetta in SERVICE_RULES:
             if rx.search(desc or ''):
                 return NOMI_SERVIZIO.get(etichetta, etichetta)
-    return 'Personal Training'
+    # Nessuna regola ha riconosciuto le righe: chi usa l'app vende altro.
+    # Stringa vuota, e l'apertura usa la versione che il servizio non lo nomina.
+    return ''
 
 
 def allegato_di(inv, settings):
@@ -245,8 +252,10 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
     servizio = servizio_di(descrizioni)
     if len(allegati) > 1:
         apertura = APERTURA_MULTIPLA.format(quante=QUANTE.get(len(allegati), len(allegati)))
-    else:
+    elif servizio:
         apertura = (APERTURA_MENSILE if abbonato else APERTURA_SEMPLICE).format(servizio=servizio)
+    else:
+        apertura = APERTURA_MENSILE_ANONIMA if abbonato else APERTURA_SEMPLICE_ANONIMA
     oggetto_grezzo = oggetto_modello(settings, modello)
     valori = {
         'apertura': apertura,

@@ -175,8 +175,8 @@ DEFAULT_SETTINGS = {
     # indirizzo segreto in formato iCal del calendario delle sessioni: si
     # incolla una volta e l'app legge le sessioni da sola
     'calendario_ics': '',
-    # secondo calendario, di sola lettura: quello dove stanno gli allenamenti
-    # vecchi. Serve solo all'Agenda, per sapere a che ora sono stati fatti:
+    # secondo calendario, di sola lettura: quello dove stanno le sedute
+    # vecchie. Serve solo all'Agenda, per sapere a che ora sono state fatte:
     # i crediti non lo guardano mai.
     'calendario_storico_ics': '',
     # come si chiamano, secondo loro stessi: l'app li legge dal file iCal a
@@ -191,12 +191,12 @@ DEFAULT_SETTINGS = {
     'banca_letto_il': '',
     'smtp_fallimenti': '0',
     'smtp_pausa_fino': '',
-    # Due oggetti, uno per servizio, come per la frase centrale: il coaching
-    # e' un abbonamento e nell'oggetto porta il mese coperto ({mese}, dedotto
-    # dal periodo scritto sulla fattura), il personal training e' un pacchetto
-    # e il mese non c'entra.
-    'email_oggetto_coaching': 'Online Running Coaching \u2013 [{mese}] \u2013 EM Personal Training',
-    'email_oggetto_pt': 'Invoice \u2013 Personal Training Package \u2013 EM Personal Training',
+    # Due oggetti, uno per modello, come per la frase centrale: l'abbonamento
+    # nell'oggetto porta il mese coperto ({mese}, dedotto dal periodo scritto
+    # sulla fattura), il pacchetto di sedute si paga in una volta e il mese
+    # non c'entra. Restano generici apposta: ognuno ci scrive i suoi.
+    'email_oggetto_coaching': 'Invoice \u2013 [{mese}]',
+    'email_oggetto_pt': 'Invoice',
     # Il testo della mail. Sotto {saluto} va la firma: scrivila in Impostazioni,
     # com'e' scritta in fondo alle mail che mandi davvero.
     'email_body': (
@@ -210,9 +210,9 @@ DEFAULT_SETTINGS = {
     'email_saluto_informale': 'Best,\n',
     'email_saluto_formale': 'Best regards,\n\n',
     # La riga centrale, quella che cambia da persona a persona. Ce ne sono due
-    # perche' i due servizi hanno due discorsi diversi: il coaching e' un
-    # abbonamento che continua, il personal training a domicilio e' un
-    # pacchetto di sessioni. L'app sceglie da sola quale usare guardando le
+    # perche' i due modelli hanno due discorsi diversi: l'abbonamento continua
+    # di mese in mese, il pacchetto di sedute si compra una volta e si
+    # consuma. L'app sceglie da sola quale usare guardando le
     # righe della fattura; nell'anteprima si cambia con un click e si riscrive.
     'email_corpo_coaching': 'Thank you again for your trust.',
     'email_corpo_pt': 'Thank you again for your trust.',
@@ -263,8 +263,8 @@ def _migrate(con):
         # il saluto formale invece del confidenziale
         con.execute("ALTER TABLE clients ADD COLUMN tono TEXT DEFAULT 'informale'")
     if 'intestatario' not in cli:
-        # A volte la fattura va intestata a una persona diversa da chi si
-        # allena: un genitore, un coniuge, un'azienda.
+        # A volte la fattura va intestata a una persona diversa da chi
+        # fa le sedute: un genitore, un coniuge, un'azienda.
         # Vuoto = la fattura va intestata al cliente stesso.
         con.execute('ALTER TABLE clients ADD COLUMN intestatario TEXT DEFAULT ""')
     if 'paga_come' not in cli:
@@ -299,7 +299,7 @@ def _migrate(con):
 
 
 def _migra_modelli_email(con):
-    """Dalla frase centrale unica ai due modelli, coaching e personal training.
+    """Dalla frase centrale unica ai due modelli, abbonamento e pacchetto.
 
     Il testo che era gia' stato scritto a mano non va perso: diventa il punto
     di partenza di tutti e due. La chiave vecchia sparisce solo dopo che il suo

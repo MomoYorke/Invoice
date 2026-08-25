@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Agenda: gli allenamenti davvero svolti, con giorno e ora.
+Agenda: le sedute davvero svolte, con giorno e ora.
 
 Da dove vengono i dati, e perche' da li':
 
@@ -52,7 +52,7 @@ def aggiorna_da_calendario(urls, da, a):
     """Scarica i calendari e aggiunge all'indice gli orari che ancora mancano.
 
     Non sovrascrive quelli gia' noti: se un evento viene spostato oggi, l'ora a
-    cui l'allenamento si e' svolto davvero resta quella registrata allora.
+    cui la seduta si e' svolta davvero resta quella registrata allora.
     Ritorna (quanti_nuovi, elenco_errori, {url: nome_del_calendario}). I nomi
     arrivano dal file iCal stesso: si scarica gia', tanto vale chiedergli anche
     come si chiama invece di scriverlo nel programma.
@@ -104,7 +104,7 @@ def elenco(reg, orari=None, cliente=None, anno=None):
                  if c in r['cliente'].lower() or c in r['titolo'].lower()]
     if anno:
         righe = [r for r in righe if r['data'][:4] == str(anno)]
-    # piu' recenti in cima; dentro la giornata, l'allenamento piu' tardi per
+    # piu' recenti in cima; dentro la giornata, la seduta piu' tardi per
     # primo, e quelli di cui non si conosce l'ora in fondo
     righe.sort(key=lambda r: (r['data'], r['ora'] or ''), reverse=True)
     return righe

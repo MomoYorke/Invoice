@@ -44,9 +44,9 @@ STATO_CORSO = 'In corso'
 # qui resta solo il modo di leggerlo.
 #
 # Il caso "marito e moglie" e' quello che ha fatto nascere il campo `compagno`:
-# chi si allena in coppia paga un pacchetto pieno piu' un supplemento, ma il
+# chi fa le sedute in coppia paga un pacchetto pieno piu' un supplemento, ma il
 # supplemento vale solo nei giorni in cui ci sono tutti e due. Se quel giorno
-# si allena da solo, la sua e' una sessione piena e scala dal pacchetto grande.
+# viene da solo, la sua e' una sessione piena e scala dal pacchetto grande.
 _CONFIG = None
 
 
@@ -186,9 +186,9 @@ def classifica(titolo):
 def attribuisci(chiave, clienti_del_giorno):
     """Decide a quale cliente va addebitato il credito.
 
-    Chi si allena in coppia paga un pacchetto ridotto: e' il supplemento di
+    Chi fa le sedute in coppia paga un pacchetto ridotto: e' il supplemento di
     quello dell'altro, e vale solo nei giorni in cui ci sono tutti e due. Se
-    quel giorno si allena da solo la sessione e' piena, e scala dal pacchetto
+    quel giorno viene da solo la sessione e' piena, e scala dal pacchetto
     dell'altro. Ritorna (chiave_addebito, nota)."""
     compagno = (cliente(chiave) or {}).get('compagno')
     if compagno and compagno not in set(clienti_del_giorno):

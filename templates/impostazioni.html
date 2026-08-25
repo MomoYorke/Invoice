@@ -24,7 +24,7 @@
   <label>Servizi proposti sulla nuova fattura</label>
   <textarea name="servizi" rows="4"
             style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
-            placeholder="uno per riga, per esempio:&#10;10 Sessions Pack – Personal Training at Home&#10;Abbonamento mensile">{{ settings.servizi }}</textarea>
+            placeholder="uno per riga, per esempio:&#10;Pacchetto 10 sedute&#10;Abbonamento mensile">{{ settings.servizi }}</textarea>
   <span class="muted" style="font-size:11.5px">Diventano i pulsanti sopra le righe della
     fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più.
     Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende
@@ -88,8 +88,8 @@
       <input type="text" name="calendario_storico_ics" value="{{ settings.calendario_storico_ics }}"
              placeholder="https://calendar.google.com/calendar/ical/.../basic.ics">
       <p class="muted" style="font-size:12px">
-        Serve <strong>solo all'Agenda</strong>, per sapere a che ora sono stati fatti gli
-        allenamenti vecchi: da qui i crediti non passano mai, quindi non c'è modo che
+        Serve <strong>solo all'Agenda</strong>, per sapere a che ora sono state fatte le
+        sedute vecchie: da qui i crediti non passano mai, quindi non c'è modo che
         vengano contati due volte. Senza questo indirizzo l'Agenda funziona lo stesso, ma
         delle sessioni più vecchie mostra il giorno e non l'ora.</p>
     </div>
@@ -142,14 +142,14 @@
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">I due oggetti</label>
       <p class="muted" style="font-size:12px;margin:0 0 10px">
-        Uno per servizio, scelto insieme al modello del testo. Nel coaching
+        Uno per modello, scelto insieme al testo. Nell'abbonamento
         <code>{mese}</code> diventa il mese coperto dall'abbonamento
         (<code>Aug/Sept</code> se il periodo sta a cavallo di due mesi, <code>Aug</code> se
         no): l'app lo legge dal periodo scritto sulla fattura, e se manca riparte
         dall'ultima mail mandata a quella persona avanzando di un mese.</p>
-      <label style="font-size:13px">Running / Online coaching</label>
+      <label style="font-size:13px">Abbonamento</label>
       <input type="text" name="email_oggetto_coaching" value="{{ settings.email_oggetto_coaching }}">
-      <label style="font-size:13px">Personal training</label>
+      <label style="font-size:13px">Pacchetto di sedute</label>
       <input type="text" name="email_oggetto_pt" value="{{ settings.email_oggetto_pt }}">
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
@@ -158,10 +158,10 @@
         L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima
         puoi passare all'altro con un click. Il resto della mail (apertura, frase
         sull'ordine permanente, firma) resta automatico.</p>
-      <label style="font-size:13px">Running / Online coaching — abbonamento mensile</label>
+      <label style="font-size:13px">Abbonamento — si rinnova ogni mese</label>
       <textarea name="email_corpo_coaching" rows="3"
                 style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_coaching }}</textarea>
-      <label style="font-size:13px">Personal training — sessioni a domicilio</label>
+      <label style="font-size:13px">Pacchetto di sedute — si compra una volta</label>
       <textarea name="email_corpo_pt" rows="3"
                 style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_pt }}</textarea>
     </div>
