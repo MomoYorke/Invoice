@@ -601,10 +601,11 @@ def _pausa_smtp(settings):
     if datetime.datetime.now() >= quando:
         return ''
     restano = int((quando - datetime.datetime.now()).total_seconds() // 60) + 1
-    return (f'Mi fermo qui. Il server ha già rifiutato la password due volte e al terzo '
-            f'tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra {restano} '
-            f'minuti, oppure correggi prima la password in Impostazioni: salvarla '
-            f'azzera questa pausa.')
+    return lng.t('Mi fermo qui. Il server ha già rifiutato la password due volte e al '
+                 'terzo tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra '
+                 '{restano} minuti, oppure correggi prima la password in Impostazioni: '
+                 'salvarla azzera questa pausa.',
+                 lng.normalizza(settings.get('lingua'))).format(restano=restano)
 
 
 def _conta_fallimento(con, codice, errore):

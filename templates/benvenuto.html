@@ -1,18 +1,15 @@
 {% extends 'base.html' %}
-{% block title %}{{ 'Benvenuto' if primo_avvio else 'Primi passi' }}{% endblock %}
+{% block title %}{{ _('Benvenuto') if primo_avvio else _('Primi passi') }}{% endblock %}
 {% block content %}
 
 {% if primo_avvio %}
-<h1>Benvenuto</h1>
-<p class="sub" style="max-width:620px">Questa è la tua app per le fatture. Gira sul tuo
-   computer e basta: niente account, niente abbonamento, nessun dato che esce di qui.
-   Scrive le fatture in Word e in PDF, tiene il conto di chi ha pagato e prepara il
-   pacchetto per il commercialista.</p>
+<h1>{{ _('Benvenuto') }}</h1>
+<p class="sub" style="max-width:620px">{{ _('Questa è la tua app per le fatture. Gira sul tuo computer e basta: niente account, niente abbonamento, nessun dato che esce di qui. Scrive le fatture in Word e in PDF, tiene il conto di chi ha pagato e prepara il pacchetto per il commercialista.') }}</p>
 {% else %}
-<h1>Primi passi</h1>
-<p class="sub">{{ fatti }} di {{ totali }} fatti.
-   {% if essenziale_manca %}Manca ancora qualcosa di essenziale: senza, le fatture
-   escono incomplete.{% else %}L'essenziale c'è. Il resto è comodità, quando ti va.{% endif %}</p>
+<h1>{{ _('Primi passi') }}</h1>
+<p class="sub">{{ _('{fatti} di {totali} fatti.').format(fatti=fatti, totali=totali) }}
+   {% if essenziale_manca %}{{ _('Manca ancora qualcosa di essenziale: senza, le fatture escono incomplete.') }}
+   {%- else %}{{ _("L'essenziale c'è. Il resto è comodità, quando ti va.") }}{% endif %}</p>
 {% endif %}
 
 <div class="passi">
@@ -20,16 +17,16 @@
   <div class="passo {{ 'fatto' if p.fatto }}">
     <div class="passo-segno">{% if p.fatto %}✓{% else %}{{ loop.index }}{% endif %}</div>
     <div class="passo-corpo">
-      <strong>{{ p.titolo }}</strong>
-      {% if p.obbligatorio and not p.fatto %}<span class="passo-serve">serve davvero</span>{% endif %}
-      <p>{{ p.perche }}</p>
+      <strong>{{ _(p.titolo) }}</strong>
+      {% if p.obbligatorio and not p.fatto %}<span class="passo-serve">{{ _('serve davvero') }}</span>{% endif %}
+      <p>{{ _(p.perche) }}</p>
     </div>
     <div class="passo-azione">
       {% if not p.fatto %}
         <a class="btn small {{ '' if p.obbligatorio else 'secondary' }}"
-           href="{{ url_for(p.dove) }}">{{ p.bottone }}</a>
+           href="{{ url_for(p.dove) }}">{{ _(p.bottone) }}</a>
       {% else %}
-        <a class="muted" style="font-size:13px" href="{{ url_for(p.dove) }}">rivedi</a>
+        <a class="muted" style="font-size:13px" href="{{ url_for(p.dove) }}">{{ _('rivedi') }}</a>
       {% endif %}
     </div>
   </div>
@@ -37,9 +34,8 @@
 </div>
 
 {% if not essenziale_manca %}
-<p style="margin-top:18px"><a class="btn secondary" href="{{ url_for('dashboard') }}">Vai alla Dashboard</a></p>
+<p style="margin-top:18px"><a class="btn secondary" href="{{ url_for('dashboard') }}">{{ _('Vai alla Dashboard') }}</a></p>
 {% else %}
-<p class="muted" style="margin-top:18px">Finché mancano i tuoi dati e l'IBAN, l'app si apre
-   qui. Appena li scrivi, si apre sulla Dashboard.</p>
+<p class="muted" style="margin-top:18px">{{ _("Finché mancano i tuoi dati e l'IBAN, l'app si apre qui. Appena li scrivi, si apre sulla Dashboard.") }}</p>
 {% endif %}
 {% endblock %}

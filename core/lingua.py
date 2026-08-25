@@ -488,6 +488,170 @@ TESTI = {
         'ven': 'Fri',
         'sab': 'Sat',
         'dom': 'Sun',
+        # --- Primi passi ---
+        'Benvenuto': 'Welcome',
+        'Questa è la tua app per le fatture. Gira sul tuo computer e basta: niente account, niente abbonamento, nessun dato che esce di qui. Scrive le fatture in Word e in PDF, tiene il conto di chi ha pagato e prepara il pacchetto per il commercialista.':
+            'This is your invoicing app. It runs on your computer and nowhere else: no account, no subscription, no data leaving this machine. It writes invoices in Word and PDF, keeps track of who has paid, and puts together the package for your accountant.',
+        '{fatti} di {totali} fatti.': '{fatti} of {totali} done.',
+        'Manca ancora qualcosa di essenziale: senza, le fatture escono incomplete.':
+            'Something essential is still missing: without it, the invoices come out incomplete.',
+        "L'essenziale c'è. Il resto è comodità, quando ti va.":
+            'The essentials are there. The rest is convenience, whenever you feel like it.',
+        'serve davvero': 'really needed',
+        'rivedi': 'review',
+        'Vai alla Dashboard': 'Go to the Dashboard',
+        "Finché mancano i tuoi dati e l'IBAN, l'app si apre qui. Appena li scrivi, si apre sulla Dashboard.":
+            'While your details and your IBAN are missing, the app opens here. As soon as you write them, it opens on the Dashboard.',
+        # --- i passi, uno per uno ---
+        'Chi emette le fatture': 'Who issues the invoices',
+        'Nome, indirizzo e numero IVA/IDI vanno in cima a ogni fattura.':
+            'Name, address and VAT/UID number go at the top of every invoice.',
+        'Scrivi i tuoi dati': 'Write your details',
+        'Dove ti pagano': 'Where you get paid',
+        "Senza IBAN la fattura esce senza il conto su cui incassare: è la cosa che si dimentica più facilmente e che costa di più.":
+            'Without an IBAN the invoice goes out with no account to be paid into: the easiest thing to forget and the most expensive one.',
+        "Scrivi l'IBAN": 'Write the IBAN',
+        'Il tuo logo': 'Your logo',
+        'Va sulle fatture e qui in alto a sinistra. Finché manca, sulla fattura quello spazio resta vuoto.':
+            'It goes on the invoices and up here on the left. While it is missing, that space on the invoice stays empty.',
+        'Carica il logo': 'Upload the logo',
+        'I tuoi clienti': 'Your clients',
+        'Li puoi anche aggiungere al volo mentre fai la prima fattura.':
+            'You can also add them on the fly while making the first invoice.',
+        'Aggiungi un cliente': 'Add a client',
+        'La prima fattura': 'The first invoice',
+        "L'app la scrive in Word e in PDF, controlla che i due documenti dicano lo stesso importo, e la mette in archivio.":
+            'The app writes it in Word and in PDF, checks that the two documents say the same amount, and files it away.',
+        'Fai la prima fattura': 'Make the first invoice',
+        'Come si chiamano i tuoi servizi': 'What your services are called',
+        "Serve a due cose: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio giusto. Finché è vuoto l'app non prova a indovinare: mette tutto in «Altro» e nell'email non lo nomina.":
+            'Good for two things: the Dashboard groups revenue by service, and the email names the right service. While it is empty the app does not try to guess: it puts everything under «Other» and does not name it in the email.',
+        'Scrivi i tuoi servizi': 'Write your services',
+        'La posta': 'Email',
+        "Serve solo se vuoi spedire le fatture dall'app invece di allegarle a mano.":
+            'Only needed if you want to send invoices from the app instead of attaching them by hand.',
+        'Collega la casella': 'Connect the mailbox',
+        'I pacchetti di sessioni': 'Session packs',
+        "Se vendi pacchetti prepagati, l'app tiene il conto delle sessioni leggendole dal tuo calendario.":
+            'If you sell prepaid packs, the app keeps count of the sessions by reading them from your calendar.',
+        # --- Impostazioni ---
+        'Questi dati finiscono sulle fatture e negli esporti. Cambiali solo se cambia qualcosa davvero.':
+            'These details end up on the invoices and in the exports. Change them only if something really changes.',
+        'Nome attività': 'Business name',
+        'UID / IDI': 'UID / VAT no.',
+        'Indirizzo — riga 1': 'Address — line 1',
+        'Indirizzo — riga 2': 'Address — line 2',
+        'Telefono': 'Phone',
+        'Sito': 'Website',
+        'IBAN': 'IBAN',
+        'Termini di pagamento': 'Payment terms',
+        'Città commercialista': 'Accountant’s town',
+        'Servizi proposti sulla nuova fattura': 'Services offered on a new invoice',
+        'uno per riga, per esempio:': 'one per line, for example:',
+        'Pacchetto 10 sedute': '10-session pack',
+        'Abbonamento mensile': 'Monthly subscription',
+        "Diventano i pulsanti sopra le righe della fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più. Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende l'ultima fattura di quel cliente e sposta il periodo avanti di un mese.":
+            'They become the buttons above the invoice lines. If you leave this empty, the app offers the descriptions you have used most. For subscriptions do not write the dates: when you pick the service, the app takes the last invoice of that client and moves the period one month forward.',
+        "Servizi che l'app deve riconoscere": 'Services the app should recognise',
+        "A cosa servono: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio e sceglie il testo giusto. Una riga per servizio, così: {esempio} — le parole sono quelle che compaiono nelle righe delle tue fatture. Senza {uguale}, il nome fa anche da parola. Vince la prima riga che riconosce, e gli abbonamenti si provano per primi. {vuoto}, l'app non prova a indovinare: l'email non nomina il servizio e la Dashboard mette tutto in «Altro».":
+            'What they are for: the Dashboard groups revenue by service, and the email names the service and picks the right text. One line per service, like this: {esempio} — the words are the ones that appear in the lines of your invoices. Without {uguale}, the name doubles as the word. The first line that matches wins, and subscriptions are tried first. {vuoto}, the app does not try to guess: the email does not name the service and the Dashboard puts everything under «Other».',
+        'Nome del servizio = parola, parola': 'Name of the service = word, word',
+        'Se lasci vuoto': 'If you leave this empty',
+        'In abbonamento — si rinnova ogni mese': 'By subscription — renews every month',
+        'per esempio:': 'for example:',
+        'Fisioterapia = fisioterapia, seduta': 'Physiotherapy = physiotherapy, session',
+        'Coaching = coaching': 'Coaching = coaching',
+        'A pacchetto — si compra una volta e si consuma':
+            'By pack — bought once and used up',
+        'Pacchetto sedute = pacchetto, sedute, session': 'Session pack = pack, sessions, session',
+        'Cartella storico (solo lettura)': 'History folder (read-only)',
+        'vuoto: nessuno storico da importare': 'empty: no history to import',
+        'Cartella della copia di sicurezza (fuori dal Mac)':
+            'Folder for the backup copy (off this Mac)',
+        'Logo': 'Logo',
+        "Va sulle fatture — in PDF e in Word — e qui nell'app, in alto a sinistra. Meglio un PNG con lo sfondo trasparente. Se è di un'altra forma non viene stirato: lo centriamo nello spazio che c'è.":
+            'It goes on the invoices — in PDF and in Word — and here in the app, top left. A PNG with a transparent background works best. If it is a different shape it does not get stretched: we centre it in the space available.',
+        'Questo è il tuo logo.': 'This is your logo.',
+        'Non hai ancora caricato un logo: sulle fatture compare questo segnaposto.':
+            'You have not uploaded a logo yet: this placeholder appears on the invoices.',
+        'Carica': 'Upload',
+        'Togli': 'Remove',
+        'Tolgo il logo? Sulle fatture torna il segnaposto.':
+            'Remove the logo? The placeholder comes back on the invoices.',
+        'Calendario — sessioni automatiche': 'Calendar — automatic sessions',
+        'Su Google Calendar: il calendario delle sessioni → Impostazioni del calendario → {voce}. Copia quell’indirizzo e incollalo qui. L’app leggerà le sessioni da sola ogni volta che apri la pagina Crediti. Un eventuale calendario storico {mai}: raddoppierebbe i crediti.':
+            'In Google Calendar: the sessions calendar → Settings for the calendar → {voce}. Copy that address and paste it here. The app will read the sessions by itself every time you open the Credits page. An old calendar, if you have one, {mai}: it would double the credits.',
+        'Indirizzo segreto in formato iCal': 'Secret address in iCal format',
+        'non va mai messo qui sotto': 'must never go in the box below',
+        'Indirizzo iCal segreto del calendario delle sessioni':
+            'Secret iCal address of the sessions calendar',
+        'Ultima lettura riuscita: {data} alle {ora}.': 'Last successful read: {data} at {ora}.',
+        'Non ancora collegato.': 'Not connected yet.',
+        'Chi ha questo indirizzo può leggere il calendario: trattalo come una password.':
+            'Anyone with this address can read the calendar: treat it like a password.',
+        'Indirizzo iCal del calendario storico — facoltativo':
+            'iCal address of the old calendar — optional',
+        'Serve {solo}, per sapere a che ora sono state fatte le sedute vecchie: da qui i crediti non passano mai, quindi non c’è modo che vengano contati due volte. Senza questo indirizzo l’Agenda funziona lo stesso, ma delle sessioni più vecchie mostra il giorno e non l’ora.':
+            'It is needed {solo}, to know at what time the old sessions took place: credits never come through here, so there is no way they get counted twice. Without this address Sessions works all the same, but for the older ones it shows the day and not the time.',
+        "solo all'Agenda": 'only for Sessions',
+        'Posta — invio delle fatture': 'Email — sending the invoices',
+        'Le mail partono dal tuo server, non da Gmail: se il tuo dominio autorizza solo il proprio server a spedire a suo nome (SPF {spf}), quelle mandate da Gmail finiscono in spam. Attenzione al nome del server: spesso il certificato copre {dominio} ma non {sotto}, e allora va scritto il primo.':
+            'The mail leaves from your own server, not from Gmail: if your domain only authorises its own server to send in its name (SPF {spf}), anything sent from Gmail lands in spam. Watch the server name: the certificate often covers {dominio} but not {sotto}, and then it is the first one you have to write.',
+        'tuodominio.ch': 'yourdomain.ch',
+        'mail.tuodominio.ch': 'mail.yourdomain.ch',
+        'Server SMTP': 'SMTP server',
+        'Porta': 'Port',
+        'Casella': 'Mailbox',
+        'Password della casella': 'Password of the mailbox',
+        '•••••••• (già salvata) — lascia vuoto per non cambiarla':
+            '•••••••• (already saved) — leave empty to keep it',
+        'non ancora inserita': 'not entered yet',
+        'salvata: {n} caratteri': 'saved: {n} characters',
+        'Mittente': 'Sender',
+        'Indirizzo per le prove': 'Address for test emails',
+        'Server IMAP (per la copia in Inviata)': 'IMAP server (for the copy in Sent)',
+        'Cartella Inviata': 'Sent folder',
+        'vuoto = la cerca da sola sul server': 'empty = it finds it by itself on the server',
+        'Mandane una copia nascosta anche a me (arriva nella posta in arrivo, il cliente non la vede)':
+            'Send a blind copy to me as well (it lands in my inbox, the client does not see it)',
+        'I due oggetti': 'The two subject lines',
+        'Uno per modello, scelto insieme al testo. Nell’abbonamento {mese} diventa il mese coperto dall’abbonamento ({a} se il periodo sta a cavallo di due mesi, {b} se no): l’app lo legge dal periodo scritto sulla fattura, e se manca riparte dall’ultima mail mandata a quella persona avanzando di un mese.':
+            'One per template, picked together with the text. In the subscription one, {mese} becomes the month the subscription covers ({a} if the period straddles two months, {b} if not): the app reads it from the period written on the invoice, and if that is missing it starts from the last mail sent to that person and moves one month on.',
+        'Abbonamento': 'Subscription',
+        'Pacchetto di sedute': 'Session pack',
+        'I due modelli della frase centrale': 'The two templates for the middle sentence',
+        "L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.":
+            'The app picks which one to use by looking at the invoice lines, and in the preview you can switch to the other with one click. The rest of the mail (opening, the standing-order sentence, the sign-off) stays automatic.',
+        'Abbonamento — si rinnova ogni mese': 'Subscription — renews every month',
+        'Pacchetto di sedute — si compra una volta': 'Session pack — bought once',
+        'Come chiudi la mail': 'How you close the mail',
+        'Due versioni: nella scheda di ogni cliente scegli quale usare. Vanno al posto di {saluto} nel modello qui sotto. Gli a capo contano.':
+            'Two versions: in each client’s card you choose which one to use. They go in place of {saluto} in the template below. Line breaks count.',
+        'Con chi ci si dà del tu': 'For people you are on first-name terms with',
+        'Con tutti gli altri': 'For everyone else',
+        'Modello del testo': 'Template of the text',
+        'Sotto {saluto} va la tua firma: scrivila qui com’è in fondo alle mail che mandi davvero.':
+            'Your signature goes under {saluto}: write it here exactly as it is at the bottom of the mails you actually send.',
+        'Segnaposti:': 'Placeholders:',
+        'Banca — collegamento automatico': 'Bank — automatic linking',
+        'Quando metti un estratto nuovo nella cartella {cartella}, l’app può collegare da sola i versamenti su cui non c’è niente da decidere: importo esatto, un solo candidato, e il nome (o la data della fattura) nella causale. Tutto il resto continua a chiederlo a te.':
+            'When you drop a new statement into the {cartella} folder, the app can link by itself the payments where there is nothing to decide: exact amount, a single candidate, and the name (or the invoice date) in the reference text. Everything else it still asks you about.',
+        'Estratti conto': 'Bank statements',
+        'Collega da solo i versamenti senza dubbi': 'Link the payments with no doubt by itself',
+        'Nel dubbio non decide: se i candidati sono due, o se il nome non compare, la riga resta a te. Ogni riga decisa dall’app resta marcata «dall’app» nella pagina Banca e si annulla con un click.':
+            'When in doubt it does not decide: if there are two candidates, or if the name does not appear, the row stays with you. Every row the app decided stays marked «by the app» on the Bank page and can be undone with one click.',
+        'Copia di sicurezza fuori dal Mac': 'Backup copy off this Mac',
+        'Uno zip con database, registro delle sessioni e tutti i PDF delle fatture. Viene creato all’avvio (una volta al giorno) e dopo ogni fattura nuova. Appena scritto viene riaperto e controllato: se il database dentro non è integro, l’archivio viene buttato e qui lo vedi scritto.':
+            'A zip with the database, the sessions register and every invoice PDF. It is made at startup (once a day) and after each new invoice. As soon as it is written it is opened again and checked: if the database inside is not sound, the archive is thrown away and you see it said here.',
+        'Ultima copia: {data} alle {ora} — {kb} KB': 'Last copy: {data} at {ora} — {kb} KB',
+        'Nessuna copia ancora presente in questa cartella.':
+            'No copy in this folder yet.',
+        'Fai una copia adesso': 'Make a copy now',
+        'Apri la cartella': 'Open the folder',
+        'Quando': 'When',
+        'Dimensione': 'Size',
+        'Mi fermo qui. Il server ha già rifiutato la password due volte e al terzo tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra {restano} minuti, oppure correggi prima la password in Impostazioni: salvarla azzera questa pausa.':
+            'I am stopping here. The server has already refused the password twice, and on the third try it blocks your IP address for a good while. Try again in {restano} minutes, or fix the password in Settings first: saving it clears this pause.',
     },
     'de': {
         # --- Menü ---
@@ -934,6 +1098,170 @@ TESTI = {
         'ven': 'Fr',
         'sab': 'Sa',
         'dom': 'So',
+        # --- Erste Schritte ---
+        'Benvenuto': 'Willkommen',
+        'Questa è la tua app per le fatture. Gira sul tuo computer e basta: niente account, niente abbonamento, nessun dato che esce di qui. Scrive le fatture in Word e in PDF, tiene il conto di chi ha pagato e prepara il pacchetto per il commercialista.':
+            'Das ist deine App für die Rechnungen. Sie läuft auf deinem Computer und sonst nirgends: kein Konto, kein Abo, keine Daten, die hier weggehen. Sie schreibt Rechnungen in Word und PDF, behält im Auge, wer bezahlt hat, und stellt das Paket für den Treuhänder zusammen.',
+        '{fatti} di {totali} fatti.': '{fatti} von {totali} erledigt.',
+        'Manca ancora qualcosa di essenziale: senza, le fatture escono incomplete.':
+            'Es fehlt noch etwas Wesentliches: ohne das kommen die Rechnungen unvollständig heraus.',
+        "L'essenziale c'è. Il resto è comodità, quando ti va.":
+            'Das Wesentliche ist da. Der Rest ist Bequemlichkeit, wann immer du magst.',
+        'serve davvero': 'wirklich nötig',
+        'rivedi': 'ansehen',
+        'Vai alla Dashboard': 'Zur Übersicht',
+        "Finché mancano i tuoi dati e l'IBAN, l'app si apre qui. Appena li scrivi, si apre sulla Dashboard.":
+            'Solange deine Angaben und die IBAN fehlen, öffnet sich die App hier. Sobald du sie einträgst, öffnet sie sich auf der Übersicht.',
+        # --- die Schritte, einer nach dem anderen ---
+        'Chi emette le fatture': 'Wer die Rechnungen stellt',
+        'Nome, indirizzo e numero IVA/IDI vanno in cima a ogni fattura.':
+            'Name, Adresse und MWST-/UID-Nummer stehen zuoberst auf jeder Rechnung.',
+        'Scrivi i tuoi dati': 'Deine Angaben eintragen',
+        'Dove ti pagano': 'Wohin du bezahlt wirst',
+        "Senza IBAN la fattura esce senza il conto su cui incassare: è la cosa che si dimentica più facilmente e che costa di più.":
+            'Ohne IBAN geht die Rechnung ohne Konto hinaus, auf das bezahlt werden kann: das wird am leichtesten vergessen und kostet am meisten.',
+        "Scrivi l'IBAN": 'IBAN eintragen',
+        'Il tuo logo': 'Dein Logo',
+        'Va sulle fatture e qui in alto a sinistra. Finché manca, sulla fattura quello spazio resta vuoto.':
+            'Es kommt auf die Rechnungen und hier oben links. Solange es fehlt, bleibt dieser Platz auf der Rechnung leer.',
+        'Carica il logo': 'Logo hochladen',
+        'I tuoi clienti': 'Deine Kunden',
+        'Li puoi anche aggiungere al volo mentre fai la prima fattura.':
+            'Du kannst sie auch nebenbei erfassen, während du die erste Rechnung machst.',
+        'Aggiungi un cliente': 'Kunde hinzufügen',
+        'La prima fattura': 'Die erste Rechnung',
+        "L'app la scrive in Word e in PDF, controlla che i due documenti dicano lo stesso importo, e la mette in archivio.":
+            'Die App schreibt sie in Word und in PDF, prüft, dass beide Dokumente denselben Betrag nennen, und legt sie ab.',
+        'Fai la prima fattura': 'Erste Rechnung machen',
+        'Come si chiamano i tuoi servizi': 'Wie deine Dienstleistungen heissen',
+        "Serve a due cose: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio giusto. Finché è vuoto l'app non prova a indovinare: mette tutto in «Altro» e nell'email non lo nomina.":
+            'Gut für zwei Dinge: die Übersicht gruppiert den Umsatz nach Dienstleistung, und die E-Mail nennt die richtige. Solange es leer ist, rät die App nicht: sie legt alles unter «Anderes» und nennt es in der E-Mail nicht.',
+        'Scrivi i tuoi servizi': 'Deine Dienstleistungen eintragen',
+        'La posta': 'Die Post',
+        "Serve solo se vuoi spedire le fatture dall'app invece di allegarle a mano.":
+            'Nur nötig, wenn du die Rechnungen aus der App verschicken willst, statt sie von Hand anzuhängen.',
+        'Collega la casella': 'Postfach verbinden',
+        'I pacchetti di sessioni': 'Die Sitzungspakete',
+        "Se vendi pacchetti prepagati, l'app tiene il conto delle sessioni leggendole dal tuo calendario.":
+            'Wenn du vorausbezahlte Pakete verkaufst, zählt die App die Sitzungen, indem sie sie aus deinem Kalender liest.',
+        # --- Einstellungen ---
+        'Questi dati finiscono sulle fatture e negli esporti. Cambiali solo se cambia qualcosa davvero.':
+            'Diese Angaben landen auf den Rechnungen und in den Exporten. Ändere sie nur, wenn sich wirklich etwas ändert.',
+        'Nome attività': 'Name des Betriebs',
+        'UID / IDI': 'UID / MWST-Nr.',
+        'Indirizzo — riga 1': 'Adresse — Zeile 1',
+        'Indirizzo — riga 2': 'Adresse — Zeile 2',
+        'Telefono': 'Telefon',
+        'Sito': 'Website',
+        'IBAN': 'IBAN',
+        'Termini di pagamento': 'Zahlungsfrist',
+        'Città commercialista': 'Ort des Treuhänders',
+        'Servizi proposti sulla nuova fattura': 'Dienstleistungen auf der neuen Rechnung',
+        'uno per riga, per esempio:': 'eine pro Zeile, zum Beispiel:',
+        'Pacchetto 10 sedute': '10er-Paket',
+        'Abbonamento mensile': 'Monatsabo',
+        "Diventano i pulsanti sopra le righe della fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più. Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende l'ultima fattura di quel cliente e sposta il periodo avanti di un mese.":
+            'Daraus werden die Knöpfe über den Rechnungszeilen. Lässt du das leer, schlägt die App die Beschreibungen vor, die du am häufigsten verwendet hast. Bei Abos keine Daten hinschreiben: wenn du die Dienstleistung wählst, nimmt die App die letzte Rechnung dieses Kunden und schiebt den Zeitraum einen Monat weiter.',
+        "Servizi che l'app deve riconoscere": 'Dienstleistungen, die die App erkennen soll',
+        "A cosa servono: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio e sceglie il testo giusto. Una riga per servizio, così: {esempio} — le parole sono quelle che compaiono nelle righe delle tue fatture. Senza {uguale}, il nome fa anche da parola. Vince la prima riga che riconosce, e gli abbonamenti si provano per primi. {vuoto}, l'app non prova a indovinare: l'email non nomina il servizio e la Dashboard mette tutto in «Altro».":
+            'Wozu sie da sind: die Übersicht gruppiert den Umsatz nach Dienstleistung, und die E-Mail nennt die Dienstleistung und wählt den passenden Text. Eine Zeile pro Dienstleistung, so: {esempio} — die Wörter sind jene, die in den Zeilen deiner Rechnungen vorkommen. Ohne {uguale} dient der Name zugleich als Wort. Die erste passende Zeile gewinnt, und Abos werden zuerst geprüft. {vuoto}, rät die App nicht: die E-Mail nennt die Dienstleistung nicht und die Übersicht legt alles unter «Anderes».',
+        'Nome del servizio = parola, parola': 'Name der Dienstleistung = Wort, Wort',
+        'Se lasci vuoto': 'Wenn du das leer lässt',
+        'In abbonamento — si rinnova ogni mese': 'Im Abo — erneuert sich jeden Monat',
+        'per esempio:': 'zum Beispiel:',
+        'Fisioterapia = fisioterapia, seduta': 'Physiotherapie = physiotherapie, sitzung',
+        'Coaching = coaching': 'Coaching = coaching',
+        'A pacchetto — si compra una volta e si consuma':
+            'Als Paket — einmal gekauft und aufgebraucht',
+        'Pacchetto sedute = pacchetto, sedute, session': 'Sitzungspaket = paket, sitzungen, session',
+        'Cartella storico (solo lettura)': 'Ordner der Historie (nur lesen)',
+        'vuoto: nessuno storico da importare': 'leer: keine Historie zu importieren',
+        'Cartella della copia di sicurezza (fuori dal Mac)':
+            'Ordner der Sicherungskopie (ausserhalb des Macs)',
+        'Logo': 'Logo',
+        "Va sulle fatture — in PDF e in Word — e qui nell'app, in alto a sinistra. Meglio un PNG con lo sfondo trasparente. Se è di un'altra forma non viene stirato: lo centriamo nello spazio che c'è.":
+            'Es kommt auf die Rechnungen — in PDF und in Word — und hier in der App, oben links. Am besten ein PNG mit durchsichtigem Hintergrund. Hat es eine andere Form, wird es nicht verzerrt: wir zentrieren es im vorhandenen Platz.',
+        'Questo è il tuo logo.': 'Das ist dein Logo.',
+        'Non hai ancora caricato un logo: sulle fatture compare questo segnaposto.':
+            'Du hast noch kein Logo hochgeladen: auf den Rechnungen erscheint dieser Platzhalter.',
+        'Carica': 'Hochladen',
+        'Togli': 'Entfernen',
+        'Tolgo il logo? Sulle fatture torna il segnaposto.':
+            'Logo entfernen? Auf den Rechnungen kommt der Platzhalter zurück.',
+        'Calendario — sessioni automatiche': 'Kalender — automatische Sitzungen',
+        'Su Google Calendar: il calendario delle sessioni → Impostazioni del calendario → {voce}. Copia quell’indirizzo e incollalo qui. L’app leggerà le sessioni da sola ogni volta che apri la pagina Crediti. Un eventuale calendario storico {mai}: raddoppierebbe i crediti.':
+            'In Google Kalender: der Sitzungskalender → Einstellungen für den Kalender → {voce}. Kopier diese Adresse und füg sie hier ein. Die App liest die Sitzungen von selbst, jedes Mal wenn du die Seite Guthaben öffnest. Ein allfälliger alter Kalender {mai}: das würde die Guthaben verdoppeln.',
+        'Indirizzo segreto in formato iCal': 'Geheime Adresse im iCal-Format',
+        'non va mai messo qui sotto': 'darf nie ins Feld unten',
+        'Indirizzo iCal segreto del calendario delle sessioni':
+            'Geheime iCal-Adresse des Sitzungskalenders',
+        'Ultima lettura riuscita: {data} alle {ora}.': 'Zuletzt erfolgreich gelesen: {data} um {ora}.',
+        'Non ancora collegato.': 'Noch nicht verbunden.',
+        'Chi ha questo indirizzo può leggere il calendario: trattalo come una password.':
+            'Wer diese Adresse hat, kann den Kalender lesen: behandle sie wie ein Passwort.',
+        'Indirizzo iCal del calendario storico — facoltativo':
+            'iCal-Adresse des alten Kalenders — freiwillig',
+        'Serve {solo}, per sapere a che ora sono state fatte le sedute vecchie: da qui i crediti non passano mai, quindi non c’è modo che vengano contati due volte. Senza questo indirizzo l’Agenda funziona lo stesso, ma delle sessioni più vecchie mostra il giorno e non l’ora.':
+            'Sie wird {solo} gebraucht, um zu wissen, um welche Uhrzeit die alten Sitzungen stattfanden: Guthaben kommen hier nie durch, also können sie auch nicht doppelt gezählt werden. Ohne diese Adresse funktionieren die Sitzungen gleich gut, bei den älteren steht dann aber nur der Tag und nicht die Uhrzeit.',
+        "solo all'Agenda": 'nur für die Sitzungen',
+        'Posta — invio delle fatture': 'Post — Versand der Rechnungen',
+        'Le mail partono dal tuo server, non da Gmail: se il tuo dominio autorizza solo il proprio server a spedire a suo nome (SPF {spf}), quelle mandate da Gmail finiscono in spam. Attenzione al nome del server: spesso il certificato copre {dominio} ma non {sotto}, e allora va scritto il primo.':
+            'Die Mails gehen von deinem eigenen Server hinaus, nicht von Gmail: wenn deine Domain nur dem eigenen Server erlaubt, in ihrem Namen zu senden (SPF {spf}), landen die von Gmail verschickten im Spam. Achte auf den Servernamen: oft deckt das Zertifikat {dominio} ab, aber nicht {sotto}, und dann muss der erste hin.',
+        'tuodominio.ch': 'deinedomain.ch',
+        'mail.tuodominio.ch': 'mail.deinedomain.ch',
+        'Server SMTP': 'SMTP-Server',
+        'Porta': 'Port',
+        'Casella': 'Postfach',
+        'Password della casella': 'Passwort des Postfachs',
+        '•••••••• (già salvata) — lascia vuoto per non cambiarla':
+            '•••••••• (bereits gespeichert) — leer lassen, um es zu behalten',
+        'non ancora inserita': 'noch nicht eingetragen',
+        'salvata: {n} caratteri': 'gespeichert: {n} Zeichen',
+        'Mittente': 'Absender',
+        'Indirizzo per le prove': 'Adresse für Testmails',
+        'Server IMAP (per la copia in Inviata)': 'IMAP-Server (für die Kopie in Gesendet)',
+        'Cartella Inviata': 'Ordner Gesendet',
+        'vuoto = la cerca da sola sul server': 'leer = sie wird auf dem Server selbst gesucht',
+        'Mandane una copia nascosta anche a me (arriva nella posta in arrivo, il cliente non la vede)':
+            'Auch mir eine Blindkopie schicken (sie landet im Posteingang, der Kunde sieht sie nicht)',
+        'I due oggetti': 'Die zwei Betreffzeilen',
+        'Uno per modello, scelto insieme al testo. Nell’abbonamento {mese} diventa il mese coperto dall’abbonamento ({a} se il periodo sta a cavallo di due mesi, {b} se no): l’app lo legge dal periodo scritto sulla fattura, e se manca riparte dall’ultima mail mandata a quella persona avanzando di un mese.':
+            'Eine pro Vorlage, zusammen mit dem Text gewählt. Beim Abo wird {mese} zum Monat, den das Abo deckt ({a}, wenn der Zeitraum über zwei Monate geht, sonst {b}): die App liest ihn aus dem Zeitraum auf der Rechnung, und fehlt der, geht sie von der letzten Mail an diese Person aus und einen Monat weiter.',
+        'Abbonamento': 'Abo',
+        'Pacchetto di sedute': 'Sitzungspaket',
+        'I due modelli della frase centrale': 'Die zwei Vorlagen für den mittleren Satz',
+        "L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.":
+            'Die App wählt selbst, welche sie nimmt, indem sie die Rechnungszeilen anschaut, und in der Vorschau wechselst du mit einem Klick zur anderen. Der Rest der Mail (Anrede, Satz zum Dauerauftrag, Grussformel) bleibt automatisch.',
+        'Abbonamento — si rinnova ogni mese': 'Abo — erneuert sich jeden Monat',
+        'Pacchetto di sedute — si compra una volta': 'Sitzungspaket — einmal gekauft',
+        'Come chiudi la mail': 'Wie du die Mail abschliesst',
+        'Due versioni: nella scheda di ogni cliente scegli quale usare. Vanno al posto di {saluto} nel modello qui sotto. Gli a capo contano.':
+            'Zwei Fassungen: in der Karte jedes Kunden wählst du, welche gilt. Sie kommen anstelle von {saluto} in die Vorlage unten. Zeilenumbrüche zählen.',
+        'Con chi ci si dà del tu': 'Bei wem man sich duzt',
+        'Con tutti gli altri': 'Bei allen anderen',
+        'Modello del testo': 'Vorlage des Textes',
+        'Sotto {saluto} va la tua firma: scrivila qui com’è in fondo alle mail che mandi davvero.':
+            'Unter {saluto} kommt deine Unterschrift: schreib sie hier genau so hin, wie sie am Ende deiner echten Mails steht.',
+        'Segnaposti:': 'Platzhalter:',
+        'Banca — collegamento automatico': 'Bank — automatische Verknüpfung',
+        'Quando metti un estratto nuovo nella cartella {cartella}, l’app può collegare da sola i versamenti su cui non c’è niente da decidere: importo esatto, un solo candidato, e il nome (o la data della fattura) nella causale. Tutto il resto continua a chiederlo a te.':
+            'Wenn du einen neuen Auszug in den Ordner {cartella} legst, kann die App jene Zahlungen von selbst verknüpfen, bei denen es nichts zu entscheiden gibt: genauer Betrag, ein einziger Kandidat, und der Name (oder das Rechnungsdatum) im Verwendungszweck. Alles andere fragt sie weiterhin dich.',
+        'Estratti conto': 'Kontoauszüge',
+        'Collega da solo i versamenti senza dubbi': 'Zweifelsfreie Zahlungen von selbst verknüpfen',
+        'Nel dubbio non decide: se i candidati sono due, o se il nome non compare, la riga resta a te. Ogni riga decisa dall’app resta marcata «dall’app» nella pagina Banca e si annulla con un click.':
+            'Im Zweifel entscheidet sie nicht: gibt es zwei Kandidaten, oder fehlt der Name, bleibt die Zeile bei dir. Jede von der App entschiedene Zeile bleibt auf der Seite Bank mit «von der App» markiert und lässt sich mit einem Klick rückgängig machen.',
+        'Copia di sicurezza fuori dal Mac': 'Sicherungskopie ausserhalb des Macs',
+        'Uno zip con database, registro delle sessioni e tutti i PDF delle fatture. Viene creato all’avvio (una volta al giorno) e dopo ogni fattura nuova. Appena scritto viene riaperto e controllato: se il database dentro non è integro, l’archivio viene buttato e qui lo vedi scritto.':
+            'Ein Zip mit der Datenbank, dem Sitzungsregister und allen Rechnungs-PDFs. Es entsteht beim Start (einmal am Tag) und nach jeder neuen Rechnung. Kaum geschrieben, wird es wieder geöffnet und geprüft: ist die Datenbank darin nicht heil, wird das Archiv weggeworfen, und hier steht es dann.',
+        'Ultima copia: {data} alle {ora} — {kb} KB': 'Letzte Kopie: {data} um {ora} — {kb} KB',
+        'Nessuna copia ancora presente in questa cartella.':
+            'In diesem Ordner liegt noch keine Kopie.',
+        'Fai una copia adesso': 'Jetzt eine Kopie machen',
+        'Apri la cartella': 'Ordner öffnen',
+        'Quando': 'Wann',
+        'Dimensione': 'Grösse',
+        'Mi fermo qui. Il server ha già rifiutato la password due volte e al terzo tentativo blocca il tuo indirizzo IP per un pezzo. Riprova fra {restano} minuti, oppure correggi prima la password in Impostazioni: salvarla azzera questa pausa.':
+            'Ich höre hier auf. Der Server hat das Passwort schon zweimal abgelehnt, und beim dritten Versuch sperrt er deine IP-Adresse für eine ganze Weile. Versuch es in {restano} Minuten nochmals, oder korrigier zuerst das Passwort in den Einstellungen: das Speichern hebt diese Pause auf.',
     },
 }
 
