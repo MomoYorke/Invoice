@@ -721,6 +721,84 @@ def _test_lingua(r):
     _check(r, 'Lingua', 'inglese e tedesco conoscono le stesse frasi',
            L.mancanti('en') + L.mancanti('de'), [])
 
+    # Ogni frase che una pagina chiede con _('...') deve stare nei dizionari.
+    # E' il controllo che fa crescere la traduzione da sola: chi domani scrive
+    # _('Qualcosa di nuovo') e si scorda i dizionari trova subito il collaudo
+    # rosso, invece di scoprirlo un utente tedesco.
+    _check(r, 'Lingua', 'ogni frase chiesta dalle pagine sta nei dizionari',
+           _frasi_senza_traduzione(L), [])
+
+    # I segnaposti sono la parte fragile: {n} che sparisce dalla traduzione fa
+    # sparire un numero dalla pagina, {n} scritto storto fa saltare la pagina
+    # con un errore. Meglio accorgersene qui.
+    _check(r, 'Lingua', 'le traduzioni tengono gli stessi segnaposti',
+           _segnaposti_sbagliati(L), [])
+
+    # Le quattro frasi che scrive il browser gliele passa nuova.html: se una
+    # non parte, l'inglese vede una scritta italiana in mezzo al modulo.
+    _check(r, 'Lingua', 'la pagina passa al browser tutte le frasi che gli servono',
+           _frasi_js_non_passate(), [])
+
+    # Il tedesco ha due modi di rivolgersi a chi legge e non si possono
+    # mescolare: meta' pagina che da' del Lei e meta' del tu suona sciatta.
+    # L'italiano da' del tu, quindi il tedesco fa lo stesso. Se un domani
+    # questo controllo si lamenta di un «sie» che vuol dire «loro», si
+    # riscrive la frase: e' piu' facile che tenere due registri in testa.
+    _check(r, 'Lingua', 'il tedesco da\' del tu dappertutto, come l\'italiano',
+           _tedesco_col_lei(L), [])
+
+
+def _tedesco_col_lei(L):
+    """Le frasi tedesche che danno del Lei invece che del tu."""
+    lei = re.compile(r'\b(Ihre?[nms]?|Ihnen|Sie)\b')
+    return sorted(v for v in L.TESTI['de'].values() if lei.search(v))
+
+
+def _sorgenti_pagine():
+    """Il testo di tutti i template, uno per uno."""
+    import glob
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'templates')
+    for perc in sorted(glob.glob(os.path.join(base, '*.html'))):
+        with io.open(perc, encoding='utf-8') as f:
+            yield os.path.basename(perc), f.read()
+
+
+def _frasi_senza_traduzione(L):
+    """[(pagina, frase)] per ogni _('...') che i dizionari non conoscono."""
+    # solo le frasi scritte per esteso: _(variabile) lo si controlla altrove
+    quali = re.compile(r"""_\(\s*('([^']*)'|"([^"]*)")""")
+    fuori = []
+    for pagina, testo in _sorgenti_pagine():
+        for pezzo in quali.finditer(testo):
+            frase = pezzo.group(2) if pezzo.group(2) is not None else pezzo.group(3)
+            if frase and frase not in L.TESTI['en']:
+                fuori.append((pagina, frase))
+    return sorted(set(fuori))
+
+
+def _segnaposti_sbagliati(L):
+    """[(lingua, frase)] dove la traduzione non ha gli stessi {segnaposti}."""
+    quali = re.compile(r'\{(\w+)\}')
+    fuori = []
+    for cod in ('en', 'de'):
+        for frase, tradotta in L.TESTI[cod].items():
+            if set(quali.findall(frase)) != set(quali.findall(tradotta)):
+                fuori.append((cod, frase))
+    return sorted(fuori)
+
+
+def _frasi_js_non_passate():
+    """Le chiavi che app.js usa e nuova.html non manda (o viceversa)."""
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'static', 'app.js'), encoding='utf-8') as f:
+        js = f.read()
+    with io.open(os.path.join(base, 'templates', 'nuova.html'), encoding='utf-8') as f:
+        pagina = f.read()
+    usate = set(re.findall(r'\bT\.(\w+)', js))
+    passate = set(re.findall(r'^\s*(\w+):\s*\{\{ _\(', pagina, re.M))
+    return sorted(usate ^ passate)
+
 
 
 def _db_fatture_finto(righe):
@@ -1010,6 +1088,18 @@ def _test_icone(r):
 
     # un nome sbagliato non fa saltare la pagina
     _check(r, 'Icone', 'un nome inventato non rompe la pagina', str(I.icona('nonesiste')), '')
+
+    # Un disegno e' un pezzo di SVG pieno di virgolette. Se lo si infila dentro
+    # un attributo (data-icona="{{ icona(...) }}") la prima virgoletta chiude
+    # l'attributo e il browser butta via il resto, disegno e frase insieme. E'
+    # gia' successo una volta e non se n'e' accorto nessuno per mesi: il
+    # riquadro non compariva e basta.
+    dentro_attributo = []
+    for pagina, sorgente in _sorgenti_pagine():
+        for pezzo in re.finditer(r'[a-z-]+="[^"]*\{\{[^}]*icona\(', sorgente):
+            dentro_attributo.append((pagina, pezzo.group(0)[:40]))
+    _check(r, 'Icone', 'nessun disegno infilato dentro un attributo',
+           sorted(dentro_attributo), [])
 
     # i pallini di stato
     _check(r, 'Icone', 'il pallino verde ha la sua classe',

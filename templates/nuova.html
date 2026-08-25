@@ -1,63 +1,75 @@
 {% extends 'base.html' %}
-{% block title %}Nuova fattura{% endblock %}
+{% block title %}{{ _('Nuova fattura') }}{% endblock %}
 {% block content %}
-<h1>Nuova fattura <span class="muted">#{{ next_number }}</span></h1>
-<p class="sub">Numero assegnato automaticamente. Il totale lo calcola l'app: zero errori.</p>
+<h1>{{ _('Nuova fattura') }} <span class="muted">#{{ next_number }}</span></h1>
+<p class="sub">{{ _("Numero assegnato automaticamente. Il totale lo calcola l'app: zero errori.") }}</p>
+
+<script>
+  /* le frasi che scrive il browser: qui hanno gia' la lingua giusta */
+  window.TESTI = {
+    descrizione: {{ _('Descrizione del servizio') | tojson }},
+    rimuovi: {{ _('Rimuovi') | tojson }},
+    periodo: {{ _("Periodo proposto in automatico (mese successivo all'ultima fattura: {periodo}). Controlla le date e correggi se serve.") | tojson }},
+    intestata: {{ _('La fattura sarà intestata a {chi}, non a {cliente}.') | tojson }}
+  };
+</script>
 
 <form method="post" id="invoice-form" class="panel" style="max-width:860px">
   <div class="form-grid">
     <div>
-      <label>Cliente</label>
+      <label>{{ _('Cliente') }}</label>
       <select name="client_id" id="client-select">
-        <option value="">— scegli cliente —</option>
+        <option value="">{{ _('— scegli cliente —') }}</option>
         {% for c in clients %}
         <option value="{{ c.id }}">{{ c.name }}</option>
         {% endfor %}
       </select>
       <div id="client-addr" class="muted" style="font-size:13px;margin-top:6px"></div>
       <label style="margin-top:10px">
-        <input type="checkbox" id="new-client-toggle" name="nuovo_cliente" value="1" style="width:auto"> Nuovo cliente
+        <input type="checkbox" id="new-client-toggle" name="nuovo_cliente" value="1" style="width:auto"> {{ _('Nuovo cliente') }}
       </label>
       <div id="new-client-fields" style="display:none">
-        <label>Nome e cognome</label>
-        <input type="text" name="nc_nome" placeholder="Mario Rossi">
-        <label>Indirizzo — riga 1 (via e numero)</label>
-        <input type="text" name="nc_indirizzo1" placeholder="Via Roma 1">
-        <label>Indirizzo — riga 2 (CAP e città)</label>
+        <label>{{ _('Nome e cognome') }}</label>
+        <input type="text" name="nc_nome" placeholder="{{ _('Mario Rossi') }}">
+        <label>{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
+        <input type="text" name="nc_indirizzo1" placeholder="{{ _('Via Roma 1') }}">
+        <label>{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
         <input type="text" name="nc_indirizzo2" placeholder="8000 Zürich">
       </div>
     </div>
     <div>
-      <label>Data fattura</label>
+      <label>{{ _('Data fattura') }}</label>
       <input type="date" name="data" value="{{ today }}">
-      <label>Numero (auto: {{ next_number }})</label>
+      <label>{{ _('Numero (auto: {n})').format(n=next_number) }}</label>
       <input type="number" name="numero" value="{{ next_number }}">
       {% if cestinata %}
       <p class="muted" style="font-size:12.5px;margin-top:4px">
-        {{ icona('ricicla', 'ic-mini') }} Il #{{ next_number }} si è liberato: la fattura di {{ cestinata }} con questo
-        numero è nel Cestino. Riusandolo non lasci buchi nella numerazione.</p>
+        {{ icona('ricicla', 'ic-mini') }}
+        {{ _('Il #{n} si è liberato: la fattura di {cliente} con questo numero è nel Cestino. Riusandolo non lasci buchi nella numerazione.').format(n=next_number, cliente=cestinata) }}</p>
       {% endif %}
     </div>
   </div>
 
-  <h2>Servizio</h2>
+  <h2>{{ _('Servizio') }}</h2>
   <div>
     {% for s in servizi %}
     <button type="button" class="chip preset" data-desc="{{ s }}">{{ s }}</button>
     {% endfor %}
   </div>
-  <div class="suggestion" id="running-suggestion"
-       data-icona="{{ icona('agenda', 'ic-mini') }}"></div>
+  <div class="suggestion" id="running-suggestion">
+    {{ icona('agenda', 'ic-mini') }} <span id="running-suggestion-testo"></span>
+  </div>
 
-  <h2>Righe fattura</h2>
-  <div class="item-head"><span>Qta</span><span>Descrizione</span><span>Prezzo unit.</span><span>Totale riga</span><span></span></div>
+  <h2>{{ _('Righe fattura') }}</h2>
+  <div class="item-head"><span>{{ _('Qta') }}</span><span>{{ _('Descrizione') }}</span><span>{{ _('Prezzo unit.') }}</span><span>{{ _('Totale riga') }}</span><span></span></div>
   <div id="items"></div>
-  <button type="button" class="btn secondary small" id="add-row">+ Aggiungi riga</button>
+  <button type="button" class="btn secondary small" id="add-row">{{ _('+ Aggiungi riga') }}</button>
 
-  <div class="total-preview">Totale: <span id="total-preview">0.00 CHF</span></div>
-  <p class="muted" style="font-size:12.5px">Puoi scrivere i prezzi come preferisci: <code>110.-</code>, <code>1'800.00</code>, <code>150,00 CHF</code>.
-     Se lasci vuoto il totale riga, lo calcolo io (quantità × prezzo).</p>
+  <div class="total-preview">{{ _('Totale') }}: <span id="total-preview">0.00 CHF</span></div>
+  <p class="muted" style="font-size:12.5px">{{ _('Puoi scrivere i prezzi come preferisci:') }}
+     <code>110.-</code>, <code>1'800.00</code>, <code>150,00 CHF</code>.
+     {{ _('Se lasci vuoto il totale riga, lo calcolo io (quantità × prezzo).') }}</p>
 
-  <button class="btn" type="submit">Crea fattura (docx + PDF)</button>
+  <button class="btn" type="submit">{{ _('Crea fattura (docx + PDF)') }}</button>
 </form>
 {% endblock %}

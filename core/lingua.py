@@ -149,6 +149,121 @@ TESTI = {
         'Pagate': 'Paid',
         'Spedite per email': 'Sent by email',
         "Fatte con l'app, non ancora spedite": 'Created in the app, not yet sent',
+        # --- Fatture, l'elenco ---
+        '{n} fatture': '{n} invoices',
+        'totale': 'total',
+        'Tutti gli anni': 'All years',
+        'Tutti gli stati': 'All statuses',
+        'Cerca cliente o numero…': 'Search client or number…',
+        'Cerca': 'Search',
+        '+ Nuova': '+ New',
+        'Nr.': 'No.',
+        'Cliente': 'Client',
+        'Email': 'Email',
+        'Data': 'Date',
+        'Importo': 'Amount',
+        'Stato': 'Status',
+        'Inviata': 'Sent',
+        'Origine': 'Origin',
+        'emessa': 'issued',
+        'pagata': 'paid',
+        'Clicca per cambiare stato': 'Click to change status',
+        'storico': 'history',
+        # --- Fattura, la singola ---
+        'Fattura #{n}': 'Invoice #{n}',
+        'Qta': 'Qty',
+        'Descrizione': 'Description',
+        'Prezzo unit.': 'Unit price',
+        'Totale': 'Total',
+        'TOTALE': 'TOTAL',
+        'Apri PDF': 'Open PDF',
+        'Scarica docx': 'Download docx',
+        'Mostra nel Finder': 'Show in Finder',
+        'Apri file originale (storico)': 'Open the original file (history)',
+        'Manda per email': 'Send by email',
+        'Segna DA INCASSARE': 'Mark as UNPAID',
+        'Segna PAGATA': 'Mark as PAID',
+        'Elimina': 'Delete',
+        "Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.":
+            "Delete invoice #{n}? The files go to the app's Trash.",
+        'Inviata per email il {data}': 'Sent by email on {data}',
+        ' alle {ora}': ' at {ora}',
+        'Origine:': 'Origin:',
+        'creata con questa app': 'created in this app',
+        'importata dallo storico ({file})': 'imported from the history ({file})',
+        # --- Nuova fattura ---
+        "Numero assegnato automaticamente. Il totale lo calcola l'app: zero errori.":
+            'The number is assigned automatically. The app does the maths: no slips.',
+        '— scegli cliente —': '— choose a client —',
+        'Nuovo cliente': 'New client',
+        'Nome e cognome': 'First and last name',
+        'Mario Rossi': 'John Smith',
+        'Indirizzo — riga 1 (via e numero)': 'Address — line 1 (street and number)',
+        'Via Roma 1': 'Bahnhofstrasse 1',
+        'Indirizzo — riga 2 (CAP e città)': 'Address — line 2 (postcode and town)',
+        'Data fattura': 'Invoice date',
+        'Numero (auto: {n})': 'Number (auto: {n})',
+        'Il #{n} si è liberato: la fattura di {cliente} con questo numero è nel '
+        'Cestino. Riusandolo non lasci buchi nella numerazione.':
+            'Number {n} is free again: the invoice for {cliente} with that number is in '
+            'the Trash. Reusing it leaves no gap in the sequence.',
+        'Servizio': 'Service',
+        'Righe fattura': 'Invoice lines',
+        'Totale riga': 'Line total',
+        '+ Aggiungi riga': '+ Add line',
+        'Puoi scrivere i prezzi come preferisci:': 'Write the prices however you like:',
+        'Se lasci vuoto il totale riga, lo calcolo io (quantità × prezzo).':
+            'Leave the line total empty and I work it out (quantity × price).',
+        'Crea fattura (docx + PDF)': 'Create invoice (docx + PDF)',
+        # --- Nuova fattura: le frasi che scrive il browser ---
+        'Descrizione del servizio': 'Description of the service',
+        'Rimuovi': 'Remove',
+        "Periodo proposto in automatico (mese successivo all'ultima fattura: "
+        '{periodo}). Controlla le date e correggi se serve.':
+            'Period filled in automatically (the month after the last invoice: '
+            '{periodo}). Check the dates and correct them if needed.',
+        'La fattura sarà intestata a {chi}, non a {cliente}.':
+            'The invoice will be made out to {chi}, not to {cliente}.',
+        # --- Clienti ---
+        "Il registro clienti dell'app. Le modifiche valgono per le prossime fatture.":
+            "The app's client register. Changes apply to the next invoices.",
+        'Indirizzo': 'Address',
+        'Fatturato tot.': 'Total revenue',
+        'Ultima': 'Last',
+        '(archiviato)': '(archived)',
+        'abbonamento mensile': 'monthly subscription',
+        'fattura a {chi}': 'invoiced to {chi}',
+        'modifica': 'edit',
+        'Nome': 'Name',
+        'Indirizzo riga 1': 'Address line 1',
+        'Indirizzo riga 2': 'Address line 2',
+        'Etichetta nome file': 'Label used in file names',
+        'Come ti firmi con lui/lei': 'How you sign off with them',
+        'Informale': 'Informal',
+        'Formale': 'Formal',
+        '(non ancora scritto)': '(not written yet)',
+        'Abbonamento mensile (ordine permanente)': 'Monthly subscription (standing order)',
+        'Intesta la fattura a': 'Make the invoice out to',
+        'lascia vuoto: la fattura va intestata a {nome}':
+            'leave empty: the invoice goes to {nome}',
+        'Quando chi fa le sedute e chi riceve la fattura sono due persone diverse. '
+        'Il documento e il registro portano questo nome; il nome del file resta «{file}».':
+            'For when the person training and the person paying are not the same. The '
+            'document and the register carry this name; the file name stays «{file}».',
+        "Sull'estratto conto paga come": 'On the bank statement pays as',
+        'lascia vuoto se paga col suo nome': 'leave empty if they pay under their own name',
+        "Serve alla pagina Banca quando i soldi arrivano da un'altra persona (marito, "
+        'moglie, azienda). Più nomi separati da punto e virgola.':
+            'Used by the Bank page when the money comes from someone else (spouse, '
+            'company). Several names separated by semicolons.',
+        'Note': 'Notes',
+        'Archiviato': 'Archived',
+        'Salva': 'Save',
+        'Aggiungi cliente': 'Add a client',
+        'Indirizzo — via e numero': 'Address — street and number',
+        'Indirizzo — CAP e città': 'Address — postcode and town',
+        'Aggiungi': 'Add',
+        'nome@esempio.ch': 'name@example.ch',
     },
     'de': {
         # --- Menü ---
@@ -168,13 +283,13 @@ TESTI = {
         'Impostazioni': 'Einstellungen',
         'Primi passi': 'Erste Schritte',
         'Fatturare': 'Rechnungen stellen',
-        'Chi segui': 'Ihre Kunden',
+        'Chi segui': 'Deine Kunden',
         'Incassi e fisco': 'Zahlungen und Steuern',
         "L'app": 'Die App',
         # --- Rahmen, auf jeder Seite ---
         'Indietro': 'Zurück',
         'Torna alla schermata precedente': 'Zurück zum vorherigen Bildschirm',
-        'App locale · dati sul tuo Mac': 'Lokale App · Daten auf Ihrem Mac',
+        'App locale · dati sul tuo Mac': 'Lokale App · Daten auf deinem Mac',
         'Nascondi gli importi (screenshot, luogo pubblico)':
             'Beträge ausblenden (Screenshots, öffentliche Orte)',
         'Importi nascosti — clicca per mostrarli':
@@ -192,7 +307,7 @@ TESTI = {
         'Pacchetti finiti': 'Aufgebrauchte Pakete',
         'Estratto conto da aggiornare': 'Kontoauszug veraltet',
         'Niente in sospeso. Tutte le fatture sono partite e non aspetti soldi da nessuno.':
-            'Nichts offen. Alle Rechnungen sind versendet und niemand schuldet Ihnen Geld.',
+            'Nichts offen. Alle Rechnungen sind versendet und niemand schuldet dir Geld.',
         'Ancora niente da raccontare.': 'Noch nichts zu berichten.',
         'fatture': 'Rechnungen',
         'clienti': 'Kunden',
@@ -211,7 +326,7 @@ TESTI = {
             'der letzte reicht bis {data}, vor {giorni} Tagen',
         # --- «Letzte Aktivitäten» ---
         'Fattura #{n} a {cliente}': 'Rechnung #{n} an {cliente}',
-        'Prova su di te': 'Test an Sie selbst',
+        'Prova su di te': 'Test an dich selbst',
         ' — non è partita': ' — nicht versendet',
         'Invio fallito della #{n}': 'Versand von #{n} fehlgeschlagen',
         'Fattura #{n} spedita a {a}': 'Rechnung #{n} an {a} versendet',
@@ -254,6 +369,123 @@ TESTI = {
         'Pagate': 'Bezahlt',
         'Spedite per email': 'Per E-Mail versendet',
         "Fatte con l'app, non ancora spedite": 'In der App erstellt, noch nicht versendet',
+        # --- Rechnungen, die Liste ---
+        '{n} fatture': '{n} Rechnungen',
+        'totale': 'Total',
+        'Tutti gli anni': 'Alle Jahre',
+        'Tutti gli stati': 'Alle Status',
+        'Cerca cliente o numero…': 'Kunde oder Nummer suchen…',
+        'Cerca': 'Suchen',
+        '+ Nuova': '+ Neu',
+        'Nr.': 'Nr.',
+        'Cliente': 'Kunde',
+        'Email': 'E-Mail',
+        'Data': 'Datum',
+        'Importo': 'Betrag',
+        'Stato': 'Status',
+        'Inviata': 'Versendet',
+        'Origine': 'Herkunft',
+        'emessa': 'ausgestellt',
+        'pagata': 'bezahlt',
+        'Clicca per cambiare stato': 'Klicken, um den Status zu ändern',
+        'storico': 'Historie',
+        # --- Rechnung, die einzelne ---
+        'Fattura #{n}': 'Rechnung #{n}',
+        'Qta': 'Menge',
+        'Descrizione': 'Beschreibung',
+        'Prezzo unit.': 'Einzelpreis',
+        'Totale': 'Total',
+        'TOTALE': 'TOTAL',
+        'Apri PDF': 'PDF öffnen',
+        'Scarica docx': 'docx herunterladen',
+        'Mostra nel Finder': 'Im Finder anzeigen',
+        'Apri file originale (storico)': 'Originaldatei öffnen (Historie)',
+        'Manda per email': 'Per E-Mail senden',
+        'Segna DA INCASSARE': 'Als OFFEN markieren',
+        'Segna PAGATA': 'Als BEZAHLT markieren',
+        'Elimina': 'Löschen',
+        "Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.":
+            'Rechnung #{n} löschen? Die Dateien landen im Papierkorb der App.',
+        'Inviata per email il {data}': 'Per E-Mail versendet am {data}',
+        ' alle {ora}': ' um {ora}',
+        'Origine:': 'Herkunft:',
+        'creata con questa app': 'in dieser App erstellt',
+        'importata dallo storico ({file})': 'aus der Historie importiert ({file})',
+        # --- Neue Rechnung ---
+        "Numero assegnato automaticamente. Il totale lo calcola l'app: zero errori.":
+            'Die Nummer wird automatisch vergeben. Das Total rechnet die App: keine Fehler.',
+        '— scegli cliente —': '— Kunde wählen —',
+        'Nuovo cliente': 'Neuer Kunde',
+        'Nome e cognome': 'Vor- und Nachname',
+        'Mario Rossi': 'Hans Müller',
+        'Indirizzo — riga 1 (via e numero)': 'Adresse — Zeile 1 (Strasse und Nummer)',
+        'Via Roma 1': 'Bahnhofstrasse 1',
+        'Indirizzo — riga 2 (CAP e città)': 'Adresse — Zeile 2 (PLZ und Ort)',
+        'Data fattura': 'Rechnungsdatum',
+        'Numero (auto: {n})': 'Nummer (automatisch: {n})',
+        'Il #{n} si è liberato: la fattura di {cliente} con questo numero è nel '
+        'Cestino. Riusandolo non lasci buchi nella numerazione.':
+            'Die Nummer {n} ist wieder frei: die Rechnung von {cliente} mit dieser Nummer '
+            'liegt im Papierkorb. Wenn du sie wiederverwendest, bleibt keine Lücke.',
+        'Servizio': 'Dienstleistung',
+        'Righe fattura': 'Rechnungszeilen',
+        'Totale riga': 'Zeilentotal',
+        '+ Aggiungi riga': '+ Zeile hinzufügen',
+        'Puoi scrivere i prezzi come preferisci:': 'Schreib die Preise, wie du willst:',
+        'Se lasci vuoto il totale riga, lo calcolo io (quantità × prezzo).':
+            'Lässt du das Zeilentotal leer, rechne ich es aus (Menge × Preis).',
+        'Crea fattura (docx + PDF)': 'Rechnung erstellen (docx + PDF)',
+        # --- Neue Rechnung: was der Browser schreibt ---
+        'Descrizione del servizio': 'Beschreibung der Dienstleistung',
+        'Rimuovi': 'Entfernen',
+        "Periodo proposto in automatico (mese successivo all'ultima fattura: "
+        '{periodo}). Controlla le date e correggi se serve.':
+            'Zeitraum automatisch vorgeschlagen (der Monat nach der letzten Rechnung: '
+            '{periodo}). Prüfe die Daten und korrigiere sie bei Bedarf.',
+        'La fattura sarà intestata a {chi}, non a {cliente}.':
+            'Die Rechnung lautet auf {chi}, nicht auf {cliente}.',
+        # --- Kunden ---
+        "Il registro clienti dell'app. Le modifiche valgono per le prossime fatture.":
+            'Das Kundenregister der App. Änderungen gelten für die nächsten Rechnungen.',
+        'Indirizzo': 'Adresse',
+        'Fatturato tot.': 'Umsatz total',
+        'Ultima': 'Letzte',
+        '(archiviato)': '(archiviert)',
+        'abbonamento mensile': 'Monatsabo',
+        'fattura a {chi}': 'Rechnung an {chi}',
+        'modifica': 'bearbeiten',
+        'Nome': 'Name',
+        'Indirizzo riga 1': 'Adresse Zeile 1',
+        'Indirizzo riga 2': 'Adresse Zeile 2',
+        'Etichetta nome file': 'Bezeichnung im Dateinamen',
+        'Come ti firmi con lui/lei': 'Wie du dich bei ihm/ihr verabschiedest',
+        'Informale': 'Informell',
+        'Formale': 'Förmlich',
+        '(non ancora scritto)': '(noch nicht geschrieben)',
+        'Abbonamento mensile (ordine permanente)': 'Monatsabo (Dauerauftrag)',
+        'Intesta la fattura a': 'Rechnung ausstellen auf',
+        'lascia vuoto: la fattura va intestata a {nome}':
+            'leer lassen: die Rechnung lautet auf {nome}',
+        'Quando chi fa le sedute e chi riceve la fattura sono due persone diverse. '
+        'Il documento e il registro portano questo nome; il nome del file resta «{file}».':
+            'Für den Fall, dass die Person, die trainiert, und die Person, die zahlt, '
+            'nicht dieselbe ist. Dokument und Register tragen diesen Namen; der Dateiname '
+            'bleibt «{file}».',
+        "Sull'estratto conto paga come": 'Zahlt auf dem Kontoauszug als',
+        'lascia vuoto se paga col suo nome':
+            'leer lassen, wenn er oder sie unter dem eigenen Namen zahlt',
+        "Serve alla pagina Banca quando i soldi arrivano da un'altra persona (marito, "
+        'moglie, azienda). Più nomi separati da punto e virgola.':
+            'Wird auf der Seite Bank gebraucht, wenn das Geld von jemand anderem kommt '
+            '(Ehepartner, Firma). Mehrere Namen mit Semikolon trennen.',
+        'Note': 'Notizen',
+        'Archiviato': 'Archiviert',
+        'Salva': 'Speichern',
+        'Aggiungi cliente': 'Kunde hinzufügen',
+        'Indirizzo — via e numero': 'Adresse — Strasse und Nummer',
+        'Indirizzo — CAP e città': 'Adresse — PLZ und Ort',
+        'Aggiungi': 'Hinzufügen',
+        'nome@esempio.ch': 'name@beispiel.ch',
     },
 }
 

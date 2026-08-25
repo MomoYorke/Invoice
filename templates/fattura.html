@@ -1,12 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Fattura #{{ inv.number }}{% endblock %}
+{% block title %}{{ _('Fattura #{n}').format(n=inv.number) }}{% endblock %}
 {% block content %}
-<h1>Fattura #{{ inv.number or '—' }} <span class="badge {{ inv.status }}">{{ inv.status }}</span></h1>
+<h1>{{ _('Fattura #{n}').format(n=inv.number or '—') }}
+  <span class="badge {{ inv.status }}">{{ _(inv.status) }}</span></h1>
 <p class="sub">{{ inv.client_name }} — {{ inv.date | dateit }} — {{ inv.year }}</p>
 
 <div class="panel" style="max-width:760px">
   <table>
-    <tr><th>Qta</th><th>Descrizione</th><th class="num">Prezzo unit.</th><th class="num">Totale</th></tr>
+    <tr><th>{{ _('Qta') }}</th><th>{{ _('Descrizione') }}</th>
+        <th class="num">{{ _('Prezzo unit.') }}</th><th class="num">{{ _('Totale') }}</th></tr>
     {% for it in items %}
     <tr>
       <td>{{ it.qty }}</td>
@@ -17,7 +19,7 @@
     {% endfor %}
     <tr>
       <td></td><td></td>
-      <td class="num"><strong>TOTALE</strong></td>
+      <td class="num"><strong>{{ _('TOTALE') }}</strong></td>
       <td class="num"><strong>{{ inv.total_cents | chf if inv.total_cents is not none else '—' }}</strong></td>
     </tr>
   </table>
@@ -30,35 +32,36 @@
 
   <div class="mt">
     {% if inv.pdf_path %}
-      <a class="btn small" href="{{ url_for('fattura_file', inv_id=inv.id, kind='pdf') }}" target="_blank">Apri PDF</a>
-      <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='docx') }}">Scarica docx</a>
+      <a class="btn small" href="{{ url_for('fattura_file', inv_id=inv.id, kind='pdf') }}" target="_blank">{{ _('Apri PDF') }}</a>
+      <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='docx') }}">{{ _('Scarica docx') }}</a>
       <form method="post" action="{{ url_for('apri_cartella') }}" style="display:inline">
         <input type="hidden" name="path" value="{{ inv.pdf_path }}">
-        <button class="btn small secondary">Mostra nel Finder</button>
+        <button class="btn small secondary">{{ _('Mostra nel Finder') }}</button>
       </form>
     {% elif has_src %}
-      <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='src') }}" target="_blank">Apri file originale (storico)</a>
+      <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='src') }}" target="_blank">{{ _('Apri file originale (storico)') }}</a>
     {% endif %}
-    <a class="btn small" href="{{ url_for('fattura_email', inv_id=inv.id) }}">{{ icona('email', 'ic-mini') }}Manda per email</a>
+    <a class="btn small" href="{{ url_for('fattura_email', inv_id=inv.id) }}">{{ icona('email', 'ic-mini') }}{{ _('Manda per email') }}</a>
     <form method="post" action="{{ url_for('toggle_stato', inv_id=inv.id) }}" style="display:inline">
       <button class="btn small {{ 'secondary' if inv.status == 'pagata' }}">
-        {% if inv.status == 'pagata' %}Segna DA INCASSARE
-        {%- else %}{{ icona('spunta', 'ic-mini') }}Segna PAGATA{% endif %}
+        {% if inv.status == 'pagata' %}{{ _('Segna DA INCASSARE') }}
+        {%- else %}{{ icona('spunta', 'ic-mini') }}{{ _('Segna PAGATA') }}{% endif %}
       </button>
     </form>
     {% if inv.source == 'app' %}
     <form method="post" action="{{ url_for('elimina', inv_id=inv.id) }}" style="display:inline"
-          onsubmit="return confirm('Eliminare la fattura #{{ inv.number }}? I file finiscono nel Cestino dell\'app.')">
-      <button class="btn small danger">Elimina</button>
+          onsubmit="return confirm({{ _("Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.").format(n=inv.number) | tojson }})">
+      <button class="btn small danger">{{ _('Elimina') }}</button>
     </form>
     {% endif %}
   </div>
   {% if inv.sent_at %}
   <p class="muted" style="font-size:12px;margin-top:14px">
-    {{ icona('email', 'ic-mini') }} Inviata per email il {{ inv.sent_at[:10] | dateit }}{% if inv.sent_at|length > 10 %} alle {{ inv.sent_at[11:16] }}{% endif %}.</p>
+    {{ icona('email', 'ic-mini') }} {{ _('Inviata per email il {data}').format(data=inv.sent_at[:10] | dateit) }}{% if inv.sent_at|length > 10 %}{{ _(' alle {ora}').format(ora=inv.sent_at[11:16]) }}{% endif %}.</p>
   {% endif %}
   <p class="muted" style="font-size:12px;margin-top:14px">
-    Origine: {{ 'creata con questa app' if inv.source == 'app' else 'importata dallo storico (' ~ inv.source_file ~ ')' }}
+    {{ _('Origine:') }} {{ _('creata con questa app') if inv.source == 'app'
+       else _('importata dallo storico ({file})').format(file=inv.source_file) }}
   </p>
 </div>
 {% endblock %}

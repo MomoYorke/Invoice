@@ -1,27 +1,31 @@
 {% extends 'base.html' %}
-{% block title %}Fatture{% endblock %}
+{% block title %}{{ _('Fatture') }}{% endblock %}
 {% block content %}
-<h1>Fatture</h1>
-<p class="sub">{{ rows | length }} fatture{% if year %} nel {{ year }}{% endif %} — totale <strong class="money">{{ tot | chf }}</strong></p>
+<h1>{{ _('Fatture') }}</h1>
+<p class="sub">{% if year %}{{ _('{n} fatture nel {anno}').format(n=rows | length, anno=year) }}
+  {%- else %}{{ _('{n} fatture').format(n=rows | length) }}{% endif %}
+  — {{ _('totale') }} <strong class="money">{{ tot | chf }}</strong></p>
 
 <form class="toolbar" method="get">
   <select name="anno" onchange="this.form.submit()">
-    <option value="">Tutti gli anni</option>
+    <option value="">{{ _('Tutti gli anni') }}</option>
     {% for y in all_years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
   </select>
   <select name="stato" onchange="this.form.submit()">
-    <option value="">Tutti gli stati</option>
-    <option value="emessa" {{ 'selected' if stato == 'emessa' }}>Da incassare</option>
-    <option value="pagata" {{ 'selected' if stato == 'pagata' }}>Pagate</option>
+    <option value="">{{ _('Tutti gli stati') }}</option>
+    <option value="emessa" {{ 'selected' if stato == 'emessa' }}>{{ _('Da incassare') }}</option>
+    <option value="pagata" {{ 'selected' if stato == 'pagata' }}>{{ _('Pagate') }}</option>
   </select>
-  <input type="text" name="q" value="{{ q }}" placeholder="Cerca cliente o numero…">
-  <button class="btn small secondary">Cerca</button>
-  <a class="btn small" href="{{ url_for('nuova') }}">+ Nuova</a>
+  <input type="text" name="q" value="{{ q }}" placeholder="{{ _('Cerca cliente o numero…') }}">
+  <button class="btn small secondary">{{ _('Cerca') }}</button>
+  <a class="btn small" href="{{ url_for('nuova') }}">{{ _('+ Nuova') }}</a>
 </form>
 
 <div class="panel">
 <table>
-  <tr><th>Nr.</th><th>Cliente</th><th>Data</th><th class="num">Importo</th><th>Stato</th><th>Inviata</th><th>Origine</th><th></th></tr>
+  <tr><th>{{ _('Nr.') }}</th><th>{{ _('Cliente') }}</th><th>{{ _('Data') }}</th>
+      <th class="num">{{ _('Importo') }}</th><th>{{ _('Stato') }}</th><th>{{ _('Inviata') }}</th>
+      <th>{{ _('Origine') }}</th><th></th></tr>
   {% for r in rows %}
   <tr>
     <td><a href="{{ url_for('fattura', inv_id=r.id) }}"><strong>#{{ r.number or '—' }}</strong></a></td>
@@ -30,7 +34,8 @@
     <td class="num">{{ r.total_cents | chf(false) if r.total_cents is not none else '—' }}</td>
     <td>
       <form method="post" action="{{ url_for('toggle_stato', inv_id=r.id) }}" style="display:inline">
-        <button class="badge {{ r.status }}" style="border:none;cursor:pointer" title="Clicca per cambiare stato">{{ r.status }}</button>
+        <button class="badge {{ r.status }}" style="border:none;cursor:pointer"
+                title="{{ _('Clicca per cambiare stato') }}">{{ _(r.status) }}</button>
       </form>
     </td>
     <td class="muted" style="font-size:12px;white-space:nowrap">
@@ -38,7 +43,7 @@
         <span style="opacity:.75">{{ r.sent_at[11:16] }}</span>{% endif %}
       {% else %}—{% endif %}
     </td>
-    <td><span class="badge {{ r.source }}">{{ 'app' if r.source == 'app' else 'storico' }}</span></td>
+    <td><span class="badge {{ r.source }}">{{ 'app' if r.source == 'app' else _('storico') }}</span></td>
     <td class="right">
       {% if r.pdf_path %}<a href="{{ url_for('fattura_file', inv_id=r.id, kind='pdf') }}" target="_blank">PDF</a>{% endif %}
     </td>

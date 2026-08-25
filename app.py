@@ -857,7 +857,9 @@ def clienti():
     st = db.get_settings(con)
     con.close()
     # come si chiudono le mail: si mostra il testo vero, non un esempio
-    saluti = {t: (mailer.saluto_di(st, t) or '(non ancora scritto)').strip()
+    codice = lng.normalizza(st.get('lingua'))
+    saluti = {t: (mailer.saluto_di(st, t)
+                  or lng.t('(non ancora scritto)', codice)).strip()
               for t in ('informale', 'formale')}
     return render_template('clienti.html', rows=rows, stats_c=stats_c, saluti=saluti)
 

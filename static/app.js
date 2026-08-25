@@ -8,9 +8,29 @@
   const clientSel = document.getElementById('client-select');
   const addrBox = document.getElementById('client-addr');
   const sugBox = document.getElementById('running-suggestion');
+  const sugTesto = document.getElementById('running-suggestion-testo');
   const newToggle = document.getElementById('new-client-toggle');
   const newFields = document.getElementById('new-client-fields');
   let rowCount = 0;
+
+  // Le frasi che questo file scrive nella pagina. Le manda nuova.html gia'
+  // tradotte; l'italiano qui sotto e' la rete di sicurezza, come nel resto
+  // dell'app: se una manca si legge in italiano, non si legge il vuoto.
+  const T = Object.assign({
+    descrizione: 'Descrizione del servizio',
+    rimuovi: 'Rimuovi',
+    periodo: "Periodo proposto in automatico (mese successivo all'ultima " +
+             'fattura: {periodo}). Controlla le date e correggi se serve.',
+    intestata: 'La fattura sarà intestata a {chi}, non a {cliente}.'
+  }, window.TESTI || {});
+
+  function riempi(frase, valori) {
+    return frase.replace(/\{(\w+)\}/g, (tutto, nome) =>
+      nome in valori ? valori[nome] : tutto);
+  }
+  function alSicuro(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  }
 
   // ---- parsing importi (specchio di money.py; il server ricalcola comunque) ----
   function parseAmount(s) {
@@ -44,10 +64,10 @@
     div.className = 'item-row';
     div.innerHTML =
       `<input type="text" name="qty_${i}" value="${qty || '1'}">` +
-      `<input type="text" name="desc_${i}" value="${desc || ''}" placeholder="Descrizione del servizio">` +
+      `<input type="text" name="desc_${i}" value="${desc || ''}" placeholder="${T.descrizione}">` +
       `<input type="text" name="unit_${i}" value="${unit || ''}" placeholder="110.-">` +
       `<input type="text" name="tot_${i}" value="${tot || ''}" placeholder="auto">` +
-      `<button type="button" class="remove-row" title="Rimuovi">✕</button>`;
+      `<button type="button" class="remove-row" title="${T.rimuovi}">✕</button>`;
     div.querySelector('.remove-row').onclick = () => { div.remove(); updateTotal(); };
     div.querySelectorAll('input').forEach(el => el.addEventListener('input', updateTotal));
     itemsBox.appendChild(div);
@@ -95,9 +115,8 @@
           if (r.unit) inputs[2].value = r.unit;
           if (r.advanced) {
             sugBox.style.display = 'block';
-            sugBox.innerHTML = (sugBox.dataset.icona || '') +
-              ' Periodo proposto in automatico (mese successivo all\'ultima ' +
-              'fattura: <em>' + r.previous + '</em>). Controlla le date e correggi se serve.';
+            sugTesto.innerHTML = riempi(alSicuro(T.periodo),
+                     { periodo: '<em>' + alSicuro(r.previous) + '</em>' });
           } else {
             sugBox.style.display = 'none';
           }
@@ -123,9 +142,10 @@
     if (c.intestatario) {
       const avviso = document.createElement('div');
       avviso.style.marginTop = '4px';
-      avviso.innerHTML = '\u270D\uFE0F La fattura sarà intestata a <strong>' +
-        c.intestatario.replace(/</g, '&lt;') + '</strong>, non a ' +
-        c.name.replace(/</g, '&lt;') + '.';
+      avviso.innerHTML = '\u270D\uFE0F ' + riempi(alSicuro(T.intestata), {
+        chi: '<strong>' + alSicuro(c.intestatario) + '</strong>',
+        cliente: alSicuro(c.name)
+      });
       addrBox.appendChild(avviso);
     }
   });
