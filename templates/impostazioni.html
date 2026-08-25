@@ -7,6 +7,9 @@
 <form method="post" class="panel" style="max-width:640px">
   <div class="form-grid">
     <div>
+      <label>{{ _('Il tuo nome') }}</label><input type="text" name="owner_first_name" value="{{ settings.owner_first_name }}">
+      <label>{{ _('Il tuo cognome') }}</label><input type="text" name="owner_last_name" value="{{ settings.owner_last_name }}">
+      <span class="muted" style="font-size:11.5px">{{ _('Servono solo perché l’app sappia come chiamarti. Sulle fatture va il nome dell’attività, qui sotto.') }}</span>
       <label>{{ _('Nome attività') }}</label><input type="text" name="business_name" value="{{ settings.business_name }}">
       <label>{{ _('UID / IDI') }}</label><input type="text" name="business_uid" value="{{ settings.business_uid }}">
       <label>{{ _('Indirizzo — riga 1') }}</label><input type="text" name="business_addr1" value="{{ settings.business_addr1 }}">

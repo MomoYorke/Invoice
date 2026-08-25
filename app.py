@@ -201,9 +201,22 @@ def dashboard():
     except Exception as e:
         err_logger.error('Attività non costruita: %s', e)
         novita = []
+    oggi = datetime.date.today()
+    # il confronto col mese prima ha senso solo sull'anno in corso: se guardi
+    # il 2024 il «questo mese» non esiste, e fingere che esista sarebbe peggio
+    mese = stats.mese_su_mese(con, year, oggi.month) if year == oggi.year else None
+    restano = ben.da_fare(passi)
     con.close()
     return render_template('dashboard.html', k=k, year=year, months=months,
-                           cose=cose, novita=novita, restano=ben.da_fare(passi))
+                           cose=cose, novita=novita, restano=restano,
+                           elenco_restano=', '.join(
+                               lng.in_frase(lng.t(p['titolo'], _lingua_app()), _lingua_app())
+                               for p in restano),
+                           mese=mese, mesi_nome=lng.mesi_app(_lingua_app()),
+                           saluto=settings.get('owner_first_name', '').strip(),
+                           oggi_giorno=lng.giorni_app(_lingua_app())[oggi.weekday()],
+                           oggi_numero=oggi.day,
+                           oggi_mese=lng.mesi_app(_lingua_app())[oggi.month - 1])
 
 
 @app.route('/performance')

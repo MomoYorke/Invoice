@@ -4,7 +4,11 @@
                 'sessione': 'agenda', 'crediti': 'crediti'} %}
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
-  <h1>{{ _('Dashboard') }}</h1>
+  <div>
+    <h1 class="saluto">{{ _('Ciao {nome}').format(nome=saluto) if saluto else _('Ciao') }}</h1>
+    <p class="sub" style="margin:2px 0 0">{{ _('Ecco come vanno le cose oggi, {giorno} {n} {mese}.').format(
+       giorno=oggi_giorno, n=oggi_numero, mese=oggi_mese) }}</p>
+  </div>
   <button type="button" class="privacy-btn privacy-toggle no-blur" onclick="toggleRiservato()"
           aria-pressed="false" title="{{ _('Nascondi gli importi (screenshot, luogo pubblico)') }}">
     {% include '_occhio.html' %}
@@ -13,18 +17,17 @@
 
 {% if restano %}
 <div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-  {% set elenco = restano | map(attribute='titolo') | join(', ') | lower %}
   <span class="muted">{{ icona('bussola', 'ic-mini') }}
-    {% if restano | length == 1 %}{{ _('Manca ancora una cosa da mettere a posto: {elenco}.').format(elenco=elenco) }}
-    {% else %}{{ _('Mancano ancora {n} cose da mettere a posto: {elenco}.').format(n=restano|length, elenco=elenco) }}{% endif %}</span>
+    {% if restano | length == 1 %}{{ _('Manca ancora una cosa da mettere a posto: {elenco}.').format(elenco=elenco_restano) }}
+    {% else %}{{ _('Mancano ancora {n} cose da mettere a posto: {elenco}.').format(n=restano|length, elenco=elenco_restano) }}{% endif %}</span>
   <a class="btn small secondary" href="{{ url_for('benvenuto') }}">{{ _('Vedi i primi passi') }}</a>
 </div>
 {% endif %}
 
-{# --- un numero solo, grande: quanto hai fatturato quest'anno --- #}
+{# --- due numeri: l'anno intero e il mese in corso, che si leggono insieme --- #}
 {% set max_month = (months | max) or 1 %}
 <div class="hero">
-  <div>
+  <div class="hero-cifra">
     <div class="hero-label">{{ _('Fatturato {anno} ad oggi').format(anno=year) }}</div>
     <div class="hero-value">{{ k.ytd | chf }}</div>
     {% if k.growth_bp is not none %}
@@ -35,19 +38,35 @@
     </div>
     {% endif %}
   </div>
+
+  {% if mese %}
+  <div class="hero-cifra hero-mese">
+    <div class="hero-label">{{ _('Questo mese') }}</div>
+    <div class="hero-value piccolo">{{ mese.ora | chf }}</div>
+    <div class="hero-delta">
+      {% if mese.delta_bp is not none %}
+      <span class="{{ 'up' if mese.delta_bp >= 0 else 'down' }}">{{ '▲' if mese.delta_bp >= 0 else '▼' }}
+        {{ '%+.1f' % (mese.delta_bp / 100) }}%</span>
+      {{ _('su {mese}').format(mese=mesi_nome[mese.mese_prima - 1]) }}
+      {% else %}
+      {{ _('a {mese} non c’era niente con cui confrontarlo').format(mese=mesi_nome[mese.mese_prima - 1]) }}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="hero-spark">
     <svg viewBox="0 0 248 62" width="248" height="62" aria-hidden="true" focusable="false">
       {% for m in range(12) %}
         {% set h = (months[m] / max_month * 46) | round(1) %}
         <rect x="{{ 2 + m * 20.5 }}" y="{{ 54 - (h if h > 2 else 2) }}" width="13"
               height="{{ h if h > 2 else 2 }}" rx="2"
-              fill="{{ 'var(--accent)' if months[m] else '#e2e8f0' }}"/>
+              fill="{{ ('var(--accent-2)' if mese and m == mese.mese - 1 else 'var(--accent)')
+                       if months[m] else '#e2e8f0' }}"/>
       {% endfor %}
     </svg>
     <div class="hero-spark-label">{{ _('gen — dic {anno}').format(anno=year) }}</div>
-  </div>
-  <div class="hero-link">
-    <a class="btn small secondary" href="{{ url_for('performance', anno=year) }}">
+    <a class="btn small secondary hero-link" href="{{ url_for('performance', anno=year) }}">
       {{ icona('grafico', 'ic-mini') }} {{ _('Vedi le performance') }}</a>
   </div>
 </div>
@@ -58,7 +77,7 @@
   {% for c in cose %}
   <a class="riga-da-fare {{ c.urgenza }}" href="{{ url_for(c.link[0], **c.link[1]) }}">
     <span class="segno"></span>
-    <span class="riga-icona">{{ icona(c.icona, 'ic') }}</span>
+    <span class="riga-icona">{{ icona(c.icona, 'ic-mini') }}</span>
     <span class="riga-testo">
       <strong>{{ c.titolo }}</strong>
       <span class="muted">{{ c.dettaglio }}</span>
@@ -75,28 +94,27 @@
   </a>
   {% else %}
   <div class="tutto-fatto">
-    {{ icona('spunta', 'ic') }}
+    {{ icona('spunta', 'ic-mini') }}
     <span>{{ _('Niente in sospeso. Tutte le fatture sono partite e non aspetti soldi da nessuno.') }}</span>
   </div>
   {% endfor %}
 </div>
 
 {# --- cos'è successo da quando non guardavi --- #}
-<h2 class="sezione">{{ _('Ultime cose') }}</h2>
-<div class="panel">
-  {% if novita %}
-  <table>
-    {% for n in novita %}
-    <tr>
-      <td style="width:20px" class="muted">{{ icona(ICONE.get(n.tipo, ''), 'ic-mini') }}</td>
-      <td style="white-space:nowrap" class="muted">{{ n.quando[:10] | dateit }}
-          {% if n.ora_nota %}<span style="opacity:.7">{{ n.quando[11:16] }}</span>{% endif %}</td>
-      <td><a href="{{ url_for(n.link[0], **n.link[1]) }}">{{ n.testo }}</a></td>
-    </tr>
-    {% endfor %}
-  </table>
+<h2 class="sezione">{{ _('Attività recenti') }}</h2>
+<div class="panel elenco-attivita">
+  {% for n in novita %}
+  <a class="riga-attivita" href="{{ url_for(n.link[0], **n.link[1]) }}">
+    <span class="riga-icona">{{ icona(ICONE.get(n.tipo, ''), 'ic-mini') }}</span>
+    <span class="riga-testo">{{ n.testo }}</span>
+    <span class="riga-quando">{{ n.quando[:10] | dateit }}{% if n.ora_nota %}
+      <span class="ora">{{ n.quando[11:16] }}</span>{% endif %}</span>
+  </a>
   {% else %}
-  <p class="muted" style="margin:0">{{ _('Ancora niente da raccontare.') }}</p>
-  {% endif %}
+  <div class="tutto-fatto">
+    {{ icona('nota', 'ic-mini') }}
+    <span>{{ _('Ancora niente da raccontare.') }}</span>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

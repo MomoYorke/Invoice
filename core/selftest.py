@@ -1627,6 +1627,10 @@ def _test_cruscotto(r):
                       '2026-03-10T09:00:00', None))
     con.execute(ins, (4, 'D', '2025-03-10', 2025, 100, 'pagata', 'app',
                       '2025-03-10T09:00:00', None))
+    # dicembre dell'anno prima: serve a provare che a gennaio il confronto
+    # scavalchi l'anno invece di trovare zero
+    con.execute(ins, (5, 'E', '2025-12-15', 2025, 700, 'pagata', 'app',
+                      '2025-12-15T09:00:00', None))
     con.commit()
 
     st = C.stato_fatture(con, 2026)
@@ -1661,10 +1665,70 @@ def _test_cruscotto(r):
     _check(r, 'Cruscotto', 'un tempo di un\'ora si dice al singolare',
            C._eta((datetime.datetime.now() - datetime.timedelta(hours=1)).isoformat())[1],
            'un’ora fa')
+
+    # Il mese in corso accanto a quello prima. Le fatture qui sopra sono una
+    # per mese da 1.00: gennaio, febbraio e marzo 2026, piu' marzo 2025.
+    from . import stats as _stats
+    m = _stats.mese_su_mese(con, 2026, 3)
+    _check(r, 'Cruscotto', 'il mese si confronta con quello prima, non con l\'anno',
+           (m['ora'], m['prima'], m['mese_prima']), (100, 100, 2))
+    _check(r, 'Cruscotto', 'due mesi uguali danno una variazione di zero',
+           m['delta_bp'], 0)
+    g = _stats.mese_su_mese(con, 2026, 1)
+    _check(r, 'Cruscotto', 'a gennaio il confronto guarda dicembre dell\'anno prima',
+           (g['mese_prima'], g['anno_prima'], g['prima']), (12, 2025, 700))
+    v = _stats.mese_su_mese(con, 2026, 6)
+    _check(r, 'Cruscotto', 'senza un mese prima non si inventa una percentuale',
+           v['delta_bp'], None)
     con.close()
+
+    _test_saluto(r)
 
     _test_incassi(r)
     _test_banca(r)
+
+
+def _test_saluto(r):
+    """Il nome di chi usa l'app: e' suo, e non si ricava dall'attivita'."""
+    from .db import DEFAULT_SETTINGS as S
+    from . import lingua as L
+
+    # Se sparissero da qui, il modulo delle Impostazioni smetterebbe di
+    # salvarli senza dire niente: il salvataggio gira su DEFAULT_SETTINGS.
+    _check(r, 'Cruscotto', 'nome e cognome sono due impostazioni vere',
+           ('owner_first_name' in S, 'owner_last_name' in S), (True, True))
+    _check(r, 'Cruscotto', 'di partenza sono vuoti, non inventati',
+           (S.get('owner_first_name', '(manca)'), S.get('owner_last_name', '(manca)')),
+           ('', ''))
+    # «Ciao» da solo esiste apposta: senza nome la pagina non deve
+    # scrivere «Ciao ,» con la virgola appesa al nulla.
+    _check(r, 'Cruscotto', 'il saluto senza nome ha una frase sua',
+           ('Ciao' in L.TESTI['en'], 'Ciao {nome}' in L.TESTI['en']), (True, True))
+    # I mesi finiscono dentro una frase («su luglio»): l'italiano li vuole
+    # minuscoli, il tedesco maiuscoli. Sbagliarlo si vede.
+    _check(r, 'Cruscotto', 'i mesi dell\'app stanno dentro una frase, con la giusta iniziale',
+           (L.mesi_app('it')[6], L.mesi_app('de')[6], L.mesi_app('en')[6]),
+           ('luglio', 'Juli', 'July'))
+    _check(r, 'Cruscotto', 'una lingua che non esiste torna ai mesi italiani',
+           L.mesi_app('klingon')[0], 'gennaio')
+    # Il titolo di un primo passo finisce dentro una frase della Dashboard.
+    # Prima ci finiva in italiano e tutto minuscolo: in tedesco è sbagliato,
+    # e una sigla come IBAN veniva rovinata.
+    _check(r, 'Cruscotto', 'un titolo dentro una frase scende di maiuscola, ma non in tedesco',
+           tuple(L.in_frase(L.t('Il tuo logo', c), c) for c in ('it', 'en', 'de')),
+           ('il tuo logo', 'your logo', 'Dein Logo'))
+    _check(r, 'Cruscotto', 'una sigla non si abbassa affatto',
+           L.in_frase('IBAN e conto', 'it'), 'IBAN e conto')
+
+    _check(r, 'Cruscotto', 'i giorni per esteso esistono in tutte e tre',
+           tuple(L.giorni_app(c)[1] for c in ('it', 'en', 'de')),
+           ('martedì', 'Tuesday', 'Dienstag'))
+    # ogni lingua dispone la data come vuole: il tedesco vuole la virgola
+    # dopo il giorno e il punto dopo il numero
+    f = 'Ecco come vanno le cose oggi, {giorno} {n} {mese}.'
+    _check(r, 'Cruscotto', 'la data del saluto si compone come vuole ogni lingua',
+           L.t(f, 'de').format(giorno=L.giorni_app('de')[1], n=25, mese=L.mesi_app('de')[7]),
+           'So stehen die Dinge heute, Dienstag, 25. August.')
 
 
 CSV_PROVA = """Estratto conto;;;

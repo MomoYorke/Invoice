@@ -1048,6 +1048,21 @@ TESTI = {
         'prima di reimportare lo storico': 'before re-importing the history',
         'prima di ripristinare una fattura': 'before restoring an invoice',
         'prima di eliminare la #{n}': 'before deleting #{n}',
+
+        # --- la Dashboard rifatta: saluto, mese su mese, attività ---
+        'Ciao {nome}': 'Hi {nome}',
+        'Ciao': 'Hi',
+        'Ecco come vanno le cose oggi, {giorno} {n} {mese}.':
+            'Here is how things stand today, {giorno} {n} {mese}.',
+        'Questo mese': 'This month',
+        'su {mese}': 'on {mese}',
+        'a {mese} non c’era niente con cui confrontarlo':
+            'there was nothing in {mese} to compare it with',
+        'Attività recenti': 'Recent activity',
+        'Il tuo nome': 'Your first name',
+        'Il tuo cognome': 'Your surname',
+        'Servono solo perché l’app sappia come chiamarti. Sulle fatture va il nome dell’attività, qui sotto.':
+            'They are only so the app knows what to call you. On invoices goes the business name, below.',
     },
     'de': {
         # --- Menü ---
@@ -2058,6 +2073,21 @@ TESTI = {
         'prima di reimportare lo storico': 'vor dem Neuimport des Archivs',
         'prima di ripristinare una fattura': 'vor dem Wiederherstellen einer Rechnung',
         'prima di eliminare la #{n}': 'vor dem Löschen von #{n}',
+
+        # --- la Dashboard rifatta: saluto, mese su mese, attività ---
+        'Ciao {nome}': 'Hallo {nome}',
+        'Ciao': 'Hallo',
+        'Ecco come vanno le cose oggi, {giorno} {n} {mese}.':
+            'So stehen die Dinge heute, {giorno}, {n}. {mese}.',
+        'Questo mese': 'Diesen Monat',
+        'su {mese}': 'gegenüber {mese}',
+        'a {mese} non c’era niente con cui confrontarlo':
+            'im {mese} gab es nichts zum Vergleichen',
+        'Attività recenti': 'Letzte Aktivitäten',
+        'Il tuo nome': 'Dein Vorname',
+        'Il tuo cognome': 'Dein Nachname',
+        'Servono solo perché l’app sappia come chiamarti. Sulle fatture va il nome dell’attività, qui sotto.':
+            'Sie sind nur dafür da, dass die App weiss, wie sie dich ansprechen soll. Auf die Rechnungen kommt der Name der Tätigkeit, weiter unten.',
     },
 }
 
@@ -2153,6 +2183,47 @@ def t_doc(frase, lingua=None):
     if lingua == PREDEFINITA:
         return frase
     return DOCUMENTI.get(lingua, {}).get(frase, frase)
+
+
+MESI_APP = {
+    'it': tuple(m.lower() for m in MESI_DOC['it']),
+    'en': MESI_DOC['en'],
+    'de': MESI_DOC['de'],
+}
+
+
+# I giorni per esteso. Quelli corti ('lun', 'mar') stanno gia' nel
+# dizionario e servono all'Agenda; qui servono interi, perche' «martedi' 25
+# agosto» si legge e «mar 25.08.2026» si decifra.
+GIORNI_APP = {
+    'it': ('lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'),
+    'en': ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'),
+    'de': ('Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'),
+}
+
+
+def in_frase(testo, lingua=None):
+    """Un titolo infilato dentro una frase piu' lunga.
+
+    Italiano e inglese vogliono la minuscola («manca ancora: il tuo logo»),
+    il tedesco no, perche' li' i nomi la maiuscola ce l'hanno per legge.
+    Si abbassa solo la PRIMA lettera: abbassare tutto rovinerebbe le sigle.
+    """
+    if not testo or normalizza(lingua) == 'de':
+        return testo
+    if len(testo) > 1 and testo[1].isupper():      # IBAN, UID: sono sigle
+        return testo
+    return testo[0].lower() + testo[1:]
+
+
+def giorni_app(lingua=None):
+    """I sette giorni per esteso, nella lingua dell'app."""
+    return GIORNI_APP[normalizza(lingua)]
+
+
+def mesi_app(lingua=None):
+    """I dodici nomi di mese nella lingua dell'APP, pronti per una frase."""
+    return MESI_APP[normalizza(lingua)]
 
 
 def mesi_doc(lingua=None):
