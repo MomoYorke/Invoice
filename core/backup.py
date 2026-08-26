@@ -11,7 +11,7 @@ import shutil
 import sqlite3
 import datetime
 
-from . import lingua as L
+from . import language as L
 from . import db
 
 BACKUP_DIR = os.path.join(os.path.dirname(db.DB_PATH), 'backups')

@@ -20,19 +20,19 @@ from flask import (Flask, render_template, request, redirect, url_for,
 from dateutil.relativedelta import relativedelta
 
 from core import db, stats, importer, exports, verify, selftest, corrections, backup, mailer
-from core import calendario
-from core import agenda as ag
-from core import cruscotto
-from core import banca
+from core import calendar_feed
+from core import schedule as ag
+from core import overview
+from core import bank
 from core import sessions as sess
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
-from core import marchio
-from core import servizi as srv
-from core import benvenuto as ben
-from core import icone
+from core import branding
+from core import services as srv
+from core import welcome as ben
+from core import icons
 from core import menu
-from core import lingua as lng
+from core import language as lng
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 # La cartella delle fatture si puo' deviare con INVOICE_DIR: serve per provare
@@ -44,8 +44,8 @@ app = Flask(__name__)
 app.secret_key = 'em-fatture-locale'
 app.jinja_env.filters['chf'] = fmt_chf
 app.jinja_env.filters['dash'] = fmt_dash
-app.jinja_env.globals['icona'] = icone.icona
-app.jinja_env.globals['pallino'] = icone.pallino
+app.jinja_env.globals['icona'] = icons.icona
+app.jinja_env.globals['pallino'] = icons.pallino
 
 # --- log persistente dei SOLI errori: data/error.log ---
 ERROR_LOG = os.path.join(APP_DIR, 'data', 'error.log')
@@ -62,7 +62,7 @@ err_logger.addHandler(_h)
 def logo():
     """Il logo dell'attività. Non sta fra i file del programma ma nei dati
     dell'utente, così chi riceve l'app non si porta dietro il marchio altrui."""
-    r = send_file(marchio.percorso(), mimetype='image/png')
+    r = send_file(branding.percorso(), mimetype='image/png')
     # il browser puo' tenerselo un'ora; quando cambia, cambia anche il ?v=
     r.headers['Cache-Control'] = 'private, max-age=3600'
     return r
@@ -89,7 +89,7 @@ def handle_any_error(e):
     tb = traceback.format_exc()
     err_logger.error('Errore su %s\n%s', request.path if request else '?', tb)
     try:
-        return render_template('errore.html', error=str(e), path=request.path,
+        return render_template('error.html', error=str(e), path=request.path,
                                log_path=ERROR_LOG), 500
     except Exception:
         return (f'<h2>Si è verificato un errore</h2><p>{e}</p>'
@@ -139,14 +139,14 @@ def inject_globals():
     except Exception:                                   # pragma: no cover
         restano = 0
     con.close()
-    riga1, riga2 = marchio.due_righe(nome)
+    riga1, riga2 = branding.due_righe(nome)
     # «_» traduce nella lingua dell'app. Le pagine scrivono _('Fatture') e
     # ottengono l'italiano, l'inglese o il tedesco senza sapere quale sia.
     codice = lng.normalizza(impostazioni.get('lingua'))
     return {'all_years': years, 'current_year': datetime.date.today().year,
             'attivita': nome or 'La tua attività',
             'marchio_riga1': riga1, 'marchio_riga2': riga2,
-            'logo_versione': marchio.versione(),
+            'logo_versione': branding.versione(),
             '_': lambda frase: lng.t(frase, codice),
             'lingua': codice, 'lingue': lng.LINGUE,
             'menu_gruppi': menu.GRUPPI, 'primi_passi_restano': restano,
@@ -194,9 +194,9 @@ def dashboard():
     except Exception as e:                      # il registro non deve poter
         err_logger.error('Registro non letto: %s', e)       # spegnere la Dashboard
         registro = None
-    cose = cruscotto.da_fare(con, settings, registro)
+    cose = overview.da_fare(con, settings, registro)
     try:
-        novita = cruscotto.attivita(con, registro if registro is not None else {},
+        novita = overview.attivita(con, registro if registro is not None else {},
                                     lingua=settings.get('lingua'))
     except Exception as e:
         err_logger.error('Attività non costruita: %s', e)
@@ -234,7 +234,7 @@ def performance():
     yearly = stats.revenue_by_year(con)
     clients = stats.by_client(con, year)[:8]
     services = stats.by_service(con, year)
-    stato = cruscotto.stato_fatture(con, year)
+    stato = overview.stato_fatture(con, year)
     max_month = max(months + months_prev + [1])
     max_year_v = max([v['invoiced'] for v in yearly.values()] + [1])
     max_client = max([c[1] for c in clients] + [1])
@@ -257,7 +257,7 @@ def benvenuto():
     passi = ben.passi(con, settings)
     con.close()
     fatti, totali = ben.avanzamento(passi)
-    return render_template('benvenuto.html', passi=passi, fatti=fatti, totali=totali,
+    return render_template('welcome.html', passi=passi, fatti=fatti, totali=totali,
                            essenziale_manca=ben.manca_l_essenziale(passi),
                            primo_avvio=fatti == 0)
 
@@ -275,7 +275,7 @@ def nuova():
                             'AND deleted_at IS NOT NULL', (nxt,)).fetchone()
     elenco_servizi = srv.elenco(con, db.get_settings(con))
     con.close()
-    return render_template('nuova.html', clients=clients, next_number=nxt,
+    return render_template('new_invoice.html', clients=clients, next_number=nxt,
                            today=today.isoformat(), servizi=elenco_servizi,
                            cestinata=cestinata['client_name'] if cestinata else None)
 
@@ -505,7 +505,7 @@ def fatture():
     rows = con.execute(sql, args).fetchall()
     tot = sum(r['total_cents'] or 0 for r in rows)
     con.close()
-    return render_template('fatture.html', rows=rows, year=year, q=q, stato=stato,
+    return render_template('invoices.html', rows=rows, year=year, q=q, stato=stato,
                            invio=invio, tot=tot)
 
 
@@ -520,7 +520,7 @@ def fattura(inv_id):
     src_root = settings['source_folder']
     con.close()
     has_src = bool(inv['source_file']) and os.path.exists(os.path.join(src_root, inv['source_file']))
-    return render_template('fattura.html', inv=inv, items=items, has_src=has_src)
+    return render_template('invoice.html', inv=inv, items=items, has_src=has_src)
 
 
 @app.route('/fattura/<int:inv_id>/stato', methods=['POST'])
@@ -873,7 +873,7 @@ def cestino():
     lg = _lingua_app()
     for b in backups[:12]:
         b['motivo'] = backup.motivo_in_parole(b.get('reason') or '', lg)
-    return render_template('cestino.html', rows=rows, backups=backups[:12],
+    return render_template('trash.html', rows=rows, backups=backups[:12],
                            n_backups=len(backups), trash_dir=TRASH_DIR)
 
 
@@ -922,7 +922,7 @@ def clienti():
                        or lng.t('(non ancora scritto)', codice)).strip()
                    for t in ('informale', 'formale')}
               for lg in db.LINGUE_MODELLI}
-    return render_template('clienti.html', rows=rows, stats_c=stats_c, saluti=saluti)
+    return render_template('clients.html', rows=rows, stats_c=stats_c, saluti=saluti)
 
 
 @app.route('/cliente/<int:cid>', methods=['POST'])
@@ -976,7 +976,7 @@ def commercialista():
     settings = db.get_settings(con)
     con.close()
     pkgs = sorted(glob.glob(os.path.join(exports.EXPORT_DIR, '*.zip')), reverse=True)
-    return render_template('commercialista.html', yearly=yearly, settings=settings,
+    return render_template('accountant.html', yearly=yearly, settings=settings,
                            pkgs=[os.path.basename(p) for p in pkgs],
                            legacy_years=stats.LEGACY_YEARS)
 
@@ -1040,8 +1040,8 @@ def _sincronizza_calendario(forzata=False):
     if da > a:
         return 'niente', ''
     try:
-        testo = calendario.scarica(url)
-        eventi = calendario.leggi(testo, da, a, e_testo=True)
+        testo = calendar_feed.scarica(url)
+        eventi = calendar_feed.leggi(testo, da, a, e_testo=True)
     except Exception as e:
         err_logger.error('Lettura calendario fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
@@ -1057,7 +1057,7 @@ def _sincronizza_calendario(forzata=False):
                    datetime.datetime.now().isoformat(timespec='seconds'))
     # come si chiama, l'ha detto lui: cosi' le pagine lo nominano per nome
     # senza che il nome di nessuno stia scritto nel programma
-    come_si_chiama = calendario.nome(testo)
+    come_si_chiama = calendar_feed.nome(testo)
     if come_si_chiama:
         db.set_setting(con, 'calendario_nome', come_si_chiama)
     con.close()
@@ -1110,7 +1110,7 @@ def crediti():
     con2 = get_con()
     impostazioni_cal = db.get_settings(con2)
     con2.close()
-    return render_template('crediti.html', righe=righe, pacchetti=pacchetti,
+    return render_template('credits.html', righe=righe, pacchetti=pacchetti,
                            recenti=recenti, finestra=(da, a),
                            aggiornato=reg.get('generato'),
                            sync_esito=esito_sync, sync_dettaglio=dettaglio_sync,
@@ -1131,7 +1131,7 @@ def crediti_clienti():
         # quanti pacchetti porta gia' il suo nome: dice se si puo' cancellare
         r['pacchetti'] = sum(1 for p in reg['pacchetti']
                              if r['nome'].lower() in p['cliente'].lower())
-    return render_template('crediti_clienti.html', righe=righe,
+    return render_template('credits_clients.html', righe=righe,
                            nomi={r['chiave']: r['nome'] for r in righe})
 
 
@@ -1225,7 +1225,7 @@ def _leggi_banca(con, automatico=True):
     sono illeggibili si continua con quello che c'e'.
     """
     try:
-        movimenti, problemi = banca.leggi_cartella()
+        movimenti, problemi = bank.leggi_cartella()
     except Exception as e:                                   # pragma: no cover
         err_logger.error('Lettura estratti fallita: %s', e)
         return [], [f'{type(e).__name__}: {e}'], []
@@ -1236,7 +1236,7 @@ def _leggi_banca(con, automatico=True):
     fatti = []
     if automatico and db.get_settings(con).get('banca_auto') == '1':
         try:
-            fatti = banca.collega_automatico(con, movimenti)
+            fatti = bank.collega_automatico(con, movimenti)
         except Exception as e:                               # pragma: no cover
             err_logger.error('Collegamento automatico fallito: %s', e)
     return movimenti, problemi, fatti
@@ -1258,11 +1258,11 @@ def banca_pagina():
                      'niente da decidere: {quali}{extra}. Li trovi qui sotto marcati '
                      "«collegato dall'app»: se sbaglio, Annulla."),
                'ok', quanti=len(fatti), quali=quali, extra=extra)
-    prop = banca.proposte(con, movimenti)
+    prop = bank.proposte(con, movimenti)
     con.close()
     da_decidere = [p for p in prop if not p['deciso']]
-    return render_template('banca.html', prop=prop, problemi=problemi,
-                           cartella=banca.CARTELLA,
+    return render_template('bank.html', prop=prop, problemi=problemi,
+                           cartella=bank.CARTELLA,
                            da_decidere=da_decidere,
                            decisi=[p for p in prop if p['deciso']],
                            chiare=sum(1 for p in da_decidere if p['chiaro']))
@@ -1275,7 +1275,7 @@ def banca_collega():
     inv_id = request.form.get('invoice_id', type=int)
     azione = request.form.get('azione', 'collega')
     con = get_con()
-    m = next((x for x in banca.leggi_cartella()[0] if x['impronta'] == impronta), None)
+    m = next((x for x in bank.leggi_cartella()[0] if x['impronta'] == impronta), None)
     if m is None:
         avvisa('Quel versamento non è più nei file della cartella.', 'error')
         con.close()
@@ -1326,7 +1326,7 @@ def banca_collega():
                     # numero usato due volte (succede: #58 sta su due fatture).
                     # Si scioglie col nome di chi ha versato, che è nella causale.
                     suoi = [t for t in trovate
-                            if banca.somiglianza_nome(m['descrizione'], t['client_name']) >= 0.5]
+                            if bank.somiglianza_nome(m['descrizione'], t['client_name']) >= 0.5]
                     if len(suoi) != 1:
                         elenco = ' · '.join(
                             f"{t['client_name']} del {t['date']} ({t['total_cents'] / 100:.2f})"
@@ -1405,7 +1405,7 @@ def email_inviate():
                      .fetchone()['c'],
     }
     con.close()
-    return render_template('email_inviate.html', righe=righe, solo=solo, conteggi=conteggi)
+    return render_template('email_sent.html', righe=righe, solo=solo, conteggi=conteggi)
 
 
 @app.route('/email/<int:log_id>')
@@ -1420,7 +1420,7 @@ def email_letta(log_id):
     if e['invoice_id']:
         inv = con.execute('SELECT * FROM invoices WHERE id=?', (e['invoice_id'],)).fetchone()
     con.close()
-    return render_template('email_letta.html', e=e, inv=inv)
+    return render_template('email_read.html', e=e, inv=inv)
 
 
 @app.route('/agenda')
@@ -1430,7 +1430,7 @@ def agenda():
     anno = request.args.get('anno', '').strip()
     righe = ag.elenco(reg, cliente=cliente or None, anno=anno or None)
     clienti = sorted({p['cliente'] for p in reg.get('pacchetti', []) if p.get('cliente')})
-    return render_template('agenda.html', righe=righe, r=ag.riepilogo(righe),
+    return render_template('sessions.html', righe=righe, r=ag.riepilogo(righe),
                            clienti=clienti, anni=ag.anni(reg),
                            cliente=cliente, anno=anno,
                            senza_ora=sum(1 for x in righe if not x['ora']))
@@ -1473,7 +1473,7 @@ def crediti_pacchetto(pid):
                           (p['fattura_numero'],)).fetchone()
         con.close()
         stato = row['status'] if row else None
-    return render_template('pacchetto.html', p=p, fattura_stato=stato)
+    return render_template('pack.html', p=p, fattura_stato=stato)
 
 
 @app.route('/crediti/collega', methods=['POST'])
@@ -1514,10 +1514,10 @@ def controlli():
     corr = corrections.corrections_map(con)
     # le reti di sicurezza: stavano in Dashboard, ma non sono cose da guardare
     # ogni mattina — sono cose da controllare quando si controlla
-    salute = cruscotto.salute(con, db.get_settings(con), _cartella_backup(),
+    salute = overview.salute(con, db.get_settings(con), _cartella_backup(),
                               _lingua_app())
     con.close()
-    return render_template('controlli.html', issues=issues, archived=archived,
+    return render_template('checks.html', issues=issues, archived=archived,
                            corr=corr, n_corr=len(corr), salute=salute)
 
 
@@ -1624,8 +1624,8 @@ def verifica():
     con.close()
     # test della logica crediti contro lo storico congelato (SPEC-crediti.md sez. 7)
     try:
-        from core import selftest_crediti
-        cred_ok, cred_res = selftest_crediti.run_all()
+        from core import selftest_credits
+        cred_ok, cred_res = selftest_credits.run_all()
         for cat, desc, ok, detail in cred_res:
             by_cat.setdefault('Crediti — ' + cat, []).append((desc, ok, detail))
         n_total += len(cred_res)
@@ -1634,7 +1634,7 @@ def verifica():
     except Exception as e:
         by_cat.setdefault('Crediti', []).append((f'test non eseguiti: {e}', False, str(e)))
         all_ok = False
-    return render_template('verifica.html', all_ok=all_ok, by_cat=by_cat,
+    return render_template('calculation_check.html', all_ok=all_ok, by_cat=by_cat,
                            n_total=n_total, n_ok=n_ok, rec=rec)
 
 
@@ -1705,18 +1705,18 @@ def impostazioni():
     settings = db.get_settings(con)
     con.close()
     dest = settings.get('backup_dir') or backup.DEST_DEFAULT
-    return render_template('impostazioni.html', settings=settings,
+    return render_template('settings.html', settings=settings,
                            cartella_estratti=os.path.basename(db.DIR_ESTRATTI),
                            copie=backup.elenco_esterni(dest)[:10],
                            ultimo=backup.ultimo_esterno(dest),
                            pausa=_pausa_smtp(settings),
-                           logo_suo=marchio.personalizzato())
+                           logo_suo=branding.personalizzato())
 
 
 @app.route('/impostazioni/logo', methods=['POST'])
 def impostazioni_logo():
     file = request.files.get('logo')
-    errore = marchio.salva(file.read() if file else b'')
+    errore = branding.salva(file.read() if file else b'')
     if errore:
         avvisa(errore[0], 'error', **errore[1])
     else:
@@ -1726,7 +1726,7 @@ def impostazioni_logo():
 
 @app.route('/impostazioni/logo/rimuovi', methods=['POST'])
 def impostazioni_logo_rimuovi():
-    if marchio.rimuovi():
+    if branding.rimuovi():
         avvisa('Logo rimosso: al suo posto torna il segnaposto.', 'ok')
     else:
         avvisa('Non c\'era nessun logo da rimuovere.', 'error')

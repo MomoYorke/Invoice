@@ -10,7 +10,7 @@ indispensabili e quali no, e come si controlla se sono state fatte.
 Indispensabile vuol dire una cosa precisa: senza, la fattura che esce e'
 sbagliata o incompleta. Tutto il resto e' comodita'.
 """
-from . import marchio
+from . import branding
 
 
 def passi(con, settings):
@@ -41,7 +41,7 @@ def passi(con, settings):
          'dove': 'impostazioni', 'bottone': "Scrivi l'IBAN"},
         {'chiave': 'logo', 'obbligatorio': False,
          'titolo': 'Il tuo logo',
-         'fatto': marchio.personalizzato(),
+         'fatto': branding.personalizzato(),
          'perche': "Va sulle fatture e qui in alto a sinistra. Finché manca, sulla "
                    'fattura quello spazio resta vuoto.',
          'dove': 'impostazioni', 'bottone': 'Carica il logo'},

@@ -9,7 +9,7 @@ Tutti i calcoli in centesimi interi.
 import datetime
 import re
 
-from . import servizi
+from . import services
 
 LEGACY_YEARS = (2022, 2023)
 
@@ -103,7 +103,7 @@ def regole_servizi(con):
 
 
 def _etichetta(desc, regole):
-    nome, _modello = servizi.riconosci(desc, regole)
+    nome, _modello = services.riconosci(desc, regole)
     return nome or ALTRO
 
 

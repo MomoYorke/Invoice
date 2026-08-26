@@ -294,7 +294,7 @@ error page in place of your data.
 to renew, no password: one address to paste. In exchange, iCal describes a
 recurring series as a single entry plus its exceptions, whereas the API handed
 you a ready-made event for each repetition. The repetitions are therefore
-expanded in `core/calendario.py`, and the identifier that stops the same
+expanded in `core/calendar_feed.py`, and the identifier that stops the same
 session being counted twice is **UID + date**.
 
 All the earlier rules still hold: window from 20.08.2026, future sessions do

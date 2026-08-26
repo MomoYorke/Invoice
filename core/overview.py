@@ -12,8 +12,8 @@ import os
 import datetime
 
 from . import backup
-from . import agenda
-from . import lingua as L
+from . import schedule
+from . import language as L
 
 def _cartella_estratti():
     """Il nome vero della cartella degli estratti, non la sua traduzione.
@@ -271,7 +271,7 @@ def attivita(con, reg, quante=12, lingua=None):
 
     # le sessioni passano dall'agenda, che sa anche l'ora: qui non se ne inventa
     # nessuna, e quando non si conosce si mostra solo il giorno
-    for s in agenda.elenco(reg)[:quante]:
+    for s in schedule.elenco(reg)[:quante]:
         voci.append({'quando': f"{s['data']}T{s['ora'] or ''}",
                      'ora_nota': bool(s['ora']), 'tipo': 'sessione',
                      'testo': L.t('Sessione di {cliente}', lg).format(cliente=s['cliente'])

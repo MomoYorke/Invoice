@@ -9,8 +9,8 @@ from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 
 from .money import fmt_dash
-from . import lingua as L
-from . import marchio
+from . import language as L
+from . import branding
 
 
 # Le condizioni di pagamento le scrive chi usa l'app, nelle Impostazioni. Se
@@ -140,7 +140,7 @@ def _scrivi_logo(d):
             larghezza, altezza = parte.image.px_width, parte.image.px_height
         except Exception:
             larghezza, altezza = 388, 288
-        parte._blob = marchio.adattato(larghezza, altezza)
+        parte._blob = branding.adattato(larghezza, altezza)
         return
 
 
