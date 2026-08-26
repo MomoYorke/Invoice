@@ -372,7 +372,8 @@ def _crea_fattura(con):
 
     # --- genera file ---
     settings = db.get_settings(con)
-    label = (client['file_label'] or client['name']).strip()
+    label = desktop.nome_file_sicuro(
+        (client['file_label'] or client['name']).strip())
     fname = f'{label} #{number}'
     out_dir = os.path.join(INVOICE_DIR, str(year))
     docx_path = os.path.join(out_dir, fname + '.docx')

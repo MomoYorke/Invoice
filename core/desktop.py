@@ -12,6 +12,7 @@
 # Windows cosa faresti?» e verificare la risposta senza avere un Windows.
 # ---------------------------------------------------------------------------
 import os
+import re
 import subprocess
 import sys
 
@@ -104,3 +105,21 @@ def cartella_backup(sistema=None, casa=None, ambiente=None, esiste=None):
     # Linux e il resto: nessuna nube di sistema su cui contare.
     documenti = os.path.join(casa, 'Documents')
     return os.path.join(documenti if esiste(documenti) else casa, NOME_BACKUP)
+
+
+# I caratteri che Windows non ammette dentro il nome di un file. Il Mac ne
+# vieta uno solo, la barra, quindi un nome che qui si scrive benissimo puo'
+# essere impossibile la'. Meglio ripulirlo appena nasce: un file che non si
+# riesce a salvare non e' un dettaglio estetico, e' una fattura che non esce.
+VIETATI_NEI_NOMI = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def nome_file_sicuro(nome):
+    """Un nome di file che va bene su tutti e due i sistemi.
+
+    Tocca solo i caratteri vietati e nient'altro: i punti restano dove sono,
+    perche' un nome come «J. R.» non e' un problema — nel file finito ha
+    sempre qualcosa dietro (il numero, l'estensione) e Windows si mangia i
+    punti solo quando stanno proprio in fondo.
+    """
+    return VIETATI_NEI_NOMI.sub('-', nome or '')
