@@ -16,8 +16,8 @@ from reportlab.lib.styles import ParagraphStyle
 
 from .money import fmt_dash
 from . import docgen
-from . import lingua as L
-from . import marchio
+from . import language as L
+from . import branding
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -51,8 +51,8 @@ def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
     # --- logo in alto a destra ---
     # come nel .docx: se il logo non c'e' lo spazio resta vuoto, non ci
     # mettiamo il segnaposto
-    logo = marchio.percorso()
-    if marchio.personalizzato() and os.path.exists(logo):
+    logo = branding.percorso()
+    if branding.personalizzato() and os.path.exists(logo):
         try:
             from reportlab.lib.utils import ImageReader
             img = ImageReader(logo)

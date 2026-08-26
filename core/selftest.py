@@ -434,12 +434,12 @@ def _proprieta_docx(z):
 def _test_marchio(r):
     """Il logo e il nome dell'attività vengono da chi usa l'app, non da chi
     l'ha scritta. Se il programma condiviso si portasse dietro il logo del
-    primo proprietario, ogni utente manderebbe fatture col marchio di un altro."""
+    primo proprietario, ogni utente manderebbe fatture col branding di un altro."""
     import io as _io
     import tempfile
     import zipfile
     from PIL import Image
-    from . import marchio, docgen
+    from . import branding, docgen
     from .db import DEFAULT_SETTINGS
 
     for nome, atteso in (('Studio Bianchi Fisioterapia', ('Studio Bianchi', 'Fisioterapia')),
@@ -447,61 +447,61 @@ def _test_marchio(r):
                          ('Centro Vitale', ('Centro Vitale', '')),
                          ('', ('La tua attività', ''))):
         _check(r, 'Marchio', 'il nome «%s» si spezza bene' % (nome or 'vuoto'),
-               marchio.due_righe(nome), atteso)
+               branding.due_righe(nome), atteso)
 
     def _png(colore, misura=(120, 120)):
         buf = _io.BytesIO()
         Image.new('RGBA', misura, colore).save(buf, 'PNG')
         return buf.getvalue()
 
-    vero = marchio.PERSONALE
+    vero = branding.PERSONALE
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            marchio.PERSONALE = os.path.join(tmp, 'logo.png')
+            branding.PERSONALE = os.path.join(tmp, 'logo.png')
             _check(r, 'Marchio', 'senza logo caricato si usa il segnaposto',
-                   marchio.percorso(), marchio.SEGNAPOSTO)
+                   branding.percorso(), branding.SEGNAPOSTO)
             _check(r, 'Marchio', 'il segnaposto esiste davvero',
-                   os.path.exists(marchio.SEGNAPOSTO), True)
+                   os.path.exists(branding.SEGNAPOSTO), True)
             # il segnaposto dice «caricalo dalle Impostazioni»: dentro l'app va
             # bene, su una fattura che parte al cliente sarebbe una figuraccia
-            vuoto = Image.open(_io.BytesIO(marchio.adattato(60, 40)))
+            vuoto = Image.open(_io.BytesIO(branding.adattato(60, 40)))
             _check(r, 'Marchio', 'senza logo la fattura lascia lo spazio vuoto',
                    vuoto.getbbox(), None)
 
             _check(r, 'Marchio', 'un file che non è un\'immagine viene rifiutato',
-                   marchio.salva(b'questo non e\' un png') is not None, True)
+                   branding.salva(b'questo non e\' un png') is not None, True)
             _check(r, 'Marchio', 'un caricamento vuoto viene rifiutato',
-                   marchio.salva(b'') is not None, True)
+                   branding.salva(b'') is not None, True)
             _check(r, 'Marchio', 'un\'immagine enorme viene rifiutata',
-                   marchio.salva(b'\x89PNG' + b'x' * marchio.PESO_MAX) is not None, True)
+                   branding.salva(b'\x89PNG' + b'x' * branding.PESO_MAX) is not None, True)
 
             # un JPEG entra, ma quello che salviamo e' sempre un PNG: il resto
             # dell'app non deve sapere che formato aveva l'originale
             jpg = _io.BytesIO()
             Image.new('RGB', (900, 300), (200, 30, 30)).save(jpg, 'JPEG')
-            _check(r, 'Marchio', 'un JPEG viene accettato', marchio.salva(jpg.getvalue()), None)
+            _check(r, 'Marchio', 'un JPEG viene accettato', branding.salva(jpg.getvalue()), None)
             _check(r, 'Marchio', 'adesso il logo è quello dell\'utente',
-                   marchio.percorso(), marchio.PERSONALE)
+                   branding.percorso(), branding.PERSONALE)
             _check(r, 'Marchio', 'il logo salvato è un PNG',
-                   Image.open(marchio.PERSONALE).format, 'PNG')
+                   Image.open(branding.PERSONALE).format, 'PNG')
             _check(r, 'Marchio', 'un logo enorme viene rimpicciolito',
-                   max(Image.open(marchio.PERSONALE).size) <= marchio.LATO_MAX, True)
+                   max(Image.open(branding.PERSONALE).size) <= branding.LATO_MAX, True)
 
             # dentro il Word lo spazio del logo ha una forma fissa: il logo ci
             # deve entrare con quella forma, ma senza essere stirato ne' rifatto
-            marchio.salva(_png((0, 0, 255, 255), (300, 300)))
-            fuori = Image.open(_io.BytesIO(marchio.adattato(200, 150)))
+            branding.salva(_png((0, 0, 255, 255), (300, 300)))
+            fuori = Image.open(_io.BytesIO(branding.adattato(200, 150)))
             _check(r, 'Marchio', 'il logo adattato prende la forma dello spazio',
                    round(fuori.width / fuori.height, 3), round(200 / 150, 3))
             _check(r, 'Marchio', 'un logo quadrato non viene schiacciato',
                    fuori.height, 300)
             # un logo gia' della forma giusta non va toccato per niente
-            marchio.salva(_png((0, 0, 255, 255), (400, 300)))
-            uguale = Image.open(_io.BytesIO(marchio.adattato(200, 150)))
+            branding.salva(_png((0, 0, 255, 255), (400, 300)))
+            uguale = Image.open(_io.BytesIO(branding.adattato(200, 150)))
             _check(r, 'Marchio', 'un logo già della forma giusta resta tale e quale',
                    uguale.size, (400, 300))
 
-            marchio.salva(_png((255, 0, 0, 255)))
+            branding.salva(_png((255, 0, 0, 255)))
             with tempfile.TemporaryDirectory() as t2:
                 dx = os.path.join(t2, 'p.docx')
                 docgen.build_docx(dx, 9, '23-08-26', 'Mario Bianchi', [''],
@@ -514,13 +514,13 @@ def _test_marchio(r):
                 _check(r, 'Marchio', 'nel .docx finisce il logo dell\'utente',
                        len(rossi) > 1000, True)
 
-            marchio.rimuovi()
+            branding.rimuovi()
             _check(r, 'Marchio', 'tolto il logo si torna al segnaposto',
-                   marchio.percorso(), marchio.SEGNAPOSTO)
+                   branding.percorso(), branding.SEGNAPOSTO)
             _check(r, 'Marchio', 'e la fattura torna a lasciare lo spazio vuoto',
-                   Image.open(_io.BytesIO(marchio.adattato(60, 40))).getbbox(), None)
+                   Image.open(_io.BytesIO(branding.adattato(60, 40))).getbbox(), None)
     finally:
-        marchio.PERSONALE = vero
+        branding.PERSONALE = vero
 
     # il template distribuito non deve contenere niente di nessuno: ne' il logo,
     # ne' il nome di chi l'ha disegnato nelle proprieta' del documento. Word ce
@@ -528,7 +528,7 @@ def _test_marchio(r):
     _check(r, 'Marchio', 'il template Word non porta il nome di chi l\'ha fatto',
            _proprieta_docx(zipfile.ZipFile(docgen.TEMPLATE)), [])
     interno = zipfile.ZipFile(docgen.TEMPLATE).read('word/media/image1.png')
-    atteso = open(marchio.SEGNAPOSTO, 'rb').read()
+    atteso = open(branding.SEGNAPOSTO, 'rb').read()
     _check(r, 'Marchio', 'il template Word contiene solo il segnaposto',
            interno == atteso, True)
 
@@ -633,7 +633,7 @@ def _test_clienti_crediti(r):
 def _test_servizi(r):
     """I servizi proposti li scrive chi usa l'app, e il periodo degli
     abbonamenti lo sposta avanti l'app senza sapere come li hai chiamati."""
-    from . import servizi as SR
+    from . import services as SR
 
     for testo, atteso in (
             ('Monthly abo: running coaching 13.07.26 – 12.08.26', 'Monthly abo: running coaching'),
@@ -698,7 +698,7 @@ def _test_lingua(r):
     metA' in italiano e meta' in tedesco, e nessuno se ne accorge finche' non
     lo vede un utente.
     """
-    from . import lingua as L
+    from . import language as L
     from . import menu as M
 
     _check(r, 'Lingua', 'le lingue sono tre', L.CODICI, ('it', 'en', 'de'))
@@ -805,7 +805,7 @@ def _test_lingua(r):
 def _pagina_dice_gia_pagata():
     """La pagina Banca avverte quando la fattura era gia' spuntata a mano."""
     for pagina, sorgente in _sorgenti_pagine():
-        if pagina != 'banca.html':
+        if pagina != 'bank.html':
             continue
         pulito = ' '.join(sorgente.split())
         return 'not c.aperta' in pulito and 'già segnata pagata' in pulito
@@ -876,14 +876,14 @@ def _frasi_codice_senza_traduzione(L):
 
 def _frasi_restituite_senza_traduzione(L):
     """Le chiavi che i moduli danno indietro e nessuno ha tradotto."""
-    from . import marchio
-    from . import banca as B
+    from . import branding
+    from . import bank as B
     from . import mailer as M
     # i nomi dei due modelli di mail: la pagina li scrive con _(nome), quindi
     # nessuna guardia sui template puo' vederli
     frasi = [nome for _chiave, nome in M.MODELLI]
-    for dati in (b'', b'non e\' un png', b'\x89PNG' + b'x' * marchio.PESO_MAX):
-        esito = marchio.salva(dati)
+    for dati in (b'', b'non e\' un png', b'\x89PNG' + b'x' * branding.PESO_MAX):
+        esito = branding.salva(dati)
         if esito:
             frasi.append(esito[0])
     frasi += [B.PERCHE_RIFERIMENTO, B.PERCHE_DATA, B.PERCHE_NOME, B.PERCHE_SOLO_IMPORTO,
@@ -993,10 +993,10 @@ def _famiglie_senza_traduzione(L, risultati):
 
 
 def _chiavi_doppie():
-    """[(riga, frase)] per ogni chiave scritta due volte in lingua.py."""
+    """[(riga, frase)] per ogni chiave scritta due volte in language.py."""
     import ast
     import collections
-    perc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lingua.py')
+    perc = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'language.py')
     with io.open(perc, encoding='utf-8') as f:
         albero = ast.parse(f.read())
     fuori = []
@@ -1026,7 +1026,7 @@ def _frasi_js_non_passate():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with io.open(os.path.join(base, 'static', 'app.js'), encoding='utf-8') as f:
         js = f.read()
-    with io.open(os.path.join(base, 'templates', 'nuova.html'), encoding='utf-8') as f:
+    with io.open(os.path.join(base, 'templates', 'new_invoice.html'), encoding='utf-8') as f:
         pagina = f.read()
     usate = set(re.findall(r'\bT\.(\w+)', js))
     passate = set(re.findall(r'^\s*(\w+):\s*\{\{ _\(', pagina, re.M))
@@ -1063,7 +1063,7 @@ def _test_da_fare(r):
     fiducia in tutti gli altri numeri della pagina.
     """
     import datetime
-    from . import cruscotto as C
+    from . import overview as C
 
     oggi = datetime.date.today()
     ieri = (oggi - datetime.timedelta(days=1)).isoformat()
@@ -1149,7 +1149,7 @@ def _test_servizi_riconosciuti(r):
     servono a due cose: che chi le scrive ottenga quello che si aspetta, e che
     chi non le ha ancora scritte non si veda inventare niente.
     """
-    from . import servizi as S
+    from . import services as S
     from . import mailer, db
 
     mio = {'servizi_abbonamento': 'Running Coaching = running coaching\n'
@@ -1216,13 +1216,13 @@ def _test_primi_passi(r):
     dirlo appena non serve piu'."""
     import sqlite3
     import tempfile
-    from . import benvenuto as B, marchio
+    from . import welcome as B, branding
     from .db import DEFAULT_SETTINGS
 
     # il passo del logo guarda il file vero: qui si guarda altrove, altrimenti
     # il controllo dipende da chi lo sta eseguendo
-    logo_vero = marchio.PERSONALE
-    marchio.PERSONALE = os.path.join(tempfile.gettempdir(), 'logo-che-non-esiste.png')
+    logo_vero = branding.PERSONALE
+    branding.PERSONALE = os.path.join(tempfile.gettempdir(), 'logo-che-non-esiste.png')
     con = sqlite3.connect(':memory:')
     con.row_factory = sqlite3.Row
     con.executescript(
@@ -1263,7 +1263,7 @@ def _test_primi_passi(r):
     con.execute('UPDATE clients SET archived = 1')
     _check(r, 'Primi passi', 'un cliente archiviato non conta',
            {p['chiave']: p['fatto'] for p in B.passi(con, pieno)}['clienti'], False)
-    marchio.PERSONALE = logo_vero
+    branding.PERSONALE = logo_vero
     con.close()
 
 
@@ -1287,7 +1287,7 @@ def _test_icone(r):
     usati nelle pagine esistano davvero.
     """
     import xml.etree.ElementTree as ET
-    from . import icone as I
+    from . import icons as I
 
     modelli = _sorgenti('templates', '.html')
     tutto = '\n'.join(modelli.values())
@@ -1349,10 +1349,10 @@ def _test_icone(r):
     # la pagina dell'errore tiene la sua faccina: li' non e' un'icona, e' il
     # tono con cui l'app si scusa, ed e' l'unico punto dove serve una faccia
     with_emoji = sorted(n for n, t in modelli.items()
-                        if n != 'errore.html' and faccine.search(t))
+                        if n != 'error.html' and faccine.search(t))
     _check(r, 'Icone', 'nessuna emoji colorata rimasta nelle pagine', with_emoji, [])
     _check(r, 'Icone', "la faccina resta solo nella pagina dell'errore",
-           bool(faccine.search(modelli['errore.html'])), True)
+           bool(faccine.search(modelli['error.html'])), True)
     js = _sorgenti('static', '.js')
     _check(r, 'Icone', 'nessuna emoji colorata rimasta nel codice delle pagine',
            sorted(n for n, t in js.items() if faccine.search(t)), [])
@@ -1468,7 +1468,7 @@ def _tabelle_fuori_dai_riquadri(testo):
 def _test_calendario(r):
     """L'iCal descrive le serie in modo compatto: espanderle bene e' delicato."""
     import datetime
-    from . import calendario as C
+    from . import calendar_feed as C
 
     # il nome del calendario lo dice il calendario: cosi' nel programma non
     # resta scritto come si chiama quello di nessuno
@@ -1523,7 +1523,7 @@ def _test_calendario(r):
 
 def _test_agenda(r):
     """L'agenda mette insieme due fonti: registro (quali) e calendario (a che ora)."""
-    from . import agenda as A
+    from . import schedule as A
 
     reg = {'pacchetti': [
         {'id': 'X-01', 'cliente': 'Tizia', 'crediti': 10, 'fattura_numero': 7,
@@ -1613,7 +1613,7 @@ def _test_cruscotto(r):
     """I tre riquadri della Dashboard: contano e ordinano, non inventano."""
     import sqlite3
     import datetime
-    from . import cruscotto as C
+    from . import overview as C
     from . import db as _db
     from .db import SCHEMA, DEFAULT_SETTINGS as S
 
@@ -1695,7 +1695,7 @@ def _test_cruscotto(r):
 def _test_saluto(r):
     """Il nome di chi usa l'app: e' suo, e non si ricava dall'attivita'."""
     from .db import DEFAULT_SETTINGS as S
-    from . import lingua as L
+    from . import language as L
 
     # Se sparissero da qui, il modulo delle Impostazioni smetterebbe di
     # salvarli senza dire niente: il salvataggio gira su DEFAULT_SETTINGS.
@@ -1761,7 +1761,7 @@ def _test_incassi(r):
     """La differenza fra «non pagata» e «non ancora verificabile»."""
     import sqlite3
     from . import db as _db
-    from . import cruscotto as C
+    from . import overview as C
     from .db import SCHEMA
 
     con = sqlite3.connect(':memory:')
@@ -1840,7 +1840,7 @@ def _test_banca(r):
     import os
     import sqlite3
     import tempfile
-    from . import banca as B
+    from . import bank as B
     from . import db as _db
     from .db import SCHEMA
 
@@ -1900,7 +1900,7 @@ def _test_banca(r):
     pagata = next(c for c in cand if c['inv']['number'] == 60)
     _check(r, 'Banca', 'una fattura già pagata a mano resta proponibile',
            pagata['aperta'], False)
-    # la frase la mette la pagina, non banca.py: cosi' si puo' tradurre. Il
+    # la frase la mette la pagina, non bank.py: cosi' si puo' tradurre. Il
     # controllo resta lo stesso — la riga deve dirlo — solo guardato dove
     # adesso la frase vive davvero.
     _check(r, 'Banca', 'e la riga lo dice, invece di far credere a un incasso nuovo',
@@ -2084,7 +2084,7 @@ def _test_pacchetto_lingua(r):
     import tempfile
     import openpyxl
     from . import exports as E
-    from . import lingua as L
+    from . import language as L
     from . import db as _db
     from .db import SCHEMA
 

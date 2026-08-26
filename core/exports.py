@@ -23,7 +23,7 @@ from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph,
 from reportlab.lib.styles import getSampleStyleSheet
 
 from . import stats
-from . import lingua as L
+from . import language as L
 from .money import fmt_chf
 
 from . import db as _db

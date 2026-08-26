@@ -20,7 +20,7 @@ import os
 import json
 import datetime
 
-from . import calendario
+from . import calendar_feed
 
 from . import db as _db
 
@@ -64,9 +64,9 @@ def aggiorna_da_calendario(urls, da, a):
     nuovi, errori, nomi = 0, [], {}
     for url in [u for u in urls if (u or '').strip()]:
         try:
-            testo = calendario.scarica(url.strip())
-            nomi[url] = calendario.nome(testo)
-            voci = calendario.leggi(testo, da, a, e_testo=True)
+            testo = calendar_feed.scarica(url.strip())
+            nomi[url] = calendar_feed.nome(testo)
+            voci = calendar_feed.leggi(testo, da, a, e_testo=True)
         except Exception as e:
             errori.append(str(e))
             continue

@@ -27,8 +27,8 @@ from email.message import EmailMessage
 
 from .money import fmt_chf
 from . import db
-from . import lingua as L
-from . import servizi as srv
+from . import language as L
+from . import services as srv
 
 FRASE_ABBONAMENTO = ("Se ha già pagato questo mese con l'ordine permanente, può "
                      'semplicemente tenere il documento allegato per i Suoi archivi.\n')
