@@ -891,6 +891,10 @@ def _frasi_restituite_senza_traduzione(L):
     # finisce nel database e la pagina lo traduce quando lo mostra
     from . import db as _db
     frasi.append(_db.MOTIVO_RICOSTRUITO)
+    # le due etichette che l'app mette da sé quando le regole non riconoscono
+    # niente: i nomi veri dei servizi li scrive l'utente e non si traducono
+    from . import stats as _st
+    frasi += [_st.ALTRO, _st.NON_DETTAGLIATO]
     # il perche' di una copia: la sigla sta nel nome del file, le parole no
     from . import backup as _bk
     frasi += [_bk.motivo_in_parole(sigla) for sigla in _bk.MOTIVI]
