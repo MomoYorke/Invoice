@@ -19,8 +19,11 @@ import datetime
 
 from .money import fmt_chf
 
+from . import db as _db
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REGISTRY = os.environ.get('FATTURE_SESSIONS') or os.path.join(APP_DIR, 'sessions.json')
+REGISTRY = (_db.env('INVOICE_SESSIONS', 'FATTURE_SESSIONS')
+            or os.path.join(APP_DIR, 'sessions.json'))
 SEED = os.path.join(APP_DIR, 'sessions_seed.json')
 
 # Prima data leggibile dal calendario: tutto cio' che precede e' congelato (spec 5.1)

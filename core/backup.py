@@ -24,7 +24,8 @@ KEEP = 40  # quante copie tenere
 MOTIVI = {'avvio': 'all’avvio dell’app',
           'manuale': 'chiesta a mano',
           'prima-reimport': 'prima di reimportare lo storico',
-          'prima-del-ripristino': 'prima di ripristinare una fattura'}
+          'prima-del-ripristino': 'prima di ripristinare una fattura',
+          'prima-aggiornamento': 'prima di aggiornare il programma'}
 PRIMA_DI_ELIMINARE = 'prima-eliminazione-'
 
 
@@ -109,10 +110,10 @@ import tempfile
 import hashlib
 
 ICLOUD = os.path.expanduser('~/Library/Mobile Documents/com~apple~CloudDocs')
-# Si puo' deviare con FATTURE_BACKUP, come per il database: cosi' un'app di
+# Si puo' deviare con INVOICE_BACKUP, come per il database: cosi' un'app di
 # prova non va a depositare le sue copie fra quelle vere, dove col ricambio
 # spingerebbero fuori le buone.
-DEST_DEFAULT = (os.environ.get('FATTURE_BACKUP')
+DEST_DEFAULT = (db.env('INVOICE_BACKUP', 'FATTURE_BACKUP')
                 or os.path.join(ICLOUD, 'Fatture App - Backup'))
 TIENI_GIORNALIERI = 30          # quante copie recenti conservare
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -124,8 +125,9 @@ def _sorgenti():
     Le variabili d'ambiente sono le stesse usate dal resto dell'app, cosi' una
     prova su una copia archivia la copia e non i dati veri.
     """
-    registro = os.environ.get('FATTURE_SESSIONS') or os.path.join(APP_DIR, 'sessions.json')
-    fatture = os.environ.get('FATTURE_DIR') or os.path.join(APP_DIR, 'Fatture')
+    registro = (db.env('INVOICE_SESSIONS', 'FATTURE_SESSIONS')
+                or os.path.join(APP_DIR, 'sessions.json'))
+    fatture = db.DIR_FATTURE
     return [
         (db.DB_PATH, 'fatture.db'),
         (registro, 'sessions.json'),

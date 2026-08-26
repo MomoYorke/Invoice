@@ -15,6 +15,16 @@ from . import backup
 from . import agenda
 from . import lingua as L
 
+def _cartella_estratti():
+    """Il nome vero della cartella degli estratti, non la sua traduzione.
+
+    E' un nome sul disco: si chiama cosi' anche quando l'app parla italiano.
+    Tradurlo manderebbe a cercare una cartella che non esiste.
+    """
+    from . import db as _db
+    return _db.DIR_ESTRATTI
+
+
 VERDE, GIALLO, ROSSO = 'ok', 'attenzione', 'guai'
 GIORNI_BACKUP_VECCHIO = 3        # oltre, il riquadro diventa giallo
 ORE_CALENDARIO_VECCHIO = 48
@@ -164,7 +174,8 @@ def salute(con, settings, cartella_backup=None, lingua=None):
     ultimo_estratto = settings.get('banca_ultimo_estratto') or ''
     if not ultimo_estratto:
         aggiungi(t('Estratto conto'), t('mai letto'),
-                 t('Scarica i movimenti dall’e-banking e mettili in «Estratti conto».'),
+                 t('Scarica i movimenti dall’e-banking e mettili in «{cartella}».',
+                   cartella=os.path.basename(_cartella_estratti())),
                  GIALLO)
     else:
         try:
@@ -218,8 +229,7 @@ def _spazio(con):
         return tot
 
     dati = os.path.dirname(_db.DB_PATH)
-    fatture = os.environ.get('FATTURE_DIR') or os.path.join(
-        os.path.dirname(dati), 'Fatture')
+    fatture = _db.DIR_FATTURE
     db_byte = peso(_db.DB_PATH)
     return {
         'database': db_byte,

@@ -22,8 +22,11 @@ import datetime
 
 from . import calendario
 
+from . import db as _db
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDICE = os.environ.get('FATTURE_ORARI') or os.path.join(APP_DIR, 'data', 'orari.json')
+INDICE = (_db.env('INVOICE_TIMES', 'FATTURE_ORARI')
+          or os.path.join(APP_DIR, 'data', 'orari.json'))
 
 
 def _chiave(data, titolo):

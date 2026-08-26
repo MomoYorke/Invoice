@@ -26,8 +26,10 @@ import hashlib
 import datetime
 import xml.etree.ElementTree as ET
 
+from . import db as _db
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CARTELLA = os.environ.get('FATTURE_ESTRATTI') or os.path.join(APP_DIR, 'Estratti conto')
+CARTELLA = _db.DIR_ESTRATTI
 ESTENSIONI = ('.xml', '.csv', '.tsv', '.txt', '.pdf')
 
 # Quanto puo' distare il versamento dalla data della fattura. La finestra e'

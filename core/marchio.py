@@ -14,9 +14,12 @@ import os
 
 from PIL import Image
 
+from . import db as _db
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# si puo' deviare con FATTURE_LOGO: serve alle prove, per non toccare il vero
-PERSONALE = os.environ.get('FATTURE_LOGO') or os.path.join(APP_DIR, 'data', 'logo.png')
+# si puo' deviare con INVOICE_LOGO: serve alle prove, per non toccare il vero
+PERSONALE = (_db.env('INVOICE_LOGO', 'FATTURE_LOGO')
+             or os.path.join(APP_DIR, 'data', 'logo.png'))
 SEGNAPOSTO = os.path.join(APP_DIR, 'assets', 'logo-esempio.png')
 
 LATO_MAX = 600          # px: piu' che sufficiente per stampa e schermo

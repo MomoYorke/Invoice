@@ -28,13 +28,17 @@ You can go back whenever you like, from that reminder.
 
 ## How to start it
 
-Double-click **`Avvia Fatture.command`** (the launcher; the name is Italian,
-like the folder names, because that is what they are actually called on disk).
-The browser opens at `http://127.0.0.1:8471`. Leave the Terminal window open
+Double-click **`Start Invoice.command`**. The browser opens at
+`http://127.0.0.1:8471`. Leave the Terminal window open
 while you use the app (to stop it: Ctrl+C, or close the window).
 
 > The first time, macOS may ask for confirmation: right-click the file →
 > "Open" → "Open".
+
+> Coming from an older version, the data folders were named in Italian
+> (`Fatture`, `Esporti`, `Cestino`, `Estratti conto`). The app renames them to
+> `Invoices`, `Exports`, `Trash` and `Bank statements` the first time it
+> starts, and repairs the paths it had recorded, so nothing goes missing.
 
 If the app is already running, double-clicking only opens the browser without
 restarting anything — **except when the program has been updated**: in that
@@ -53,9 +57,9 @@ files, and installs any new libraries needed. **Your data is not touched**:
 database, invoices, bank statements, backups and logo all live outside the
 repository, so the update does not even see them.
 
-To go back to the previous version, the number is in `data/.versione-precedente`:
+To go back to the previous version, the number is in `data/.previous-version`:
 
-    git reset --hard $(cat data/.versione-precedente)
+    git reset --hard $(cat data/.previous-version)
 
 The Terminal window stays almost empty: two lines at startup and that is it.
 Nothing scrolls while you use the app, and there is no red warning to
@@ -114,7 +118,7 @@ never shifts sideways.
   to year end, collected vs outstanding, top clients, service types, charts.
 - **New invoice** — pick client and service, the app assigns the sequential
   number, works out the totals (arithmetic in cents: no rounding errors) and
-  produces **docx + PDF** in `Fatture/YEAR/`. For a monthly subscription it
+  produces **docx + PDF** in `Invoices/YEAR/`. For a monthly subscription it
   suggests by itself the month after the last invoice.
 - **Invoices** — the full list (historical ones included), search, mark paid /
   to collect with one click. The *Sent* column shows the day and time the
@@ -122,7 +126,7 @@ never shifts sideways.
 - **Clients** — the client register with total revenue for each.
 - **Accountant** — one click and it prepares the package: Excel (register +
   monthly/quarterly summary + by client), a summary PDF and a copy of every
-  invoice PDF of the year, already zipped. You will find it in `Esporti/`.
+  invoice PDF of the year, already zipped. You will find it in `Exports/`.
   The package can have a language of its own, separate from the app's, because
   it is your bookkeeper who reads it.
 - **Sessions** — the training sessions actually done, with day and time, most
@@ -171,7 +175,7 @@ the app on to someone else, your logo does not follow it.
 On first start, if you point Settings at an **archive folder**, the app imports
 what is in it: invoices in Word and PDF, a `clients.json`, the Excel summaries
 of past years. That folder is **never modified**: the app only reads it. New
-invoices are born in here, in `Fatture/YEAR/`.
+invoices are born in here, in `Invoices/YEAR/`.
 
 For the years before the app, the official totals come from the Excel summaries
 (more complete than the individual Word invoices of those years).
@@ -415,7 +419,7 @@ cannot be attached as PDFs.
 ## Knowing when you have been paid
 
 Download the transactions from your e-banking and drop the files into
-**`Estratti conto/`** (bank statements). The app reads three formats:
+**`Bank statements/`**. The app reads three formats:
 **camt.053 / camt.054** (XML), **CSV**, and **PDF statements**. In a CSV it
 recognises the columns by their header names, because every bank writes them
 differently. Then you open the **Bank** page.
@@ -513,7 +517,7 @@ you back half an hour, not to survive a broken disk — it sits on the same disk
 **Off the Mac** (iCloud Drive, folder *Fatture App - Backup*): two archives.
 
 - `fatture-app-YYYYMMDD-hhmmss.zip` — database, session register and the PDFs
-  in the `Fatture/` folder. Created at startup (once a day) and **after every
+  in the `Invoices/` folder. Created at startup (once a day) and **after every
   new invoice**. About 140 KB. The last 30 copies are kept, plus the first of
   each month, which is never deleted.
 - `storico-YYYYMMDD-hhmmss.zip` — the documents in the archive folder, where
@@ -536,7 +540,7 @@ now* button, and the destination folder, which you can change.
   `150,00 CHF`).
 - The invoice number is automatic (highest existing + 1); the app refuses
   duplicates and never overwrites existing files.
-- Deleted invoices end up in `Cestino/` (trash) inside this folder.
+- Deleted invoices end up in `Trash/` inside this folder.
 - Backup: just copy this folder (the database is `data/fatture.db`).
 
 ## Trying the app without touching real data
@@ -547,16 +551,19 @@ without risking your own.
 
 | Variable | Diverts |
 |---|---|
-| `FATTURE_DB` | the database |
-| `FATTURE_DIR` | the folder where documents end up |
-| `FATTURE_SESSIONS` | the session register |
-| `FATTURE_ESTRATTI` | the bank statements |
-| `FATTURE_ORARI` | the session times |
-| `FATTURE_LOGO` | the logo |
-| `FATTURE_BACKUP` | the backups |
-| `FATTURE_PORT` | the port (8471 by default) |
+| `INVOICE_DB` | the database |
+| `INVOICE_DIR` | the folder where documents end up |
+| `INVOICE_SESSIONS` | the session register |
+| `INVOICE_STATEMENTS` | the bank statements |
+| `INVOICE_TIMES` | the session times |
+| `INVOICE_LOGO` | the logo |
+| `INVOICE_BACKUP` | the backups |
+| `INVOICE_PORT` | the port (8471 by default) |
 
-`FATTURE_BACKUP` also takes precedence over the saved setting: a test app
+They used to be called `FATTURE_*`, and those names still work: a test script
+that uses them does not break on an update.
+
+`INVOICE_BACKUP` also takes precedence over the saved setting: a test app
 almost always starts from a copy of the real database, and without this it
 would drop its copies in among the good ones — where, with the rotation of the
 last 30, they would end up pushing the real ones out.

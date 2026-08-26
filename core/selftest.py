@@ -1835,6 +1835,7 @@ def _test_banca(r):
     _test_pacchetto(r)
     _test_pacchetto_lingua(r)
     _test_modelli_lingua(r)
+    _test_cartelle(r)
     """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     import os
     import sqlite3
@@ -2239,4 +2240,91 @@ def _test_modelli_lingua(r):
     _check(r, 'Modelli della mail', 'la firma compare una volta sola in tutte e due',
            (tedesca.count('Anna Muster'), inglese.count('Anna Muster')), (1, 1))
     con.close()
+
+
+def _test_cartelle(r):
+    """Le cartelle dei dati cambiano nome senza che si perda niente.
+
+    E' la migrazione piu' delicata di tutte: sposta i documenti veri. Il caso
+    da non sbagliare non e' la rinomina — e' quando esistono tutt'e due le
+    cartelle, perche' li' unire e' una decisione di chi ha i file davanti.
+    """
+    import shutil
+    import sqlite3
+    import tempfile
+    from . import db as _db
+    from .db import SCHEMA
+
+    base = tempfile.mkdtemp(prefix='prova-cartelle-')
+    def scrivi(*pezzi):
+        p = os.path.join(base, *pezzi)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with io.open(p, 'w', encoding='utf-8') as f:
+            f.write('x')
+        return p
+
+    scrivi('Fatture', '2026', 'una.pdf')
+    scrivi('Estratti conto', 'estratto.pdf')
+    fatte = _db.migra_cartelle(base)
+    _check(r, 'Cartelle', 'le cartelle vecchie prendono il nome nuovo',
+           sorted(fatte), [('Estratti conto', 'Bank statements'),
+                           ('Fatture', 'Invoices')])
+    _check(r, 'Cartelle', 'e i documenti sono dentro quella nuova',
+           (os.path.exists(os.path.join(base, 'Invoices', '2026', 'una.pdf')),
+            os.path.exists(os.path.join(base, 'Fatture'))), (True, False))
+    _check(r, 'Cartelle', 'rifarla una seconda volta non fa niente',
+           _db.migra_cartelle(base), [])
+
+    # il caso pericoloso: ci sono tutt'e due. Rinominare sopra vorrebbe dire
+    # sovrascrivere o mischiare, e nessuna delle due e' una migrazione.
+    scrivi('Cestino', 'vecchia.pdf')
+    scrivi('Trash', 'nuova.pdf')
+    _check(r, 'Cartelle', 'con tutt’e due le cartelle non tocca niente',
+           _db.migra_cartelle(base), [])
+    _check(r, 'Cartelle', 'e nessuno dei due file si perde',
+           (os.path.exists(os.path.join(base, 'Cestino', 'vecchia.pdf')),
+            os.path.exists(os.path.join(base, 'Trash', 'nuova.pdf'))), (True, True))
+    shutil.rmtree(base, ignore_errors=True)
+
+    # --- i percorsi salvati nel database ---
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(SCHEMA)
+    _db._migrate(con)
+    vecchio = os.path.join(_db.APP_DIR, 'Fatture', '2026', 'inesistente.pdf')
+    con.execute("""INSERT INTO invoices(number, client_name, date, year,
+                                        total_cents, status, pdf_path)
+                   VALUES(?,?,?,?,?,?,?)""",
+                (1, 'Anna Muster', '2026-01-15', 2026, 11000, 'emessa', vecchio))
+    con.commit()
+    _db._migra_percorsi(con)
+    con.commit()
+    _check(r, 'Cartelle', 'un percorso che non porta a niente resta com’è',
+           con.execute('SELECT pdf_path FROM invoices WHERE number=1').fetchone()[0],
+           vecchio)
+
+    # ora il file nuovo c'e' davvero: il percorso va raddrizzato
+    nuovo = os.path.join(_db.APP_DIR, 'Invoices', 'prova-migrazione.pdf')
+    os.makedirs(os.path.dirname(nuovo), exist_ok=True)
+    with io.open(nuovo, 'w', encoding='utf-8') as f:
+        f.write('x')
+    con.execute('UPDATE invoices SET pdf_path=? WHERE number=1',
+                (os.path.join(_db.APP_DIR, 'Fatture', 'prova-migrazione.pdf'),))
+    con.commit()
+    _db._migra_percorsi(con)
+    con.commit()
+    _check(r, 'Cartelle', 'il percorso alla cartella vecchia viene raddrizzato',
+           con.execute('SELECT pdf_path FROM invoices WHERE number=1').fetchone()[0],
+           nuovo)
+    os.remove(nuovo)
+    con.close()
+
+    # --- il vecchio nome delle variabili d'ambiente ---
+    os.environ['FATTURE_PROVA'] = 'vecchio'
+    _check(r, 'Cartelle', 'il vecchio nome di una variabile funziona ancora',
+           _db.env('INVOICE_PROVA', 'FATTURE_PROVA'), 'vecchio')
+    os.environ['INVOICE_PROVA'] = 'nuovo'
+    _check(r, 'Cartelle', 'ma il nome nuovo passa davanti',
+           _db.env('INVOICE_PROVA', 'FATTURE_PROVA'), 'nuovo')
+    del os.environ['FATTURE_PROVA'], os.environ['INVOICE_PROVA']
 
