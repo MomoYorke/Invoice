@@ -1,0 +1,10 @@
+# How the two launchers must reach the other side.
+#
+# The Windows one needs CRLF line endings: with LF only, cmd.exe can misread
+# labels and gotos, and the launcher would skip whole pieces in silence.
+# The Mac one needs the opposite, LF: zsh will not run a file whose lines end
+# in CRLF, so the app would not start at all.
+# Saying it here means it holds on every machine, whatever each person has
+# set in their own git.
+*.bat       text eol=crlf
+*.command   text eol=lf

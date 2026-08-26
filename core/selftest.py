@@ -1831,13 +1831,15 @@ def _test_intestatario(r):
 
 
 def _test_banca(r):
+    """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     _test_intestatario(r)
     _test_pacchetto(r)
     _test_pacchetto_lingua(r)
     _test_modelli_lingua(r)
     _test_cartelle(r)
     _test_avviatore(r)
-    """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
+    _test_avviatore_windows(r)
+    _test_windows(r)
     import os
     import sqlite3
     import tempfile
@@ -2369,3 +2371,204 @@ def _test_avviatore(r):
     _check(r, 'Avviatore', 'e prima di sostituire i file fa una copia dei dati',
            "backup.make_backup('prima-aggiornamento')" in testo, True)
 
+
+
+def _avviatori():
+    """I due avviatori letti dal disco, in byte: cosi' si puo' guardare anche
+    COM'E' scritto il file, non solo cosa dice."""
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fuori = {}
+    for nome in ('Start Invoice.command', 'Start Invoice.bat'):
+        try:
+            with io.open(os.path.join(base, nome), 'rb') as f:
+                fuori[nome] = f.read()
+        except OSError:
+            fuori[nome] = b''
+    return fuori
+
+
+def _test_avviatore_windows(r):
+    """L'avviatore di Windows e quello del Mac fanno lo stesso mestiere in due
+    linguaggi diversi: e' esattamente la situazione in cui uno impara qualcosa
+    e l'altro resta indietro senza che nessuno se ne accorga.
+
+    Il .bat da un Mac non si puo' FAR GIRARE: non c'e' nessun cmd.exe. Si puo'
+    pero' provare tutto il resto, e non e' poco, perche' su Windows questi
+    sbagli non danno errore — saltano il pezzo in silenzio: che il file sia
+    scritto in un modo che Windows sa leggere, che ogni salto abbia la sua
+    etichetta, che ogni domanda fatta a launcher.py sia una domanda che quello
+    sa davvero rispondere, e che i due avviatori continuino a dire le stesse
+    cose sulle stesse cose.
+    """
+    a = _avviatori()
+    grezzo = a['Start Invoice.bat']
+    win = grezzo.decode('ascii', 'replace')
+    mac = a['Start Invoice.command'].decode('utf-8', 'replace')
+
+    _check(r, 'Avviatore Windows', 'c’è', bool(grezzo), True)
+    # cmd.exe non legge UTF-8: una lettera accentata o una virgoletta bassa
+    # arriverebbe sullo schermo come uno scarabocchio
+    _check(r, 'Avviatore Windows', 'scritto in ASCII, che cmd.exe sa leggere',
+           max(bytearray(grezzo) or [0]) < 128, True)
+    # con le sole LF, cmd puo' leggere male etichette e salti
+    _check(r, 'Avviatore Windows', 'righe che finiscono come vuole Windows (CRLF)',
+           (grezzo.count(b'\n') > 0, grezzo.count(b'\n') == grezzo.count(b'\r\n')),
+           (True, True))
+
+    righe = win.split('\r\n')
+    etichette = set()
+    for x in righe:
+        m = re.match(r':(\w+)', x.strip())
+        if m:
+            etichette.add(m.group(1).lower())
+    mete = {m.group(1).lower() for x in righe
+            for m in re.finditer(r'\b(?:goto|call)\s+:(\w+)', x, re.I)}
+    # un salto verso un'etichetta che non c'e' non da' errore: cmd salta il
+    # pezzo e tira dritto, e il pezzo saltato e' proprio quello che serviva
+    _check(r, 'Avviatore Windows', 'ogni salto ha la sua etichetta',
+           sorted(mete - etichette - {'eof'}), [])
+    _check(r, 'Avviatore Windows', 'e nessuna etichetta è rimasta orfana',
+           sorted(etichette - mete), [])
+    _check(r, 'Avviatore Windows', 'parentesi aperte e chiuse in pari',
+           (sum(x.count('(') - x.count('^(') for x in righe),
+            sum(x.count(')') - x.count('^)') for x in righe)),
+           (sum(x.count(')') - x.count('^)') for x in righe),
+            sum(x.count(')') - x.count('^)') for x in righe)))
+    # «set NOME=valore» senza virgolette si porta dentro lo spazio che ha in
+    # coda: «none » non e' «none», e il confronto dopo fallisce per sempre
+    _check(r, 'Avviatore Windows', 'nessun «set» senza virgolette',
+           [x.strip() for x in righe
+            if re.match(r'\s*set\s+[A-Za-z_]', x) and '"' not in x], [])
+
+    # --- le domande a launcher.py -------------------------------------------
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'core', 'launcher.py'), encoding='utf-8') as f:
+        sorgente_launcher = f.read()
+    usate = sorted(set(re.findall(r'core\.launcher\s+([a-z-]+)', win)))
+    note = set(re.findall(r"domanda == '([a-z-]+)'", sorgente_launcher))
+    _check(r, 'Avviatore Windows', 'chiede a launcher.py i sei conti difficili',
+           usate, ['aggiornato', 'controllato-da-poco', 'in-salute',
+                   'requisiti-a-posto', 'scrivi-impronta', 'tocca'])
+    _check(r, 'Avviatore Windows', 'e ogni domanda è una che launcher.py sa rispondere',
+           sorted(set(usate) - note), [])
+    # il nome del segnale d'accensione lo scrive app.py e lo legge launcher.py:
+    # se uno dei due lo cambia da solo, l'app risulta sempre «da riavviare»
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        sorgente_app = f.read()
+    firma = "'data', '.started-%s' % porta"
+    _check(r, 'Avviatore Windows', 'app.py e launcher.py chiamano allo stesso modo il segnale d’accensione',
+           (firma in sorgente_app, firma in sorgente_launcher), (True, True))
+
+    # --- i quattro casi, anche qui ------------------------------------------
+    _check(r, 'Avviatore Windows', 'sa dire tutti e quattro i casi',
+           sorted(c for c in ('none', 'forward', 'ahead', 'diverged')
+                  if 'set "KIND=%s"' % c in win),
+           ['ahead', 'diverged', 'forward', 'none'])
+    _check(r, 'Avviatore Windows', 'e sa cosa fare per ognuno',
+           ('"%KIND%"=="none"' in win, '"%KIND%"=="ahead"' in win,
+            '"%KIND%"=="diverged"' in win, 'call :ask_and_apply "  Install it?"' in win),
+           (True, True, True, True))
+    _check(r, 'Avviatore Windows', 'guarda la parentela nei due versi',
+           win.count('merge-base --is-ancestor'), 2)
+
+    # --- e adesso i due, a confronto ----------------------------------------
+    def porta(testo):
+        m = re.search(r'PORT=(\d+)', testo)
+        return m.group(1) if m else None
+    _check(r, 'I due avviatori', 'parlano della stessa porta',
+           (porta(mac), porta(win)), ('8471', '8471'))
+
+    def librerie(testo):
+        m = re.search(r'import (flask[a-zA-Z0-9_, ]*)"', testo)
+        return sorted(x.strip() for x in m.group(1).split(',')) if m else []
+    _check(r, 'I due avviatori', 'controllano le stesse librerie', librerie(win), librerie(mac))
+    _check(r, 'I due avviatori', 'e la lista non è vuota', len(librerie(mac)), 7)
+
+    for nome in ('.last-update-check', '.previous-version'):
+        _check(r, 'I due avviatori', 'tutt’e due usano «data/%s»' % nome,
+               (nome in mac, nome in win), (True, True))
+    _check(r, 'I due avviatori', 'tutt’e due offrono di riallinearsi dopo una riscrittura',
+           ('Line up with the published version?' in mac,
+            'Line up with the published version?' in win), (True, True))
+    _check(r, 'I due avviatori', 'tutt’e due copiano i dati prima di sostituire i file',
+           ("backup.make_backup('prima-aggiornamento')" in mac,
+            "backup.make_backup('prima-aggiornamento')" in win), (True, True))
+    # una finestra lasciata aperta per sbaglio non deve tenere in ostaggio
+    # l'app per sempre: senza risposta, dopo due minuti si va avanti
+    _check(r, 'I due avviatori', 'tutt’e due aspettano una risposta al massimo 120 secondi',
+           ('read -t 120' in mac, '/t 120' in win), (True, True))
+    _check(r, 'I due avviatori', 'tutt’e due ricontrollano gli aggiornamenti ogni 6 ore',
+           ('HOURS_BETWEEN_CHECKS=6' in mac,
+            'controllato-da-poco "data\\.last-update-check" 6' in win), (True, True))
+
+
+def _test_windows(r):
+    """Le scelte che cambiano da un sistema all'altro, provate una per una.
+
+    Sono tutte scritte in modo da poter chiedere «e su Windows cosa faresti?»
+    da un Mac: la decisione e' separata dal farla davvero, cosi' si puo'
+    verificare senza avere il computer sotto mano.
+    """
+    from . import desktop as dk
+
+    # --- far vedere un file o una cartella ---
+    _check(r, 'Windows', 'sul Mac una cartella si APRE nel Finder, non si lancia',
+           dk.comando_apri('/x', 'darwin', cartella=True), ['open', '-a', 'Finder', '/x'])
+    _check(r, 'Windows', 'sul Mac un file si MOSTRA, non si apre',
+           dk.comando_apri('/x/y.pdf', 'darwin', cartella=False), ['open', '-R', '/x/y.pdf'])
+    _check(r, 'Windows', 'su Windows la cartella la apre Explorer',
+           dk.comando_apri('C:/a', 'win32', cartella=True), ['explorer', 'C:\\a'])
+    # senza spazio dopo la virgola, se no Explorer apre Documenti e buonanotte
+    _check(r, 'Windows', 'su Windows il file arriva evidenziato, «/select,» attaccato',
+           dk.comando_apri('C:/a/b.pdf', 'win32', cartella=False),
+           ['explorer', '/select,C:\\a\\b.pdf'])
+    _check(r, 'Windows', 'a Explorer non arrivano mai barre all’americana',
+           '/' in dk.comando_apri('C:/a/b.pdf', 'win32', cartella=False)[1].split(',', 1)[1],
+           False)
+    _check(r, 'Windows', 'altrove si apre la cartella che contiene il file',
+           dk.comando_apri('/x/y.pdf', 'linux', cartella=False), ['xdg-open', '/x'])
+
+    # --- dove finiscono le copie di sicurezza ---
+    mac = dk.cartella_backup('darwin', casa='/C')
+    _check(r, 'Windows', 'sul Mac le copie vanno su iCloud',
+           ('com~apple~CloudDocs' in mac, mac.endswith(dk.NOME_BACKUP)), (True, True))
+    con_nube = dk.cartella_backup('win32', casa='C:/u', esiste=lambda p: True,
+                                  ambiente={'OneDrive': 'C:/u/OneDrive'})
+    _check(r, 'Windows', 'su Windows le copie vanno su OneDrive, se c’è',
+           con_nube.startswith(os.path.join('C:/u/OneDrive', '')), True)
+    senza_nube = dk.cartella_backup('win32', casa='C:/u', ambiente={}, esiste=lambda p: False)
+    _check(r, 'Windows', 'senza OneDrive si ripiega su Documenti',
+           'Documents' in senza_nube, True)
+    # la variabile puo' esserci ancora e la cartella no: chi ha spento OneDrive
+    # se la ritroverebbe puntata su una cartella che non esiste, e il backup
+    # fallirebbe ogni volta in silenzio
+    _check(r, 'Windows', 'un OneDrive dichiarato ma sparito non si usa',
+           dk.cartella_backup('win32', casa='C:/u', esiste=lambda p: False,
+                              ambiente={'OneDrive': 'C:/u/OneDrive'}), senza_nube)
+    _check(r, 'Windows', 'anche l’OneDrive aziendale va bene',
+           dk.cartella_backup('win32', casa='C:/u', esiste=lambda p: True,
+                              ambiente={'OneDriveCommercial': 'C:/u/OneDrive - Ditta'}),
+           os.path.join('C:/u/OneDrive - Ditta', dk.NOME_BACKUP))
+
+    # --- e che nessuno scavalchi desktop.py ---
+    import ast as _ast
+    import glob as _glob
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    perc = ([os.path.join(base, 'app.py')]
+            + sorted(_glob.glob(os.path.join(base, 'core', '*.py'))))
+    lancia, a_mano = [], []
+    for p in perc:
+        nome = os.path.basename(p)
+        with io.open(p, encoding='utf-8') as f:
+            testo = f.read()
+        for nodo in _ast.walk(_ast.parse(testo)):
+            if isinstance(nodo, _ast.Import) and any(x.name == 'subprocess' for x in nodo.names):
+                lancia.append(nome)
+        # i file di collaudo no: qui quei percorsi ci sono per forza, scritti
+        # apposta per confrontarli
+        if 'selftest' not in nome and ('~/Library' in testo or 'Mobile Documents' in testo):
+            a_mano.append(nome)
+    _check(r, 'Windows', 'i comandi di sistema li lancia solo desktop.py',
+           sorted(set(lancia)), ['desktop.py'])
+    _check(r, 'Windows', 'i percorsi del Mac stanno solo dentro desktop.py',
+           sorted(set(a_mano)), ['desktop.py'])

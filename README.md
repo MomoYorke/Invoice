@@ -1,8 +1,8 @@
 # Invoice
 
 A local app to write invoices, keep them in a database, and produce both the
-package your accountant needs and the figures you need. Everything stays on
-your own Mac.
+package your accountant needs and the figures you need. It runs on **Mac and
+on Windows**, and everything stays on your own computer.
 
 Your business name, address, UID, IBAN and logo go in **Settings**: there is
 nothing personal inside the program itself, and what you type there is what
@@ -28,12 +28,23 @@ You can go back whenever you like, from that reminder.
 
 ## How to start it
 
-Double-click **`Start Invoice.command`**. The browser opens at
-`http://127.0.0.1:8471`. Leave the Terminal window open
-while you use the app (to stop it: Ctrl+C, or close the window).
+On a **Mac**, double-click **`Start Invoice.command`**.
+On **Windows**, double-click **`Start Invoice.bat`**.
 
-> The first time, macOS may ask for confirmation: right-click the file →
-> "Open" → "Open".
+Either way the browser opens at `http://127.0.0.1:8471`. Leave the window that
+came up with it open while you use the app (to stop it: Ctrl+C, or close the
+window).
+
+> The first time on a Mac, macOS may ask for confirmation: right-click the
+> file → "Open" → "Open".
+
+> On Windows, install **Python** first: it is the one thing Windows does not
+> bring by itself. Take it from
+> [python.org](https://www.python.org/downloads/) and tick **"Add python.exe
+> to PATH"** while installing. The launcher looks for it and says so plainly
+> if it is missing, instead of failing later with something unreadable.
+> Everything else — the libraries the app needs — it installs by itself the
+> first time, which takes a minute or two.
 
 > Coming from an older version, the data folders were named in Italian
 > (`Fatture`, `Esporti`, `Cestino`, `Estratti conto`). The app renames them to
@@ -61,7 +72,7 @@ To go back to the previous version, the number is in `data/.previous-version`:
 
     git reset --hard $(cat data/.previous-version)
 
-The Terminal window stays almost empty: two lines at startup and that is it.
+That window stays almost empty: two lines at startup and that is it.
 Nothing scrolls while you use the app, and there is no red warning to
 interpret. If something goes wrong the page says so, and the full trace ends up
 in `data/error.log`.
@@ -514,7 +525,11 @@ Two nets, not one.
 start and before every operation that could destroy data. It is there to take
 you back half an hour, not to survive a broken disk — it sits on the same disk.
 
-**Off the Mac** (iCloud Drive, folder *Fatture App - Backup*): two archives.
+**Off the computer**, in a folder that syncs itself somewhere else: iCloud
+Drive on a Mac, OneDrive on Windows, and *Documents* when neither is there. The
+folder is called *Invoice - Backup*; installations that started out in Italian
+keep the name they already had, *Fatture App - Backup*, because what is written
+in Settings always wins over the default. Two archives go in it.
 
 - `fatture-app-YYYYMMDD-hhmmss.zip` — database, session register and the PDFs
   in the `Invoices/` folder. Created at startup (once a day) and **after every
@@ -562,6 +577,11 @@ without risking your own.
 
 They used to be called `FATTURE_*`, and those names still work: a test script
 that uses them does not break on an update.
+
+One more diverts nothing: `INVOICE_OPEN_BROWSER=1` tells the app to open the
+browser itself, the moment it has taken the port. The Windows launcher uses it,
+because that is the only place that knows for sure the app is up; the Mac one
+waits and opens the browser on its own, the way it always has.
 
 `INVOICE_BACKUP` also takes precedence over the saved setting: a test app
 almost always starts from a copy of the real database, and without this it
