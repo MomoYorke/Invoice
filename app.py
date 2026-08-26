@@ -760,7 +760,8 @@ def fattura_email(inv_id):
                                altre=altre, scelte=scelte, modelli=mailer.MODELLI,
                                oggetti=oggetti, segnaposto_mese=mailer.SEGNAPOSTO_MESE,
                                corpo=corpo if corpo is not None
-                               else mailer.testo_modello(settings, msg['modello']))
+                               else mailer.testo_modello(settings, msg['modello'],
+                                                         msg['lingua']))
 
     if azione in ('prova', 'invia'):
         pausa = _pausa_smtp(settings)
@@ -917,9 +918,10 @@ def clienti():
     con.close()
     # come si chiudono le mail: si mostra il testo vero, non un esempio
     codice = lng.normalizza(st.get('lingua'))
-    saluti = {t: (mailer.saluto_di(st, t)
-                  or lng.t('(non ancora scritto)', codice)).strip()
-              for t in ('informale', 'formale')}
+    saluti = {lg: {t: (mailer.saluto_di(st, t, lg)
+                       or lng.t('(non ancora scritto)', codice)).strip()
+                   for t in ('informale', 'formale')}
+              for lg in db.LINGUE_MODELLI}
     return render_template('clienti.html', rows=rows, stats_c=stats_c, saluti=saluti)
 
 
@@ -985,7 +987,7 @@ def commercialista_genera():
     con = get_con()
     settings = db.get_settings(con)
     res = exports.build_package(con, year, settings, settings['source_folder'],
-                                _lingua_app())
+                                exports.lingua_pacchetto(settings, _lingua_app()))
     con.close()
     lg = _lingua_app()
     msg = lng.t('Pacchetto {anno} pronto: Excel + PDF riepilogo + {quante} fatture '
@@ -1690,9 +1692,7 @@ def impostazioni():
                 # password nuova: si riparte da zero, pausa compresa
                 db.set_setting(con, 'smtp_fallimenti', '0')
                 db.set_setting(con, 'smtp_pausa_fino', '')
-            elif k in ('email_body', 'email_corpo_coaching', 'email_corpo_pt',
-                       'email_saluto_informale', 'email_saluto_formale', 'servizi',
-                       'servizi_abbonamento', 'servizi_pacchetto'):
+            elif k in db.TESTI_INTOCCABILI:
                 # il testo va tenuto com'e': negli a capo in fondo a un saluto
                 # c'e' lo spazio prima della firma, e toglierli lo rovina
                 valore = valore.replace('\r\n', '\n')

@@ -40,8 +40,9 @@
             <span class="muted" style="font-size:11.5px">{{ _('È la lingua dei documenti che riceve lui, non quella con cui usi tu l’app.') }}</span>
             <label>{{ _('Come ti firmi con lui/lei') }}</label>
             <select name="tono">
-              <option value="informale" {{ 'selected' if c.tono != 'formale' }}>{{ _('Informale') }} — «{{ saluti.informale }}»</option>
-              <option value="formale" {{ 'selected' if c.tono == 'formale' }}>{{ _('Formale') }} — «{{ saluti.formale }}»</option>
+              {% set suoi = saluti.get(c.lingua) or saluti['en'] %}
+              <option value="informale" {{ 'selected' if c.tono != 'formale' }}>{{ _('Informale') }} — «{{ suoi.informale }}»</option>
+              <option value="formale" {{ 'selected' if c.tono == 'formale' }}>{{ _('Formale') }} — «{{ suoi.formale }}»</option>
             </select>
             <label style="font-weight:400"><input type="checkbox" name="abbonamento" value="1"
               {{ 'checked' if c.abbonamento }} style="width:auto"> {{ _('Abbonamento mensile (ordine permanente)') }}</label>

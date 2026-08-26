@@ -1100,6 +1100,27 @@ TESTI = {
         'Generato il {data} — UID {uid} — IBAN {iban}':
             'Generated on {data} — UID {uid} — IBAN {iban}',
 
+        # --- i modelli della mail, uno per lingua ---
+        'I modelli della mail':
+            'The email templates',
+        'Per tutti':
+            'For everyone',
+        'Come ti firmi':
+            'Your sign-off',
+        'Il testo delle mail lo scrivi tu, quindi l’app non può tradurlo: sono parole tue. Puoi però scriverne una versione per lingua, e l’app userà quella della lingua del cliente — è lui che la legge. Dove non scrivi niente vale quella «per tutti».':
+            'You write the email text yourself, so the app cannot translate it: those are your words. You can however write one version per language, and the app will use the one matching the client’s language — they are the one reading it. Where you write nothing, the «for everyone» one is used.',
+        'Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.':
+            'How the email is built. {firma} is where your sign-off goes: you write it once below and it never changes language.',
+        'Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.':
+            'Name, title, contacts: it goes at the end of every email, in place of {firma}. It sits outside the templates and is never translated, so a phone number stays a single one even if one day you write the templates in three languages.',
+
+        'Lingua del pacchetto':
+            'Package language',
+        'come l’app':
+            'same as the app',
+        'Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.':
+            'The register and the summary are read by whoever keeps your books, not by you: if you use the app in one language and they read another, pick theirs. The amounts never change.',
+
     },
     'de': {
         # --- Menü ---
@@ -2161,6 +2182,27 @@ TESTI = {
             'Rechnungsübersicht {anno} — für {nome} ({citta})',
         'Generato il {data} — UID {uid} — IBAN {iban}':
             'Erstellt am {data} — UID {uid} — IBAN {iban}',
+
+        # --- i modelli della mail, uno per lingua ---
+        'I modelli della mail':
+            'Die E-Mail-Vorlagen',
+        'Per tutti':
+            'Für alle',
+        'Come ti firmi':
+            'Deine Signatur',
+        'Il testo delle mail lo scrivi tu, quindi l’app non può tradurlo: sono parole tue. Puoi però scriverne una versione per lingua, e l’app userà quella della lingua del cliente — è lui che la legge. Dove non scrivi niente vale quella «per tutti».':
+            'Den Text der E-Mails schreibst du selbst, deshalb kann die App ihn nicht übersetzen: das sind deine Worte. Du kannst aber eine Fassung pro Sprache schreiben, und die App nimmt die Sprache der Kundin oder des Kunden — die lesen sie ja. Wo du nichts schreibst, gilt die Fassung «für alle».',
+        'Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.':
+            'Wie die E-Mail aufgebaut ist. {firma} ist der Platz deiner Signatur: du schreibst sie unten einmal, und sie wechselt nie die Sprache.',
+        'Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.':
+            'Name, Titel, Kontakte: steht am Ende jeder E-Mail, anstelle von {firma}. Sie liegt ausserhalb der Vorlagen und wird nie übersetzt, damit eine Telefonnummer eine einzige bleibt, auch wenn du die Vorlagen eines Tages in drei Sprachen schreibst.',
+
+        'Lingua del pacchetto':
+            'Sprache des Pakets',
+        'come l’app':
+            'wie die App',
+        'Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.':
+            'Das Register und die Übersicht liest, wer deine Buchhaltung führt, nicht du: Wenn du die App in einer Sprache nutzt und dort eine andere gelesen wird, wähle jene. Die Beträge ändern sich nie.',
 
     },
 }

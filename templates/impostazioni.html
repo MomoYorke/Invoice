@@ -1,3 +1,21 @@
+{% macro campo(settings, nome, suff, righe) %}
+  {%- if righe -%}
+  <textarea class="per-lingua" data-suff="{{ suff }}"{{ ' hidden' if suff }}
+            name="{{ nome }}{{ suff }}" rows="{{ righe }}"
+            style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
+            placeholder="{{ settings[nome] if suff }}">{{ settings[nome + suff] }}</textarea>
+  {%- else -%}
+  <input class="per-lingua" data-suff="{{ suff }}"{{ ' hidden' if suff }}
+         type="text" name="{{ nome }}{{ suff }}" value="{{ settings[nome + suff] }}"
+         placeholder="{{ settings[nome] if suff }}">
+  {%- endif -%}
+{% endmacro %}
+
+{% macro modello(settings, lingue, nome, righe=0) -%}
+  {{ campo(settings, nome, '', righe) }}
+  {%- for cod, _nome in lingue %}{{ campo(settings, nome, '_' + cod, righe) }}{% endfor -%}
+{%- endmacro %}
+
 {% extends 'base.html' %}
 {% block title %}{{ _('Impostazioni') }}{% endblock %}
 {% block content %}
@@ -22,6 +40,14 @@
       <label>{{ _('Termini di pagamento') }}</label><input type="text" name="terms" value="{{ settings.terms }}">
       <label>{{ _('Commercialista') }}</label><input type="text" name="accountant_name" value="{{ settings.accountant_name }}">
       <label>{{ _('Città commercialista') }}</label><input type="text" name="accountant_city" value="{{ settings.accountant_city }}">
+      <label>{{ _('Lingua del pacchetto') }}</label>
+      <select name="accountant_lingua">
+        <option value="">{{ _('come l’app') }}</option>
+        {% for cod, nome in lingue %}
+        <option value="{{ cod }}" {{ 'selected' if settings.accountant_lingua == cod }}>{{ nome }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted" style="font-size:12px;margin:-4px 0 8px">{{ _('Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.') }}</p>
     </div>
   </div>
   <label>{{ _('Servizi proposti sulla nuova fattura') }}</label>
@@ -148,24 +174,33 @@
       {{ 'checked' if settings.email_copia_a_me == '1' }} style="width:auto">
       {{ _('Mandane una copia nascosta anche a me (arriva nella posta in arrivo, il cliente non la vede)') }}</label>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">{{ _('I modelli della mail') }}</label>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Il testo delle mail lo scrivi tu, quindi l’app non può tradurlo: sono parole tue. Puoi però scriverne una versione per lingua, e l’app userà quella della lingua del cliente — è lui che la legge. Dove non scrivi niente vale quella «per tutti».') }}</p>
+      <div class="linguette">
+        <button type="button" class="linguetta attiva" data-suff="">{{ _('Per tutti') }}</button>
+        {% for cod, nome in lingue %}
+        <button type="button" class="linguetta" data-suff="_{{ cod }}">{{ nome }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">{{ _('I due oggetti') }}</label>
       <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('Uno per modello, scelto insieme al testo. Nell’abbonamento {mese} diventa il mese coperto dall’abbonamento ({a} se il periodo sta a cavallo di due mesi, {b} se no): l’app lo legge dal periodo scritto sulla fattura, e se manca riparte dall’ultima mail mandata a quella persona avanzando di un mese.').format(
            mese='<code>{mese}</code>', a='<code>Aug/Sept</code>', b='<code>Aug</code>') | safe }}</p>
       <label style="font-size:13px">{{ _('Abbonamento') }}</label>
-      <input type="text" name="email_oggetto_coaching" value="{{ settings.email_oggetto_coaching }}">
+      {{ modello(settings, lingue, 'email_oggetto_coaching') }}
       <label style="font-size:13px">{{ _('Pacchetto di sedute') }}</label>
-      <input type="text" name="email_oggetto_pt" value="{{ settings.email_oggetto_pt }}">
+      {{ modello(settings, lingue, 'email_oggetto_pt') }}
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">{{ _('I due modelli della frase centrale') }}</label>
       <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _("L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.") }}
         <br>{{ _('La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.') }}</p>
       <label style="font-size:13px">{{ _('Abbonamento — si rinnova ogni mese') }}</label>
-      <textarea name="email_corpo_coaching" rows="3"
-                style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_coaching }}</textarea>
+      {{ modello(settings, lingue, 'email_corpo_coaching', 3) }}
       <label style="font-size:13px">{{ _('Pacchetto di sedute — si compra una volta') }}</label>
-      <textarea name="email_corpo_pt" rows="3"
-                style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_pt }}</textarea>
+      {{ modello(settings, lingue, 'email_corpo_pt', 3) }}
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">{{ _('Come chiudi la mail') }}</label>
@@ -174,23 +209,31 @@
       <div class="form-grid">
         <div>
           <label style="font-size:13px">{{ _('Con chi ci si dà del tu') }}</label>
-          <textarea name="email_saluto_informale" rows="4"
-                    style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_saluto_informale }}</textarea>
+          {{ modello(settings, lingue, 'email_saluto_informale', 4) }}
         </div>
         <div>
           <label style="font-size:13px">{{ _('Con tutti gli altri') }}</label>
-          <textarea name="email_saluto_formale" rows="4"
-                    style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_saluto_formale }}</textarea>
+          {{ modello(settings, lingue, 'email_saluto_formale', 4) }}
         </div>
       </div>
     </div>
-    <label>{{ _('Modello del testo') }}</label>
-    <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Sotto {saluto} va la tua firma: scrivila qui com’è in fondo alle mail che mandi davvero.').format(
-         saluto='<code>{saluto}</code>') | safe }}</p>
-    <textarea name="email_body" rows="14" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_body }}</textarea>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">{{ _('Modello del testo') }}</label>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.').format(
+           firma='<code>{firma}</code>') | safe }}</p>
+      {{ modello(settings, lingue, 'email_body', 12) }}
+    </div>
     <p class="muted" style="font-size:12px">{{ _('Segnaposti:') }} <code>{mese}</code> <code>{nome}</code> <code>{numero}</code>
        <code>{totale}</code> <code>{servizio}</code> <code>{apertura}</code>
-       <code>{riga_abbonamento}</code> <code>{corpo}</code> <code>{saluto}</code></p>
+       <code>{riga_abbonamento}</code> <code>{corpo}</code> <code>{saluto}</code> <code>{firma}</code></p>
+
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <label style="margin-bottom:2px">{{ _('Come ti firmi') }}</label>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.').format(
+           firma='<code>{firma}</code>') | safe }}</p>
+      <textarea name="email_firma" rows="7"
+                style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_firma }}</textarea>
+    </div>
     <button class="btn mt">{{ _('Salva') }}</button>
   </form>
 </div>
@@ -243,4 +286,19 @@
   </table>
   {% endif %}
 </div>
+<script>
+// Le linguette non mandano niente al server: mostrano e nascondono i campi
+// che stanno gia' tutti nel modulo, cosi' «Salva» salva tutte le lingue
+// insieme e non si perde quello scritto in una linguetta non aperta.
+document.querySelectorAll('.linguetta').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('.linguetta').forEach(function (x) {
+      x.classList.toggle('attiva', x === b);
+    });
+    document.querySelectorAll('.per-lingua').forEach(function (c) {
+      c.hidden = c.dataset.suff !== b.dataset.suff;
+    });
+  });
+});
+</script>
 {% endblock %}

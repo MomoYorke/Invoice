@@ -285,6 +285,16 @@ def _nome_copia(inv, src):
     return ('#%s %s' % (inv['number'], nome)).strip() + '.pdf'
 
 
+def lingua_pacchetto(settings, lingua_app):
+    """In che lingua esce il pacchetto.
+
+    Non e' la lingua dell'app: il registro lo legge chi tiene la contabilita'.
+    Di solito le due coincidono e non c'e' niente da scegliere; quando non
+    coincidono vince quella scritta apposta.
+    """
+    return settings.get('accountant_lingua') or lingua_app
+
+
 def build_package(con, year, settings, source_root, lingua=None):
     """Crea la cartella Esporti/Commercialista_YYYY con Excel, PDF riepilogo,
     copie delle fatture PDF e uno zip pronto da mandare."""
