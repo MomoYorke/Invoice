@@ -158,7 +158,8 @@
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">{{ _('I due modelli della frase centrale') }}</label>
-      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _("L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.") }}</p>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _("L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.") }}
+        <br>{{ _('La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.') }}</p>
       <label style="font-size:13px">{{ _('Abbonamento — si rinnova ogni mese') }}</label>
       <textarea name="email_corpo_coaching" rows="3"
                 style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_corpo_coaching }}</textarea>

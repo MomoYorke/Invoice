@@ -1063,6 +1063,9 @@ TESTI = {
         'Il tuo cognome': 'Your surname',
         'Servono solo perché l’app sappia come chiamarti. Sulle fatture va il nome dell’attività, qui sotto.':
             'They are only so the app knows what to call you. On invoices goes the business name, below.',
+        'La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.':
+            'The app writes the standing-order sentence by itself, already translated, for clients ticked «Monthly subscription» on their card: write it here too and the email will say it twice.',
+
     },
     'de': {
         # --- Menü ---
@@ -2088,6 +2091,9 @@ TESTI = {
         'Il tuo cognome': 'Dein Nachname',
         'Servono solo perché l’app sappia come chiamarti. Sulle fatture va il nome dell’attività, qui sotto.':
             'Sie sind nur dafür da, dass die App weiss, wie sie dich ansprechen soll. Auf die Rechnungen kommt der Name der Tätigkeit, weiter unten.',
+        'La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.':
+            'Den Satz zum Dauerauftrag schreibt die App von selbst, bereits übersetzt, bei Kundinnen und Kunden mit dem Häkchen «Monatsabo» in ihrer Karte: schreibst du ihn auch hier, steht er zweimal in der E-Mail.',
+
     },
 }
 

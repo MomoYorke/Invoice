@@ -1828,6 +1828,7 @@ def _test_intestatario(r):
 
 def _test_banca(r):
     _test_intestatario(r)
+    _test_pacchetto(r)
     """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     import os
     import sqlite3
@@ -1985,3 +1986,81 @@ def _test_banca(r):
 
     import shutil
     shutil.rmtree(cartella, ignore_errors=True)
+
+
+def _test_pacchetto(r):
+    """Il PDF che finisce nel pacchetto e' quello di quella fattura li'.
+
+    Nell'archivio storico lo stesso documento ha due nomi (Word e PDF) che non
+    coincidono, e una rinumerazione lascia sul disco due file con lo stesso
+    numero intestati a due persone diverse. Sbagliare qui vuol dire mandare
+    alla commercialista la fattura di uno col numero di un altro.
+    """
+    import shutil
+    import tempfile
+    from . import exports as E
+
+    cartella = tempfile.mkdtemp(prefix='prova-pacchetto-')
+    def crea(*nomi):
+        for n in nomi:
+            with io.open(os.path.join(cartella, n), 'w', encoding='utf-8') as f:
+                f.write('x')
+    def gemello(nome):
+        t = E.pdf_gemello(os.path.join(cartella, nome))
+        return os.path.basename(t) if t else None
+
+    # la rinumerazione: la #58 di uno e' diventata #59, ma sul disco si chiama
+    # ancora 58, e nella stessa cartella c'e' la vera #58 di un'altra persona
+    crea('Sofia #58.docx', 'Sofia ^N58.pdf',
+         'Caio Bianchi#58.docx', 'Caio Bianchi^N58.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'con due «58» di due persone, ognuna prende il proprio PDF',
+           (gemello('Sofia #58.docx'), gemello('Caio Bianchi#58.docx')),
+           ('Sofia ^N58.pdf', 'Caio Bianchi^N58.pdf'))
+
+    # I segni che l'archivio mette davanti al numero, tutti diversi. Ogni
+    # numero ha apposta un secondo PDF intestato a un altro: se no il PDF
+    # giusto si troverebbe solo perche' e' l'unico con quel numero, e questo
+    # test non direbbe niente sui segni.
+    crea('Tizio R #38.docx', 'Tizio R ^LN38.pdf', 'Anna B #38.docx', 'Anna B ^N38.pdf',
+         'Marta L #33.docx', 'Marta L ^33.pdf', 'Anna B #33.docx', 'Anna B ^N33.pdf',
+         'Sofia #37.docx', 'Sofia#37.pdf', 'Anna B #37.docx', 'Anna B ^N37.pdf',
+         'Marta L_47.docx', 'Marta L_47.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'il PDF si trova anche se il segno davanti al numero cambia',
+           (gemello('Tizio R #38.docx'), gemello('Marta L #33.docx'),
+            gemello('Sofia #37.docx'), gemello('Marta L_47.docx')),
+           ('Tizio R ^LN38.pdf', 'Marta L ^33.pdf',
+            'Sofia#37.pdf', 'Marta L_47.pdf'))
+
+    # la #6 non deve prendersi il PDF della #56
+    crea('Tizio #6.docx', 'Tizio ^N56.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'la #6 non si prende il PDF della #56', gemello('Tizio #6.docx'), None)
+
+    # nome diverso ma un solo PDF con quel numero: non c'e' da sbagliarsi
+    crea('Caio #91.docx', 'Caio Bianchi ^N91.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'se il PDF con quel numero è uno solo, il nome può essere diverso',
+           gemello('Caio #91.docx'), 'Caio Bianchi ^N91.pdf')
+
+    # nome diverso e due candidati: meglio nessun PDF che quello sbagliato
+    crea('Tizia #92.docx', 'Alfa ^N92.pdf', 'Beta ^N92.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'nel dubbio fra due PDF non ne sceglie nessuno',
+           gemello('Tizia #92.docx'), None)
+
+    shutil.rmtree(cartella, ignore_errors=True)
+
+    # dentro il pacchetto il nome del file combacia col registro: e' l'unico
+    # modo per ritrovare la riga giusta guardando il PDF
+    _check(r, 'Pacchetto commercialista',
+           'la copia porta il numero della fattura, non quello del file vecchio',
+           E._nome_copia(_Finta(number=59, client_name='Sofia Ferrari'),
+                         '/x/Sofia ^N58.pdf'),
+           '#59 Sofia Ferrari.pdf')
+    _check(r, 'Pacchetto commercialista',
+           'una fattura senza numero tiene il nome che ha',
+           E._nome_copia(_Finta(number=None, client_name='Marta L'),
+                         '/x/Marta 16.01.24.pdf'),
+           'Marta 16.01.24.pdf')
