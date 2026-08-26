@@ -984,7 +984,8 @@ def commercialista_genera():
     year = request.form.get('anno', type=int)
     con = get_con()
     settings = db.get_settings(con)
-    res = exports.build_package(con, year, settings, settings['source_folder'])
+    res = exports.build_package(con, year, settings, settings['source_folder'],
+                                _lingua_app())
     con.close()
     lg = _lingua_app()
     msg = lng.t('Pacchetto {anno} pronto: Excel + PDF riepilogo + {quante} fatture '

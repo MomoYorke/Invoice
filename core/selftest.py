@@ -1829,6 +1829,7 @@ def _test_intestatario(r):
 def _test_banca(r):
     _test_intestatario(r)
     _test_pacchetto(r)
+    _test_pacchetto_lingua(r)
     """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     import os
     import sqlite3
@@ -2064,3 +2065,70 @@ def _test_pacchetto(r):
            E._nome_copia(_Finta(number=None, client_name='Marta L'),
                          '/x/Marta 16.01.24.pdf'),
            'Marta 16.01.24.pdf')
+
+
+def _test_pacchetto_lingua(r):
+    """Il pacchetto per la commercialista parla la lingua dell'app.
+
+    Le cifre no: quelle non cambiano mai lingua, e questo va provato, perche'
+    un registro che cambia i totali quando cambi lingua sarebbe un disastro
+    silenzioso.
+    """
+    import sqlite3
+    import tempfile
+    import openpyxl
+    from . import exports as E
+    from . import lingua as L
+    from . import db as _db
+    from .db import SCHEMA
+
+    _check(r, 'Pacchetto commercialista',
+           'i mesi dell’elenco tengono la maiuscola, quelli da frase no',
+           (L.mesi_elenco('it')[0], L.mesi_app('it')[0]), ('Gennaio', 'gennaio'))
+    _check(r, 'Pacchetto commercialista', 'e cambiano con la lingua dell’app',
+           (L.mesi_elenco('en')[0], L.mesi_elenco('de')[0]), ('January', 'Januar'))
+
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(SCHEMA)
+    _db._migrate(con)
+    con.execute("""INSERT INTO invoices(number, client_name, date, year, total_cents,
+                                        status) VALUES(?,?,?,?,?,?)""",
+                (1, 'Sofia Ferrari', '2026-01-15', 2026, 180000, 'pagata'))
+    con.commit()
+    impostazioni = dict(_db.DEFAULT_SETTINGS, business_name='Studio Prova',
+                        accountant_name='Anna Rossi', accountant_city='Zurigo',
+                        business_uid='CHE-000.000.000', business_iban='CH00')
+
+    cartella = tempfile.mkdtemp(prefix='prova-registro-')
+    letto = {}
+    for lg in ('it', 'de'):
+        p = os.path.join(cartella, lg + '.xlsx')
+        E.build_excel(con, 2026, p, impostazioni, lg)
+        wb = openpyxl.load_workbook(p)
+        ws = wb[wb.sheetnames[0]]
+        letto[lg] = {
+            'foglio': wb.sheetnames[0],
+            'intestazioni': [ws.cell(row=4, column=i).value for i in range(1, 7)],
+            'stato': ws.cell(row=5, column=6).value,
+            'importo': ws.cell(row=5, column=5).value,
+            'numero': ws.cell(row=5, column=1).value,
+        }
+    con.close()
+    import shutil
+    shutil.rmtree(cartella, ignore_errors=True)
+
+    _check(r, 'Pacchetto commercialista', 'in italiano il registro resta com’era',
+           (letto['it']['foglio'], letto['it']['intestazioni'][0],
+            letto['it']['intestazioni'][4], letto['it']['stato']),
+           ('Registro fatture', 'Nr.', 'Importo CHF', 'pagata'))
+    _check(r, 'Pacchetto commercialista', 'in tedesco parla tedesco, anche lo stato',
+           (letto['de']['foglio'], letto['de']['intestazioni'][1],
+            letto['de']['intestazioni'][4], letto['de']['stato']),
+           ('Rechnungsregister', 'Datum', 'Betrag CHF', 'bezahlt'))
+    _check(r, 'Pacchetto commercialista',
+           'i soldi e il numero della fattura non cambiano lingua',
+           (letto['it']['importo'], letto['de']['importo'],
+            letto['it']['numero'], letto['de']['numero']),
+           (1800.0, 1800.0, '#1', '#1'))
+
