@@ -1836,6 +1836,7 @@ def _test_banca(r):
     _test_pacchetto_lingua(r)
     _test_modelli_lingua(r)
     _test_cartelle(r)
+    _test_avviatore(r)
     """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     import os
     import sqlite3
@@ -2327,4 +2328,44 @@ def _test_cartelle(r):
     _check(r, 'Cartelle', 'ma il nome nuovo passa davanti',
            _db.env('INVOICE_PROVA', 'FATTURE_PROVA'), 'nuovo')
     del os.environ['FATTURE_PROVA'], os.environ['INVOICE_PROVA']
+
+
+def _test_avviatore(r):
+    """L'avviatore sa distinguere i quattro modi in cui una copia puo' stare
+    rispetto a quella pubblicata.
+
+    Quello che conta e' «diverged»: succede quando la storia pubblicata viene
+    riscritta, e senza quel ramo l'app di chi ha la copia vecchia smetterebbe
+    di aggiornarsi PER SEMPRE, e in silenzio — perche' la regola «solo in
+    avanti» non sarebbe mai piu' vera. Qui si controlla che i quattro casi
+    siano ancora tutti previsti; che facciano la cosa giusta e' stato provato
+    su repository veri, e si rifa' cosi' se qualcuno tocca l'avviatore.
+    """
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    perc = os.path.join(base, 'Start Invoice.command')
+    try:
+        with io.open(perc, encoding='utf-8') as f:
+            testo = f.read()
+    except OSError:
+        testo = ''
+    _check(r, 'Avviatore', 'l’avviatore c’è e si chiama in inglese',
+           bool(testo), True)
+    # due controlli e non uno: la prima volta ne avevo scritto uno solo, che
+    # accettava «o lo sa dire o lo sa trattare» — e restava verde anche
+    # togliendo del tutto il caso dalla funzione che lo decide
+    _check(r, 'Avviatore', 'sa dire tutti e quattro i casi',
+           sorted(c for c in ('none', 'forward', 'ahead', 'diverged')
+                  if 'echo %s' % c in testo),
+           ['ahead', 'diverged', 'forward', 'none'])
+    _check(r, 'Avviatore', 'e sa cosa fare per ognuno',
+           ('none|ahead)' in testo, 'forward)' in testo, 'diverged)' in testo),
+           (True, True, True))
+    # servono tutt'e due i confronti: con uno solo «piu' avanti» e «storia
+    # riscritta» si confonderebbero, e a una copia piu' avanti non si tocca
+    _check(r, 'Avviatore', 'guarda la parentela nei due versi',
+           testo.count('merge-base --is-ancestor'), 2)
+    _check(r, 'Avviatore', 'una storia riscritta non aggiorna di nascosto: chiede',
+           'Line up with the published version?' in testo, True)
+    _check(r, 'Avviatore', 'e prima di sostituire i file fa una copia dei dati',
+           "backup.make_backup('prima-aggiornamento')" in testo, True)
 
