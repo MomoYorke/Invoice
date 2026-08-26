@@ -83,43 +83,85 @@ check_for_updates() {
   here=$(git rev-parse HEAD 2>/dev/null)
   out_there=$(git rev-parse origin/HEAD 2>/dev/null || git rev-parse origin/main 2>/dev/null)
   [ -n "$out_there" ] || return
-  [ "$here" = "$out_there" ] && return
-  # forwards only: if this copy is ahead of the repository, leave it alone
-  git merge-base --is-ancestor "$here" "$out_there" 2>/dev/null || return
 
-  echo ""
-  echo "  ┌─ There is a new version of the app ───────────────────────"
-  git log --format='  │  · %s' "$here..$out_there" 2>/dev/null | head -8
-  echo "  └───────────────────────────────────────────────────────────"
+  case "$(update_kind "$here" "$out_there")" in
+    none|ahead) return ;;
+    forward)
+      echo ""
+      echo "  ┌─ There is a new version of the app ───────────────────────"
+      git log --format='  │  · %s' "$here..$out_there" 2>/dev/null | head -8
+      echo "  └───────────────────────────────────────────────────────────"
+      warn_local_changes
+      ask_and_apply "  Install it?" "$here" "$out_there" || return
+      ;;
+    diverged)
+      # The published history was rewritten (old commits replaced by new ones
+      # holding the same work). This copy still has the old ones, so «only
+      # forwards» would never be true again and the app would quietly stop
+      # updating for good. Better to say so and offer to line back up.
+      echo ""
+      echo "  ┌─ This copy no longer lines up with the published one ─────"
+      echo "  │  The history was rewritten, so your version and the"
+      echo "  │  published one no longer share the same commits."
+      echo "  │  Lining up replaces the program files with the published"
+      echo "  │  ones. YOUR DATA IS NOT TOUCHED: database, invoices,"
+      echo "  │  statements and backups live outside the repository."
+      echo "  └───────────────────────────────────────────────────────────"
+      warn_local_changes
+      ask_and_apply "  Line up with the published version?" "$here" "$out_there" || return
+      ;;
+  esac
+}
 
-  if [ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]; then
-    echo "  WARNING: you have modified some program files. Updating will"
-    echo "  lose those changes. (Your data is not involved.)"
+# What separates this copy from the published one. Four answers, because the
+# wrong thing to do differs in each case:
+#   none      same commit: nothing to do
+#   forward   the usual case, a newer version exists
+#   ahead     this copy has work the repository does not: never touch it
+#   diverged  the published history was rewritten: neither contains the other
+update_kind() {
+  local here=$1 out_there=$2
+  [ "$here" = "$out_there" ] && { echo none; return; }
+  if git merge-base --is-ancestor "$here" "$out_there" 2>/dev/null; then
+    echo forward
+  elif git merge-base --is-ancestor "$out_there" "$here" 2>/dev/null; then
+    echo ahead
+  else
+    echo diverged
   fi
+}
 
-  echo -n "  Install it? [Enter = yes, n = not now] "
-  local answer
+warn_local_changes() {
+  [ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ] || return
+  echo "  WARNING: you have modified some program files. Going ahead will"
+  echo "  lose those changes. (Your data is not involved.)"
+}
+
+# Asks, and if the answer is yes replaces the program files. Backs the data up
+# first, and writes down where we were, so there is always a way back.
+ask_and_apply() {
+  local question=$1 here=$2 target=$3 answer
+  echo -n "$question [Enter = yes, n = not now] "
   if ! read -t 120 -r answer; then
     echo ""; echo "  No answer: starting the version you already have."
-    return
+    return 1
   fi
   case "$answer" in
-    [nN]*) echo "  All right, I will offer it again next time."; return ;;
+    [nN]*) echo "  All right, I will offer it again next time."; return 1 ;;
   esac
 
-  # back up the data BEFORE touching the program
   if [ -x "venv/bin/python" ]; then
     ./venv/bin/python -c "from core import backup; backup.make_backup('prima-aggiornamento')" \
       >/dev/null 2>&1 && echo "  Data backup: done."
   fi
-  echo "$here" > data/.previous-version     # to go back, if it comes to that
+  mkdir -p data && echo "$here" > data/.previous-version
 
-  if git reset --hard --quiet "$out_there" 2>/dev/null; then
-    echo "  Updated."
+  if git reset --hard --quiet "$target" 2>/dev/null; then
+    echo "  Done."
     # if the libraries changed, the environment rebuilds itself just below
     venv_ok || { echo "  New libraries needed:"; build_environment; }
   else
-    echo "  The update did not go through: starting the version you have."
+    echo "  It did not go through: starting the version you have."
   fi
 }
 check_for_updates
