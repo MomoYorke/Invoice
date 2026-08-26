@@ -1476,6 +1476,30 @@ def _test_calendario(r):
            'Allenamenti')
     _check(r, 'Calendario', 'un calendario senza nome non ne inventa uno',
            C.nome('BEGIN:VCALENDAR\nEND:VCALENDAR'), '')
+
+    # --- il fuso orario, che su Windows non c'e' di serie ---
+    # Un DTSTART che finisce per Z e' in UTC e va riportato all'ora di Zurigo.
+    # Serve il database dei fusi: il Mac e Linux ce l'hanno di sistema, Windows
+    # NO. Senza, «FUSO» resta None e l'ora torna in UTC senza dirlo: una
+    # sessione delle 07:30 comparirebbe alle 05:30. Un errore che non si vede.
+    _check(r, 'Calendario', 'un orario in UTC diventa l’ora di Zurigo (estate, +2)',
+           C._ora('20260414T053000Z'), '07:30')
+    _check(r, 'Calendario', 'e d’inverno +1',
+           C._ora('20260114T053000Z'), '06:30')
+    _check(r, 'Calendario', 'un orario già locale non si tocca',
+           C._ora('20260414T073000'), '07:30')
+    _check(r, 'Calendario', 'il fuso c’è davvero, non si è ripiegato sul niente',
+           C.FUSO is not None, True)
+    # Questo e' l'unico che protegge Windows: qui il fuso funziona comunque,
+    # perche' il database ce l'ha il sistema. Su Windows arriva solo se
+    # «tzdata» resta fra le librerie richieste — e questo lo si vede solo
+    # guardando il file, non facendo girare il programma.
+    _requisiti = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'requirements.txt')
+    with io.open(_requisiti, encoding='utf-8') as _f:
+        _elenco = _f.read()
+    _check(r, 'Calendario', 'e su Windows ci arriva, perché «tzdata» è fra le librerie',
+           any(x.strip().startswith('tzdata') for x in _elenco.splitlines()), True)
     _check(r, 'Calendario', 'il nome si legge anche se la riga e\' spezzata in due',
            C.nome('BEGIN:VCALENDAR\nX-WR-CALNAME:Alle\n namenti PT\nEND:VCALENDAR'),
            'Allenamenti PT')
