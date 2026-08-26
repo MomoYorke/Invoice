@@ -1066,6 +1066,40 @@ TESTI = {
         'La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.':
             'The app writes the standing-order sentence by itself, already translated, for clients ticked «Monthly subscription» on their card: write it here too and the email will say it twice.',
 
+        # --- il pacchetto per la commercialista ---
+        'Registro fatture':
+            'Invoice register',
+        'Registro fatture {anno}':
+            'Invoice register {anno}',
+        'Generato il {data} — importi in CHF':
+            'Generated on {data} — amounts in CHF',
+        'Importo CHF':
+            'Amount CHF',
+        'importo da verificare':
+            'amount to be checked',
+        'Controllo (calcolo interno esatto):':
+            'Check (exact internal calculation):',
+        'Riepilogo mensile':
+            'Monthly summary',
+        'Riepilogo mensile {anno}':
+            'Monthly summary {anno}',
+        'Mese':
+            'Month',
+        'Fatturato CHF':
+            'Revenue CHF',
+        'N. fatture':
+            'No. of invoices',
+        'Trimestre':
+            'Quarter',
+        'Per cliente':
+            'By client',
+        'Fatturato per cliente {anno}':
+            'Revenue by client {anno}',
+        'Riepilogo fatture {anno} — per {nome} ({citta})':
+            'Invoice summary {anno} — for {nome} ({citta})',
+        'Generato il {data} — UID {uid} — IBAN {iban}':
+            'Generated on {data} — UID {uid} — IBAN {iban}',
+
     },
     'de': {
         # --- Menü ---
@@ -2094,6 +2128,40 @@ TESTI = {
         'La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.':
             'Den Satz zum Dauerauftrag schreibt die App von selbst, bereits übersetzt, bei Kundinnen und Kunden mit dem Häkchen «Monatsabo» in ihrer Karte: schreibst du ihn auch hier, steht er zweimal in der E-Mail.',
 
+        # --- il pacchetto per la commercialista ---
+        'Registro fatture':
+            'Rechnungsregister',
+        'Registro fatture {anno}':
+            'Rechnungsregister {anno}',
+        'Generato il {data} — importi in CHF':
+            'Erstellt am {data} — Beträge in CHF',
+        'Importo CHF':
+            'Betrag CHF',
+        'importo da verificare':
+            'Betrag zu prüfen',
+        'Controllo (calcolo interno esatto):':
+            'Kontrolle (exakte interne Berechnung):',
+        'Riepilogo mensile':
+            'Monatsübersicht',
+        'Riepilogo mensile {anno}':
+            'Monatsübersicht {anno}',
+        'Mese':
+            'Monat',
+        'Fatturato CHF':
+            'Umsatz CHF',
+        'N. fatture':
+            'Anz. Rechnungen',
+        'Trimestre':
+            'Quartal',
+        'Per cliente':
+            'Nach Kunde',
+        'Fatturato per cliente {anno}':
+            'Umsatz nach Kunde {anno}',
+        'Riepilogo fatture {anno} — per {nome} ({citta})':
+            'Rechnungsübersicht {anno} — für {nome} ({citta})',
+        'Generato il {data} — UID {uid} — IBAN {iban}':
+            'Erstellt am {data} — UID {uid} — IBAN {iban}',
+
     },
 }
 
@@ -2235,6 +2303,15 @@ def mesi_app(lingua=None):
 def mesi_doc(lingua=None):
     """I dodici nomi di mese nella lingua del cliente."""
     return MESI_DOC[normalizza_doc(lingua)]
+
+
+def mesi_elenco(lingua=None):
+    """I dodici mesi nella lingua dell'APP, come voci di un elenco.
+
+    Diversi da mesi_app(): quelli vanno dentro una frase e in italiano sono
+    minuscoli, questi sono etichette per conto loro e vogliono la maiuscola.
+    """
+    return MESI_DOC[normalizza(lingua)]
 
 
 def mancanti_doc(lingua):

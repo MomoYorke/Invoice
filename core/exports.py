@@ -23,13 +23,11 @@ from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph,
 from reportlab.lib.styles import getSampleStyleSheet
 
 from . import stats
+from . import lingua as L
 from .money import fmt_chf
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXPORT_DIR = os.path.join(APP_DIR, 'Esporti')
-
-MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
 
 HDR_FILL = PatternFill('solid', fgColor='1F4E5F')
 HDR_FONT = Font(bold=True, color='FFFFFF')
@@ -47,17 +45,25 @@ def _sheet_header(ws, row, headers, widths):
         ws.column_dimensions[get_column_letter(i)].width = w
 
 
-def build_excel(con, year, out_path, settings):
+def build_excel(con, year, out_path, settings, lingua=None):
+    def t(frase, **valori):
+        """La frase nella lingua dell'app, coi buchi gia' riempiti."""
+        testo = L.t(frase, lingua)
+        return testo.format(**valori) if valori else testo
+
+    mesi = L.mesi_elenco(lingua)
+    oggi = datetime.date.today().strftime('%d.%m.%Y')
     wb = openpyxl.Workbook()
 
     # ---- Registro fatture ----
     ws = wb.active
-    ws.title = 'Registro fatture'
-    ws['A1'] = f"{settings['business_name']} — Registro fatture {year}"
+    ws.title = t('Registro fatture')
+    ws['A1'] = f"{settings['business_name']} — " + t('Registro fatture {anno}', anno=year)
     ws['A1'].font = Font(bold=True, size=14)
-    ws['A2'] = f"Generato il {datetime.date.today().strftime('%d.%m.%Y')} — importi in CHF"
+    ws['A2'] = t('Generato il {data} — importi in CHF', data=oggi)
     ws['A2'].font = Font(italic=True, size=9)
-    _sheet_header(ws, 4, ['Nr.', 'Data', 'Cliente', 'Descrizione', 'Importo CHF', 'Stato'],
+    _sheet_header(ws, 4, [t('Nr.'), t('Data'), t('Cliente'), t('Descrizione'),
+                          t('Importo CHF'), t('Stato')],
                   [8, 12, 26, 52, 14, 12])
     invs = con.execute(
         'SELECT * FROM invoices WHERE year=? AND deleted_at IS NULL ORDER BY COALESCE(number, 0), date', (year,)).fetchall()
@@ -79,24 +85,25 @@ def build_excel(con, year, out_path, settings):
         c.number_format = NUMFMT
         if inv['total_cents'] is None:
             ws.cell(row=r, column=4).value = ((ws.cell(row=r, column=4).value or '')
-                                              + ' [importo da verificare]').strip()
-        ws.cell(row=r, column=6, value=inv['status'])
+                                              + ' [' + t('importo da verificare') + ']').strip()
+        ws.cell(row=r, column=6, value=t(inv['status']))
         for col in range(1, 7):
             ws.cell(row=r, column=col).border = THIN
         r += 1
-    ws.cell(row=r, column=4, value='TOTALE').font = BOLD
+    ws.cell(row=r, column=4, value=t('TOTALE')).font = BOLD
     tc = ws.cell(row=r, column=5, value=f'=SUM(E{first_data}:E{r - 1})')
     tc.number_format = NUMFMT
     tc.font = BOLD
     total_exact = sum(i['total_cents'] or 0 for i in invs)
-    ws.cell(row=r + 1, column=4, value='Controllo (calcolo interno esatto):').font = Font(italic=True, size=9)
+    ws.cell(row=r + 1, column=4,
+            value=t('Controllo (calcolo interno esatto):')).font = Font(italic=True, size=9)
     ws.cell(row=r + 1, column=5, value=fmt_chf(total_exact)).font = Font(italic=True, size=9)
 
     # ---- Riepilogo mensile / trimestrale ----
-    ws2 = wb.create_sheet('Riepilogo mensile')
-    ws2['A1'] = f'Riepilogo mensile {year}'
+    ws2 = wb.create_sheet(t('Riepilogo mensile'))
+    ws2['A1'] = t('Riepilogo mensile {anno}', anno=year)
     ws2['A1'].font = Font(bold=True, size=14)
-    _sheet_header(ws2, 3, ['Mese', 'Fatturato CHF', 'N. fatture'], [16, 16, 12])
+    _sheet_header(ws2, 3, [t('Mese'), t('Fatturato CHF'), t('N. fatture')], [16, 16, 12])
     months = stats.monthly(con, year)
     counts = [0] * 12
     for inv in invs:
@@ -104,31 +111,32 @@ def build_excel(con, year, out_path, settings):
             counts[int(inv['date'][5:7]) - 1] += 1
     rr = 4
     for m in range(12):
-        ws2.cell(row=rr, column=1, value=MESI[m])
+        ws2.cell(row=rr, column=1, value=mesi[m])
         c = ws2.cell(row=rr, column=2, value=months[m] / 100)
         c.number_format = NUMFMT
         ws2.cell(row=rr, column=3, value=counts[m])
         rr += 1
-    ws2.cell(row=rr, column=1, value='TOTALE').font = BOLD
+    ws2.cell(row=rr, column=1, value=t('TOTALE')).font = BOLD
     c = ws2.cell(row=rr, column=2, value=f'=SUM(B4:B{rr - 1})')
     c.number_format = NUMFMT
     c.font = BOLD
     ws2.cell(row=rr, column=3, value=f'=SUM(C4:C{rr - 1})').font = BOLD
     rr += 2
-    _sheet_header(ws2, rr, ['Trimestre', 'Fatturato CHF', ''], [16, 16, 12])
+    _sheet_header(ws2, rr, [t('Trimestre'), t('Fatturato CHF'), ''], [16, 16, 12])
     rr += 1
     for q in range(4):
         tot_q = sum(months[q * 3:q * 3 + 3])
-        ws2.cell(row=rr, column=1, value=f'Q{q + 1} ({MESI[q * 3][:3]}–{MESI[q * 3 + 2][:3]})')
+        ws2.cell(row=rr, column=1,
+                 value=f'Q{q + 1} ({mesi[q * 3][:3]}–{mesi[q * 3 + 2][:3]})')
         c = ws2.cell(row=rr, column=2, value=tot_q / 100)
         c.number_format = NUMFMT
         rr += 1
 
     # ---- Per cliente ----
-    ws3 = wb.create_sheet('Per cliente')
-    ws3['A1'] = f'Fatturato per cliente {year}'
+    ws3 = wb.create_sheet(t('Per cliente'))
+    ws3['A1'] = t('Fatturato per cliente {anno}', anno=year)
     ws3['A1'].font = Font(bold=True, size=14)
-    _sheet_header(ws3, 3, ['Cliente', 'Fatturato CHF', 'N. fatture'], [30, 16, 12])
+    _sheet_header(ws3, 3, [t('Cliente'), t('Fatturato CHF'), t('N. fatture')], [30, 16, 12])
     rr = 4
     for name, tot, n in stats.by_client(con, year):
         ws3.cell(row=rr, column=1, value=name)
@@ -136,7 +144,7 @@ def build_excel(con, year, out_path, settings):
         c.number_format = NUMFMT
         ws3.cell(row=rr, column=3, value=n)
         rr += 1
-    ws3.cell(row=rr, column=1, value='TOTALE').font = BOLD
+    ws3.cell(row=rr, column=1, value=t('TOTALE')).font = BOLD
     c = ws3.cell(row=rr, column=2, value=f'=SUM(B4:B{rr - 1})')
     c.number_format = NUMFMT
     c.font = BOLD
@@ -145,34 +153,44 @@ def build_excel(con, year, out_path, settings):
     return out_path
 
 
-def build_summary_pdf(con, year, out_path, settings):
+def build_summary_pdf(con, year, out_path, settings, lingua=None):
+    def t(frase, **valori):
+        """La frase nella lingua dell'app, coi buchi gia' riempiti."""
+        testo = L.t(frase, lingua)
+        return testo.format(**valori) if valori else testo
+
+    mesi = L.mesi_elenco(lingua)
     styles = getSampleStyleSheet()
     doc = SimpleDocTemplate(out_path, pagesize=A4,
                             leftMargin=2 * cm, rightMargin=2 * cm,
                             topMargin=2 * cm, bottomMargin=2 * cm)
     story = []
     story.append(Paragraph(f"{settings['business_name']}", styles['Title']))
-    story.append(Paragraph(f"Riepilogo fatture {year} — per {settings['accountant_name']} "
-                           f"({settings['accountant_city']})", styles['Heading2']))
-    story.append(Paragraph(f"Generato il {datetime.date.today().strftime('%d.%m.%Y')} — "
-                           f"UID {settings['business_uid']} — IBAN {settings['business_iban']}",
-                           styles['Normal']))
+    story.append(Paragraph(
+        t('Riepilogo fatture {anno} — per {nome} ({citta})', anno=year,
+          nome=settings['accountant_name'], citta=settings['accountant_city']),
+        styles['Heading2']))
+    story.append(Paragraph(
+        t('Generato il {data} — UID {uid} — IBAN {iban}',
+          data=datetime.date.today().strftime('%d.%m.%Y'),
+          uid=settings['business_uid'], iban=settings['business_iban']),
+        styles['Normal']))
     story.append(Spacer(1, 14))
 
     invs = con.execute('SELECT * FROM invoices WHERE year=? AND deleted_at IS NULL ORDER BY COALESCE(number,0), date',
                        (year,)).fetchall()
-    data = [['Nr.', 'Data', 'Cliente', 'Importo', 'Stato']]
+    data = [[t('Nr.'), t('Data'), t('Cliente'), t('Importo'), t('Stato')]]
     total = 0
     for inv in invs:
         d = ''
         if inv['date']:
             d = datetime.date.fromisoformat(inv['date']).strftime('%d.%m.%Y')
         data.append([f"#{inv['number']}" if inv['number'] else '—', d,
-                     inv['client_name'], fmt_chf(inv['total_cents']), inv['status']])
+                     inv['client_name'], fmt_chf(inv['total_cents']), t(inv['status'])])
         total += inv['total_cents'] or 0
-    data.append(['', '', 'TOTALE', fmt_chf(total), ''])
-    t = Table(data, colWidths=[1.6 * cm, 2.6 * cm, 6.4 * cm, 3.6 * cm, 2.4 * cm], repeatRows=1)
-    t.setStyle(TableStyle([
+    data.append(['', '', t('TOTALE'), fmt_chf(total), ''])
+    tabella = Table(data, colWidths=[1.6 * cm, 2.6 * cm, 6.4 * cm, 3.6 * cm, 2.4 * cm], repeatRows=1)
+    tabella.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E5F')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -182,22 +200,22 @@ def build_summary_pdf(con, year, out_path, settings):
         ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#F3F6F8')]),
     ]))
-    story.append(t)
+    story.append(tabella)
     story.append(Spacer(1, 16))
 
     months = stats.monthly(con, year)
-    md = [['Mese', 'Fatturato']] + [[MESI[m], fmt_chf(months[m])] for m in range(12)]
-    md.append(['TOTALE', fmt_chf(sum(months))])
-    t2 = Table(md, colWidths=[4 * cm, 4 * cm])
-    t2.setStyle(TableStyle([
+    md = [[t('Mese'), t('Fatturato')]] + [[mesi[m], fmt_chf(months[m])] for m in range(12)]
+    md.append([t('TOTALE'), fmt_chf(sum(months))])
+    tabella_mesi = Table(md, colWidths=[4 * cm, 4 * cm])
+    tabella_mesi.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
         ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
         ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 9),
         ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#BBBBBB')),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
     ]))
-    story.append(Paragraph('Riepilogo mensile', styles['Heading3']))
-    story.append(t2)
+    story.append(Paragraph(t('Riepilogo mensile'), styles['Heading3']))
+    story.append(tabella_mesi)
     doc.build(story)
     return out_path
 
@@ -267,7 +285,7 @@ def _nome_copia(inv, src):
     return ('#%s %s' % (inv['number'], nome)).strip() + '.pdf'
 
 
-def build_package(con, year, settings, source_root):
+def build_package(con, year, settings, source_root, lingua=None):
     """Crea la cartella Esporti/Commercialista_YYYY con Excel, PDF riepilogo,
     copie delle fatture PDF e uno zip pronto da mandare."""
     stamp = datetime.date.today().strftime('%Y%m%d')
@@ -277,8 +295,10 @@ def build_package(con, year, settings, source_root):
     inv_dir = os.path.join(folder, 'Fatture PDF')
     os.makedirs(inv_dir, exist_ok=True)
 
-    xlsx = build_excel(con, year, os.path.join(folder, f'Registro_Fatture_{year}.xlsx'), settings)
-    spdf = build_summary_pdf(con, year, os.path.join(folder, f'Riepilogo_{year}.pdf'), settings)
+    xlsx = build_excel(con, year, os.path.join(folder, f'Registro_Fatture_{year}.xlsx'),
+                       settings, lingua)
+    spdf = build_summary_pdf(con, year, os.path.join(folder, f'Riepilogo_{year}.pdf'),
+                             settings, lingua)
 
     # copia PDF fatture: prima quelle dell'app, poi quelle importate dalla cartella storica
     copied, missing = 0, []
