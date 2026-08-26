@@ -2550,17 +2550,32 @@ def _test_windows(r):
                               ambiente={'OneDriveCommercial': 'C:/u/OneDrive - Ditta'}),
            os.path.join('C:/u/OneDrive - Ditta', dk.NOME_BACKUP))
 
+    # --- i nomi dei file, che Windows accetta meno del Mac ---
+    _check(r, 'Windows', 'una barra nel nome non fa più un file impossibile',
+           dk.nome_file_sicuro('Studio 4/5'), 'Studio 4-5')
+    _check(r, 'Windows', 'e nemmeno due punti, virgolette, asterischi',
+           dk.nome_file_sicuro('a<b>c:d"e|f?g*h\\i'), 'a-b-c-d-e-f-g-h-i')
+    # e non deve ripulire piu' del necessario: «J. R.» e' un nome, non un guaio
+    _check(r, 'Windows', 'ma un nome normale resta identico',
+           (dk.nome_file_sicuro('J. R.'), dk.nome_file_sicuro('Café & Co. GmbH')),
+           ('J. R.', 'Café & Co. GmbH'))
+    from . import exports as _ex
+    _check(r, 'Windows', 'anche il PDF per la commercialista prende un nome che Windows accetta',
+           _ex._nome_copia({'number': 12, 'client_name': 'Studio 4/5'}, '/x/y.pdf'),
+           '#12 Studio 4-5.pdf')
+
     # --- e che nessuno scavalchi desktop.py ---
     import ast as _ast
     import glob as _glob
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     perc = ([os.path.join(base, 'app.py')]
             + sorted(_glob.glob(os.path.join(base, 'core', '*.py'))))
-    lancia, a_mano = [], []
+    lancia, a_mano, sorgenti = [], [], {}
     for p in perc:
         nome = os.path.basename(p)
         with io.open(p, encoding='utf-8') as f:
             testo = f.read()
+        sorgenti[nome] = testo
         for nodo in _ast.walk(_ast.parse(testo)):
             if isinstance(nodo, _ast.Import) and any(x.name == 'subprocess' for x in nodo.names):
                 lancia.append(nome)
@@ -2572,3 +2587,10 @@ def _test_windows(r):
            sorted(set(lancia)), ['desktop.py'])
     _check(r, 'Windows', 'i percorsi del Mac stanno solo dentro desktop.py',
            sorted(set(a_mano)), ['desktop.py'])
+    # i due punti che trasformano il nome di un cliente in un nome di file:
+    # se uno dei due se ne dimentica, l'errore compare solo su Windows e solo
+    # per quel cliente li'
+    _check(r, 'Windows', 'tutt’e due i punti che fanno nomi di file lo usano',
+           sorted(n for n in ('app.py', 'exports.py')
+                  if 'desktop.nome_file_sicuro' in sorgenti.get(n, '')),
+           ['app.py', 'exports.py'])

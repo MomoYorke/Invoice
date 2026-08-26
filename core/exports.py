@@ -27,6 +27,7 @@ from . import language as L
 from .money import fmt_chf
 
 from . import db as _db
+from . import desktop
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXPORT_DIR = _db.DIR_ESPORTI
@@ -283,7 +284,7 @@ def _nome_copia(inv, src):
     """
     if not inv['number']:
         return os.path.basename(src)
-    nome = re.sub(r'[\\/:]', '-', (inv['client_name'] or '').strip())
+    nome = desktop.nome_file_sicuro((inv['client_name'] or '').strip())
     return ('#%s %s' % (inv['number'], nome)).strip() + '.pdf'
 
 
