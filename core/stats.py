@@ -83,7 +83,11 @@ def by_client(con, year=None):
 # - omaggi: sessioni regalate, valgono 0
 SCONTI = re.compile(r'discount|sconto|riduzione|rabatt', re.I)
 OMAGGI = re.compile(r'gift|bring a friend|referral|free|omaggio|gratis', re.I)
+# Le due etichette che mette l'app quando le regole non dicono niente. Sono
+# sue, non nomi di servizio scritti dall'utente, quindi vanno tradotte: la
+# pagina le passa da _(), che sui nomi veri dei servizi non fa niente.
 NON_DETTAGLIATO = 'Non dettagliato'
+ALTRO = 'Altro'
 
 
 def regole_servizi(con):
@@ -100,7 +104,7 @@ def regole_servizi(con):
 
 def _etichetta(desc, regole):
     nome, _modello = servizi.riconosci(desc, regole)
-    return nome or 'Altro'
+    return nome or ALTRO
 
 
 def _servizio_dedotto(con, inv_id, client_name, cents, regole):
@@ -123,7 +127,7 @@ def _servizio_dedotto(con, inv_id, client_name, cents, regole):
         trovati.add(_etichetta(d, regole))
     if len(trovati) == 1:
         etichetta = trovati.pop()
-        if etichetta != 'Altro':
+        if etichetta != ALTRO:
             return etichetta
     return NON_DETTAGLIATO
 

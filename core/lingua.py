@@ -1121,6 +1121,9 @@ TESTI = {
         'Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.':
             'The register and the summary are read by whoever keeps your books, not by you: if you use the app in one language and they read another, pick theirs. The amounts never change.',
 
+        'Altro': 'Other',
+        'Non dettagliato': 'Not itemised',
+
     },
     'de': {
         # --- Menü ---
@@ -2203,6 +2206,9 @@ TESTI = {
             'wie die App',
         'Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.':
             'Das Register und die Übersicht liest, wer deine Buchhaltung führt, nicht du: Wenn du die App in einer Sprache nutzt und dort eine andere gelesen wird, wähle jene. Die Beträge ändern sich nie.',
+
+        'Altro': 'Sonstiges',
+        'Non dettagliato': 'Ohne Aufstellung',
 
     },
 }

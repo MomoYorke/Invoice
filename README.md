@@ -1,531 +1,562 @@
-# Fatture
+# Invoice
 
-App locale per creare fatture, tenerle in un database e produrre documenti
-per la commercialista e statistiche sulla tua attività. Tutto resta sul tuo Mac.
+A local app to write invoices, keep them in a database, and produce both the
+package your accountant needs and the figures you need. Everything stays on
+your own Mac.
 
-Il nome dell'attività, l'indirizzo, l'UID, l'IBAN e il logo si mettono in
-**Impostazioni**: nel programma non c'è niente di personale, e quello che
-scrivi lì finisce sulle fatture — in PDF e in Word — e in cima all'app.
+Your business name, address, UID, IBAN and logo go in **Settings**: there is
+nothing personal inside the program itself, and what you type there is what
+ends up on the invoices — in PDF and in Word — and at the top of the app.
 
-## La prima volta
+The app speaks **Italian, English and German**; you switch with the small
+control at the top right. Your clients' documents and emails follow a language
+of their own, set on each client, because they are the ones reading them.
 
-L'app si apre su **Primi passi**: otto cose, in ordine, con scritto a cosa
-servono e un pulsante che ti porta dove si fanno.
+## The first time
 
-Due sono indispensabili — i dati di chi emette la fattura e l'IBAN — e finché
-mancano l'app continua ad aprirsi lì, perché senza quelli le fatture escono
-incomplete. Le altre cinque sono comodità: il logo, i clienti, la prima
-fattura, la posta, i pacchetti di sessioni. Quando l'essenziale c'è, l'app si
-apre sulla Dashboard e i passi rimasti diventano un promemoria discreto in
-cima, che sparisce da solo quando finisci.
+The app opens on **First steps**: eight things, in order, each saying what it
+is for, with a button that takes you where it is done.
 
-Ci si torna quando si vuole, da quel promemoria.
+Two of them are essential — who issues the invoice, and the IBAN — and until
+they are filled in the app keeps opening there, because without them the
+invoices come out incomplete. The other five are conveniences: the logo, the
+clients, the first invoice, the mail, the session packs. Once the essentials
+are in, the app opens on the Dashboard and what is left becomes a discreet
+reminder at the top, which disappears by itself when you are done.
 
-## Come si avvia
-Doppio click su **`Avvia Fatture.command`**. Si apre il browser su
-`http://127.0.0.1:8471`. Lascia aperta la finestra del Terminale mentre usi l'app
-(per chiudere: Ctrl+C o chiudi la finestra).
+You can go back whenever you like, from that reminder.
 
-> La prima volta macOS potrebbe chiedere conferma: tasto destro sul file →
-> "Apri" → "Apri".
+## How to start it
 
-Se l'app è già accesa, il doppio click apre solo il browser senza far ripartire
-niente — **tranne quando il programma è stato aggiornato**: in quel caso la
-riavvia da sola, perché le pagine restano in memoria da quando è partita e
-altrimenti continueresti a vedere la versione vecchia.
+Double-click **`Avvia Fatture.command`** (the launcher; the name is Italian,
+like the folder names, because that is what they are actually called on disk).
+The browser opens at `http://127.0.0.1:8471`. Leave the Terminal window open
+while you use the app (to stop it: Ctrl+C, or close the window).
 
-## Quando esce una versione nuova
-Se hai ricevuto l'app da un repository, l'avviatore controlla da solo se ne è
-uscita una versione più recente — non più di una volta ogni sei ore, e senza
-bloccare l'avvio se la rete non c'è. Quando ne trova una **mostra cos'è
-cambiato e chiede il permesso**: non aggiorna mai di nascosto.
+> The first time, macOS may ask for confirmation: right-click the file →
+> "Open" → "Open".
 
-Dicendo di sì, prima fa una copia di sicurezza dei dati, poi sostituisce i file
-del programma, e se servono librerie nuove le installa. **I tuoi dati non
-vengono toccati**: database, fatture, estratti conto, backup e logo stanno
-fuori dal repository, quindi l'aggiornamento non li vede nemmeno.
+If the app is already running, double-clicking only opens the browser without
+restarting anything — **except when the program has been updated**: in that
+case it restarts by itself, because the pages stay in memory from when it
+started and you would otherwise keep seeing the old version.
 
-Per tornare alla versione precedente, il numero è in `data/.versione-precedente`:
+## When a new version comes out
+
+If you got the app from a repository, the launcher checks by itself whether a
+newer version exists — not more than once every six hours, and without holding
+up the start if there is no network. When it finds one it **shows what changed
+and asks permission**: it never updates behind your back.
+
+If you say yes, it first makes a backup of your data, then replaces the program
+files, and installs any new libraries needed. **Your data is not touched**:
+database, invoices, bank statements, backups and logo all live outside the
+repository, so the update does not even see them.
+
+To go back to the previous version, the number is in `data/.versione-precedente`:
 
     git reset --hard $(cat data/.versione-precedente)
 
-La finestra del Terminale resta quasi vuota: due righe all'avvio e basta.
-Non scorre niente mentre usi l'app, e non c'è nessun avviso rosso da
-interpretare. Se qualcosa va storto lo dice la pagina, e la traccia completa
-finisce in `data/error.log`.
+The Terminal window stays almost empty: two lines at startup and that is it.
+Nothing scrolls while you use the app, and there is no red warning to
+interpret. If something goes wrong the page says so, and the full trace ends up
+in `data/error.log`.
 
-## Il menu
-Le voci sono divise in gruppi, nell'ordine in cui le cose capitano davvero:
+## The menu
 
-| Gruppo | Voci | Quando lo apri |
+The entries are grouped in the order things actually happen:
+
+| Group | Entries | When you open it |
 |---|---|---|
-| — | Dashboard · Performance | ogni volta |
-| **Fatturare** | Nuova fattura · Fatture · Email inviate | tutte le settimane |
-| **Chi segui** | Clienti · Crediti · Agenda | tutte le settimane |
-| **Incassi e fisco** | Banca · Commercialista | ogni tanto |
-| **L'app** | Controlli · Verifica calcoli · Cestino · Impostazioni | quando serve |
+| — | Dashboard · Performance | every time |
+| **Invoicing** | New invoice · Invoices · Sent emails | every week |
+| **Your clients** | Clients · Credits · Sessions | every week |
+| **Payments and tax** | Bank · Accountant | now and then |
+| **The app** | Checks · Calculation check · Trash · Settings | when needed |
 
-**Dashboard e Performance rispondono a due domande diverse**, ed è per questo
-che sono due pagine. La *Dashboard* dice **cosa devi fare adesso**: quanto hai
-fatturato quest'anno, e sotto la lista delle cose in sospeso — da incassare, da
-spedire, pacchetti finiti, estratto conto da aggiornare. Ogni voce porta
-esattamente alle righe che ha contato. Quando non c'è niente in sospeso lo dice,
-e va bene così. La *Performance* dice **come stai andando**: andamento mensile,
-fatturato per anno, migliori clienti, ripartizione per servizio.
+**Dashboard and Performance answer two different questions**, which is why they
+are two pages. The *Dashboard* says **what you have to do now**: it greets you
+by name, shows the revenue for the year so far and this month against last
+month, then the list of what is outstanding — to collect, to send, packs run
+out, bank statement to update — and finally recent activity. Every entry leads
+exactly to the rows it counted. When there is nothing outstanding it says so,
+and that is fine. *Performance* says **how you are doing**: monthly trend,
+revenue by year, top clients, breakdown by service.
 
-Le reti di sicurezza — copie, calendario, verifica dei calcoli, posta — stanno in
-**Controlli**: non sono cose da guardare ogni mattina, sono cose da controllare
-quando si controlla.
+The safety nets — copies, calendar, calculation check, mail — live in
+**Checks**: they are not things to look at every morning, they are things to
+check when you check.
 
-Finché resta qualcosa dei **primi passi**, in cima al menu compare la voce
-*Primi passi* con quante cose mancano; quando non ne manca più nessuna sparisce
-da sola.
+As long as anything is left from the **first steps**, a *First steps* entry
+appears at the top of the menu with how many things are missing; when none are
+left it disappears by itself.
 
-Aprendo un dettaglio la voce del suo elenco resta accesa: la scheda di una
-fattura tiene acceso *Fatture*, un pacchetto tiene acceso *Crediti*.
+When you open a detail, the entry of its list stays lit: an invoice's page
+keeps *Invoices* lit, a pack keeps *Credits* lit.
 
-**Se stringi la finestra** — per tenere l'app a metà schermo accanto a
-qualcos'altro — sotto i 1040px il menu si riduce a una colonnina di sole icone
-(passandoci sopra col mouse leggi il nome). Fino a 900px tutte le pagine ci
-stanno intere; più stretto di così sono le singole tabelle a scorrere dentro il
-loro riquadro, e la pagina non si sposta mai di lato.
+**If you narrow the window** — to keep the app on half the screen next to
+something else — below 1040px the menu shrinks to a strip of icons only (hover
+to read the name). Up to 900px every page still fits whole; narrower than that
+it is the individual tables that scroll inside their own box, and the page
+never shifts sideways.
 
-## Cosa fa
-- **Dashboard** — fatturato dell'anno, confronto con l'anno prima, proiezione a
-  fine anno, incassato vs da incassare, top clienti, tipi di servizio, grafici.
-  Più tre riquadri di controllo: **Stato fatture** (quante emesse, pagate, da
-  incassare, spedite e — solo per quelle fatte con l'app — non ancora spedite,
-  ognuna cliccabile), **Salute dell'app** (ultima copia su iCloud e sua
-  dimensione, quante copie conservate, ultima lettura del calendario, esito
-  dell'ultima verifica dei calcoli, stato della posta, spazio occupato: verde,
-  giallo o rosso) e **È successo questo** (fatture create e spedite, sessioni
-  registrate, pacchetti arrivati a zero, in un'unica lista in ordine di tempo;
-  dove l'ora non si conosce compare solo il giorno).
-- **Nuova fattura** — scegli cliente e servizio, l'app assegna il numero
-  progressivo, calcola i totali (matematica in centesimi: zero errori di
-  arrotondamento) e genera **docx + PDF** in `Fatture/ANNO/`.
-  Per il *running coaching* propone da sola il mese successivo all'ultima fattura.
-- **Fatture** — elenco completo (storico incluso), ricerca, segna pagata /
-  da incassare con un click. La colonna *Inviata* mostra giorno e ora in cui la
-  fattura è partita per email.
-- **Clienti** — registro clienti con fatturato totale per ciascuno.
-- **Commercialista** — un click e prepara il pacchetto per il commercialista:
-  Excel (registro + riepilogo mensile/trimestrale + per cliente), PDF di
-  riepilogo e copia di tutte le fatture PDF dell'anno, già zippato.
-  Lo trovi in `Esporti/`.
-- **Agenda** — gli allenamenti svolti, con giorno e ora, dal più recente.
-- **Email inviate** — il diario di tutto quello che l'app ha spedito, prove e
-  tentativi falliti compresi.
-- **Banca** — legge gli estratti conto e propone quale fattura è stata pagata.
-- **Crediti** — tracking delle sessioni di personal training. Ogni cliente ha un
-  pacchetto di crediti (12 o 10 sessioni); ogni sessione svolta ne consuma uno.
-  La pagina mostra quanti crediti restano a ciascuno e segnala con **"Crediti terminati"**
-  chi ha finito il pacchetto e va rifatturato. Le sessioni arrivano dal tuo calendario Google.
-  Per aggiornare, chiedi a Claude: *«aggiorna i crediti dal calendario»*.
-  Quando emetti la fattura di un pacchetto, la colleghi dalla stessa pagina: le
-  sessioni coperte vengono marcate col numero fattura e il pacchetto si chiude.
-  Accanto al pacchetto vedi **quale fattura lo copre** e se quella fattura è
-  *da incassare* (ambra) o *✓ incassata* (verde): lo stato si aggiorna da solo
-  quando segni la fattura come pagata.
-- **Nascondi importi** — il pulsante con l'**occhio** in alto nella Dashboard (e lo stesso
-  occhio in fondo al menu) sfoca tutti gli importi: utile per screenshot o quando sei in
-  un luogo pubblico. Occhio aperto = importi visibili, occhio barrato = importi nascosti.
-  Resta attivo su tutte le pagine finché non lo rispegni.
-- **Controlli** — verifica numerazione (duplicati, buchi) e importi.
-- **Impostazioni** — dati aziendali che finiscono in fattura (IBAN, indirizzo…).
+## What it does
 
-## Il logo
+- **Dashboard** — a greeting with today's date, revenue for the year to date
+  compared with the same period last year, and this month against the month
+  before (in January it looks back at December of the previous year; if the
+  previous month was zero it does not invent a percentage). Then **To do** —
+  invoices to collect, invoices not yet sent, packs run out, bank statement
+  getting old, each one clickable — and **Recent activity**: invoices created
+  and sent, sessions recorded, packs reaching zero, in a single list in time
+  order. Where the time of day is not known, only the day is shown.
+- **Performance** — revenue for the year, comparison with last year, projection
+  to year end, collected vs outstanding, top clients, service types, charts.
+- **New invoice** — pick client and service, the app assigns the sequential
+  number, works out the totals (arithmetic in cents: no rounding errors) and
+  produces **docx + PDF** in `Fatture/YEAR/`. For a monthly subscription it
+  suggests by itself the month after the last invoice.
+- **Invoices** — the full list (historical ones included), search, mark paid /
+  to collect with one click. The *Sent* column shows the day and time the
+  invoice left by email.
+- **Clients** — the client register with total revenue for each.
+- **Accountant** — one click and it prepares the package: Excel (register +
+  monthly/quarterly summary + by client), a summary PDF and a copy of every
+  invoice PDF of the year, already zipped. You will find it in `Esporti/`.
+  The package can have a language of its own, separate from the app's, because
+  it is your bookkeeper who reads it.
+- **Sessions** — the training sessions actually done, with day and time, most
+  recent first.
+- **Sent emails** — the diary of everything the app has sent, tests and failed
+  attempts included.
+- **Bank** — reads the bank statements and proposes which invoice was paid.
+- **Credits** — tracking of session packs. Each client has a pack of credits
+  (12 or 10 sessions); every session done consumes one. The page shows how many
+  credits each person has left and flags with **"Credits used up"** whoever has
+  finished a pack and needs invoicing again. The sessions come from your Google
+  Calendar and are read automatically. When you issue the invoice for a pack,
+  you link it from the same page: the sessions covered are marked with the
+  invoice number and the pack closes. Next to the pack you see **which invoice
+  covers it** and whether that invoice is *to collect* (amber) or *✓ collected*
+  (green): the state updates by itself when you mark the invoice as paid.
+- **Hide amounts** — the **eye** button at the top of the Dashboard (and the
+  same eye at the bottom of the menu) blurs every amount: useful for
+  screenshots or when you are in a public place. Open eye = amounts visible,
+  crossed-out eye = amounts hidden. It stays on across every page until you
+  turn it off.
+- **Checks** — verifies numbering (duplicates, gaps) and amounts, and holds the
+  safety-net panel.
+- **Settings** — business details that end up on the invoice (IBAN, address…),
+  the email templates, and the backup folder.
 
-Si carica in **Impostazioni → Logo**. Vale ovunque: sulle fatture PDF, su
-quelle Word e in alto a sinistra nell'app. Meglio un PNG con lo sfondo
-trasparente; va bene anche un JPG.
+## The logo
 
-Non serve che sia della misura giusta. Nella fattura Word lo spazio del logo
-ha una forma fissa e piuttosto larga: se il tuo logo è quadrato non viene
-stirato, gli si lascia dell'aria ai lati.
+You upload it in **Settings → Logo**. It applies everywhere: on the PDF
+invoices, on the Word ones, and at the top left of the app. A PNG with a
+transparent background is best; a JPG works too.
 
-Finché non ne carichi uno, nell'app vedi un segnaposto grigio — ma **sulle
-fatture quello spazio resta vuoto**, così non parte mai un documento con
-scritto «caricalo dalle Impostazioni» sopra.
+It does not need to be the right size. In the Word invoice the logo's space has
+a fixed, fairly wide shape: if your logo is square it is not stretched, it is
+simply given some air on either side.
 
-Il file finisce in `data/logo.png`, insieme agli altri tuoi dati. Se passi
-l'app a qualcun altro, il tuo logo non lo segue.
+Until you upload one, the app shows a grey placeholder — but **on the invoices
+that space stays empty**, so a document never goes out with "upload it in
+Settings" printed on it.
 
-## Da dove vengono i dati
-Al primo avvio, se in Impostazioni indichi una **cartella dello storico**,
-l'app importa quello che c'è dentro: fatture in Word e PDF, un `clients.json`,
-i riepiloghi Excel degli anni passati.
-Quella cartella **non viene mai modificata**: l'app la legge soltanto.
-Le nuove fatture nascono qui dentro, in `Fatture/ANNO/`.
+The file ends up in `data/logo.png`, together with your other data. If you pass
+the app on to someone else, your logo does not follow it.
 
-Per gli anni precedenti all'app, i totali ufficiali vengono dai riepiloghi Excel
-(più completi delle singole fatture Word di quegli anni).
+## Where the data comes from
 
-## Crediti sessioni — regole
+On first start, if you point Settings at an **archive folder**, the app imports
+what is in it: invoices in Word and PDF, a `clients.json`, the Excel summaries
+of past years. That folder is **never modified**: the app only reads it. New
+invoices are born in here, in `Fatture/YEAR/`.
 
-**Chi lavora a crediti si dichiara nell'app**, in *Crediti → Chi lavora a crediti*.
-Per ogni persona servono quattro cose:
+For the years before the app, the official totals come from the Excel summaries
+(more complete than the individual Word invoices of those years).
 
-| Campo | A cosa serve |
+## Session credits — the rules
+
+**Whoever works on credits is declared in the app**, under *Credits → Who works
+on credits*. Each person needs four things:
+
+| Field | What it is for |
 |---|---|
-| Nome | come compare nell'app e nel registro |
-| Parola nel calendario | l'app conta come sua sessione ogni evento che contiene questa parola. Scegline una che non compaia per caso altrove |
-| Sessioni per pacchetto | quanti crediti dà un pacchetto |
-| Prezzo | quando emetti una fattura di quell'importo, l'app capisce da sola che ha comprato un pacchetto e gli ridà i crediti |
+| Name | how they appear in the app and in the register |
+| Word in the calendar | the app counts as their session every event containing this word. Pick one that will not turn up by accident elsewhere |
+| Sessions per pack | how many credits a pack gives |
+| Price | when you issue an invoice for that amount, the app works out by itself that they bought a pack and gives the credits back |
 
-Due campi si usano di rado:
+Two fields are rarely used:
 
-- **Intesta la fattura a** — quando chi si allena e chi paga sono due persone diverse.
-- **È il supplemento di** — per chi si allena in coppia e paga un pacchetto ridotto in
-  aggiunta a quello dell'altro. Nei giorni in cui l'altro non c'è, la sessione è piena
-  e scala dal pacchetto dell'altro.
+- **Make the invoice out to** — when the person training and the person paying
+  are two different people.
+- **Is the supplement of** — for someone who trains as a couple and pays a
+  reduced pack in addition to the other person's. On days when the other one is
+  absent, the session is a full one and comes off the other person's pack.
 
-Chi smette si **archivia**, non si cancella: il suo nome resta riconoscibile nei titoli
-del calendario (serve se un pacchetto condiviso è ancora aperto) ma non gli si aprono
-più pacchetti. L'app rifiuta di cancellare chi ha già dei pacchetti nel registro.
+Someone who stops is **archived**, not deleted: their name stays recognisable
+in the calendar titles (needed if a shared pack is still open) but no new packs
+are opened for them. The app refuses to delete anyone who already has packs in
+the register.
 
-Chi paga a sessione singola o a fattura mensile qui non va messo.
+People who pay per single session, or by monthly invoice, do not belong here.
 
-- **Le fatture si agganciano da sole.** Quando emetti una fattura-pacchetto, l'app
-  riconosce di chi è dall'importo e dall'intestatario, e: apre il pacchetto nuovo
-  se quello vecchio è finito; oppure lo collega a quello in corso se non risultava
-  ancora pagato; oppure la tiene **in attesa** e la usa al prossimo pacchetto.
-  Le fatture del running coaching (110.-) non toccano i crediti.
-- Gli importi riconosciuti sono quelli scritti nella scheda di ogni cliente.
-- Puoi sempre collegare **a mano** una fattura passata a qualsiasi pacchetto dal
-  pulsante nella pagina Crediti. Collegare non chiude mai un pacchetto che ha
-  ancora crediti.
-- Una sessione **cancellata consuma comunque il credito**.
-- Gli **appuntamenti futuri non contano**: solo le sessioni fino a oggi.
-- Lo storico delle sessioni (fino al 19.08.2026) è **congelato e validato** contro le
-  fatture reali: la sincronizzazione aggiunge in coda, non riscrive mai il passato.
-- Ogni sessione porta l'ID dell'evento Google: rilanciare la sincronizzazione dieci
-  volte non crea duplicati.
-- Il calendario storico, se ne colleghi uno, non viene mai letto dai crediti.
-- Stati: *In corso* · *In esaurimento* (2 o meno rimasti) · **Crediti terminati**
-  (pacchetto finito: emetti la prossima fattura).
-- Il registro è `sessions.json` (copia di sicurezza a ogni salvataggio in `data/backups/`).
+- **Invoices attach themselves.** When you issue a pack invoice, the app
+  recognises whose it is from the amount and the addressee, and: opens the new
+  pack if the old one has run out; or links it to the one in progress if that
+  did not look paid yet; or holds it **pending** and uses it for the next pack.
+  Invoices for a monthly subscription do not touch the credits.
+- The amounts recognised are the ones written on each client's card.
+- You can always link a past invoice **by hand** to any pack, from the button
+  on the Credits page. Linking never closes a pack that still has credits.
+- A **cancelled session still consumes the credit**.
+- **Future appointments do not count**: only sessions up to today.
+- The session history (up to 19.08.2026) is **frozen and validated** against
+  the real invoices: syncing appends, it never rewrites the past.
+- Every session carries its Google event ID: running the sync ten times does
+  not create duplicates.
+- The historical calendar, if you connect one, is never read by the credits.
+- States: *In progress* · *Running low* (2 or fewer left) · **Credits used up**
+  (pack finished: issue the next invoice).
+- The register is `sessions.json` (backed up on every save in `data/backups/`).
 
-## Quali servizi riconosce l'app
+## Which services the app recognises
 
-L'app deve capire, guardando le righe di una fattura, **quale servizio hai venduto**:
-serve alla Dashboard per raggruppare il fatturato, e all'email per nominare il
-servizio e scegliere il testo giusto.
+Looking at the lines of an invoice, the app has to work out **which service you
+sold**: the Dashboard needs it to group revenue, and the email needs it to name
+the service and pick the right text.
 
-Le regole le scrivi tu, in **Impostazioni → Servizi che l'app deve riconoscere**.
-Una riga per servizio:
+You write the rules yourself, in **Settings → Services the app should
+recognise**. One line per service:
 
 ```
-Nome del servizio = parola, parola
+Service name = word, word
 ```
 
-Le parole sono quelle che compaiono nelle righe delle tue fatture. Senza `=`, il
-nome fa anche da parola. Ci sono due elenchi, e la differenza conta perché decide
-quale testo va nell'email:
+The words are the ones that appear in the lines of your invoices. Without `=`,
+the name doubles as the word. There are two lists, and the difference matters
+because it decides which text goes in the email:
 
-| Elenco | Cos'è | Nell'email |
+| List | What it is | In the email |
 |---|---|---|
-| **In abbonamento** | si rinnova ogni mese | «this month's invoice», e nell'oggetto va il mese |
-| **A pacchetto** | si compra una volta e si consuma | «your invoice», senza mese |
+| **By subscription** | renews every month | "this month's invoice", and the month goes in the subject |
+| **By pack** | bought once and used up | "your invoice", no month |
 
-Vince la **prima riga che riconosce**, e gli abbonamenti si provano per primi: se una
-parola compare in tutti e due gli elenchi, metti quella più precisa in alto.
+The **first line that matches** wins, and subscriptions are tried first: if a
+word appears in both lists, put the more specific one on top.
 
-Un fisioterapista, per esempio:
+A physiotherapist, for example:
 
 ```
-In abbonamento:  Riabilitazione = riabilitazione
-A pacchetto:     Fisioterapia = seduta, sedute, fisioterapia
+By subscription:  Rehabilitation = rehabilitation
+By pack:          Physiotherapy = session, sessions, physiotherapy
 ```
 
-**Se lasci gli elenchi vuoti** l'app non prova a indovinare: nella Dashboard il
-fatturato finisce tutto in *Altro*, e l'email dice «Please find attached your
-invoice.» senza nominare niente. È voluto: nominare un servizio sbagliato in una
-mail che va al cliente è peggio che non nominarlo.
+**If you leave the lists empty** the app does not try to guess: on the
+Dashboard all revenue ends up under *Other*, and the email says "Please find
+attached your invoice." without naming anything. That is deliberate: naming the
+wrong service in an email that goes to a client is worse than not naming one.
 
-## Come leggere "per tipo di servizio"
-La somma delle voci coincide sempre col fatturato dell'anno:
-- gli **sconti** (es. uno sconto fedeltà) non fanno voce a sé: vengono
-  **sottratti dal servizio della stessa fattura**, anche se sul documento compaiono
-  con importo positivo (2'050 − 50 = 2'000);
-- le fatture **senza righe di dettaglio** (importate da un PDF) vengono ricondotte al
-  loro servizio quando è deducibile senza ambiguità — stesso cliente, stesso importo
-  esatto, un solo servizio possibile — altrimenti finiscono in *Non dettagliato*,
-  così non spariscono mai dal conteggio.
+## How to read "by service type"
 
-## Sessioni dal calendario
+The sum of the entries always matches the revenue for the year:
 
-L'app legge il calendario delle sessioni da sola e scala i crediti. Si collega
-una volta: Google Calendar → il tuo calendario → Impostazioni del calendario →
-*Indirizzo segreto in formato iCal*, e quell'indirizzo si incolla in
-Impostazioni. Un eventuale calendario storico non va mai collegato qui.
+- **discounts** (a loyalty discount, say) do not get an entry of their own: they
+  are **subtracted from the service on the same invoice**, even though on the
+  document they appear as a positive amount (2'050 − 50 = 2'000);
+- invoices **with no detail lines** (imported from a PDF) are traced back to
+  their service when it can be deduced without ambiguity — same client, same
+  exact amount, only one possible service — and otherwise end up under *Not
+  itemised*, so they never disappear from the count.
 
-Il nome del calendario l'app non te lo chiede: se lo fa dire dal calendario
-stesso, e da quel momento lo chiama per nome nelle sue pagine.
+## Sessions from the calendar
 
-La lettura avviene quando apri la pagina Crediti, non più di una volta ogni 15
-minuti; il pulsante *Aggiorna adesso* la forza. Se il calendario non risponde
-vedi i crediti dell'ultima lettura riuscita con un avviso, mai una pagina di
-errore al posto dei tuoi dati.
+The app reads the session calendar by itself and deducts the credits. You
+connect it once: Google Calendar → your calendar → calendar Settings →
+*Secret address in iCal format*, and you paste that address into Settings. A
+historical calendar, if you have one, must never be connected here.
 
-**Perché l'iCal e non l'API di Google.** Nessun progetto Google Cloud, nessuna
-autorizzazione da rinnovare, nessuna password: un indirizzo da incollare. In
-compenso l'iCal descrive una serie ricorrente come una voce sola più le sue
-eccezioni, mentre l'API dava un evento già pronto per ogni ripetizione. Le
-ripetizioni si espandono quindi in `core/calendario.py`, e l'identificativo che
-impedisce di contare due volte la stessa sessione è **UID + data**.
+The app does not ask you for the calendar's name: it lets the calendar itself
+say it, and from then on calls it by name in its pages.
 
-Restano valide tutte le regole di prima: finestra dal 20.08.2026, le sessioni
-future non consumano crediti, quelle disdette su Google non si contano, vale la
-regola della coppia. Due sessioni dello stesso cliente nello stesso giorno
-sono legittime (capita coi pacchetti condivisi) e vengono contate entrambe.
+The reading happens when you open the Credits page, not more than once every 15
+minutes; the *Refresh now* button forces it. If the calendar does not answer
+you see the credits from the last successful reading, with a notice — never an
+error page in place of your data.
 
-## Agenda
+**Why iCal and not the Google API.** No Google Cloud project, no authorisation
+to renew, no password: one address to paste. In exchange, iCal describes a
+recurring series as a single entry plus its exceptions, whereas the API handed
+you a ready-made event for each repetition. The repetitions are therefore
+expanded in `core/calendario.py`, and the identifier that stops the same
+session being counted twice is **UID + date**.
 
-La voce **Agenda** nel menu elenca gli allenamenti **davvero svolti**, uno per
-credito consumato, dal più recente. Gli appuntamenti ancora da fare non
-compaiono; quelli annullati sì, marcati, perché il credito l'hanno consumato.
+All the earlier rules still hold: window from 20.08.2026, future sessions do
+not consume credits, ones cancelled on Google do not count, the couple rule
+applies. Two sessions for the same client on the same day are legitimate (it
+happens with shared packs) and both are counted.
 
-Le due fonti sono separate di proposito:
+## Sessions (the list)
 
-- **quali** sessioni: il registro crediti (`sessions.json`), l'unico elenco
-  completo e già verificato contro le fatture. Il calendario di Google non lo è
-  più: quando una serie ripetuta finisce, sparisce anche il suo passato.
-- **a che ora**: il calendario, tenuto in un indice a parte
-  (`data/orari.json`). Si può cancellare e ricostruire quando si vuole senza
-  toccare i crediti.
+The **Sessions** entry in the menu lists the training sessions **actually
+done**, one per credit consumed, most recent first. Appointments still to come
+do not appear; cancelled ones do, marked, because they consumed the credit.
 
-Il pulsante *Aggiorna gli orari dal calendario* riempie gli orari mancanti.
-Delle sessioni più vecchie l'ora non si conosce, perché il calendario delle
-sessioni non le contiene più: si riempiono da sole incollando in Impostazioni
-anche l'indirizzo iCal di un **calendario storico**. Quel secondo indirizzo serve
-soltanto all'Agenda — i crediti non ci passano mai, quindi non c'è modo che una
-sessione venga contata due volte.
+The two sources are deliberately kept apart:
 
-## Mandare la fattura per email
+- **which** sessions: the credit register (`sessions.json`), the only list that
+  is complete and already checked against the invoices. The Google calendar is
+  not: when a repeating series ends, its past disappears with it.
+- **at what time**: the calendar, kept in a separate index
+  (`data/orari.json`). It can be deleted and rebuilt whenever you like without
+  touching the credits.
 
-Dal dettaglio di una fattura, **✉️ Manda per email**.
+The *Refresh the times from the calendar* button fills in the missing times.
+For the oldest sessions the time is unknown, because the session calendar no
+longer holds them: they fill in by themselves if you also paste into Settings
+the iCal address of a **historical calendar**. That second address serves the
+Sessions list only — the credits never go near it, so there is no way a session
+gets counted twice.
 
-La mail parte dal tuo server (porta 587), non da Gmail: se il tuo dominio
-autorizza solo il proprio server a spedire a suo nome (SPF `-all`), quelle
-mandate da Gmail finiscono in spam. Attenzione al nome dell'host: spesso il
-certificato copre `tuodominio.ch` ma **non** `mail.tuodominio.ch`, e allora va
-scritto il primo — l'app te lo dice, se sbagli.
-La password della casella si mette in Impostazioni una volta sola.
+## Sending the invoice by email
 
-**Come funziona la pagina di invio**
+From an invoice's page, **✉️ Send by email**.
 
-1. Il testo arriva già scritto, ricalcato sulle email che mandi davvero, e puoi
-   riscriverlo per intero prima di spedire.
-2. *Prova su di me* manda la mail identica al tuo indirizzo: la vedi arrivare
-   come la vedrà il cliente.
-3. *Invia* la manda al cliente e segna la data. Se riprovi, la pagina ti avvisa
-   che risulta già inviata.
+The mail leaves from your own server (port 587), not from Gmail: if your domain
+only authorises its own server to send in its name (SPF `-all`), anything sent
+from Gmail lands in spam. Watch the host name: the certificate often covers
+`yourdomain.ch` but **not** `mail.yourdomain.ch`, in which case you write the
+first — the app tells you if you get it wrong. The mailbox password goes into
+Settings once.
 
-**I due modelli di testo.** La frase centrale — quella che cambia da mail a
-mail — ha due versioni salvate in Impostazioni: una per *Running / Online
-coaching*, una per *Personal training*. L'app sceglie quale usare guardando le
-righe della fattura, e nella pagina di invio due pulsanti ti fanno passare
-all'altra con *Riscrivi con questo modello*. Riscrivere ricostruisce il testo da
-capo, quindi fallo prima di ritoccarlo a mano. Il resto della mail (apertura,
-frase sull'ordine permanente, firma) resta automatico come prima.
+**How the sending page works**
 
-**Quando la fattura va intestata a un altro.** Chi si allena e chi riceve la
-fattura non sono sempre la stessa persona: un genitore, un coniuge, un'azienda.
-Nella scheda del cliente c'è il campo
-**Intesta la fattura a**: se compilato, il documento e il registro portano quel
-nome, mentre il **nome del file resta quello del cliente** (`Anna #88.pdf`),
-così i documenti nuovi restano in fila con i vecchi. Nella pagina *Nuova
-fattura*, scelto il cliente, l'app te lo ricorda prima che tu generi il
-documento. L'indirizzo resta quello della scheda.
+1. The text arrives already written, modelled on the emails you really send,
+   and you can rewrite it entirely before sending.
+2. *Test to yourself* sends the identical mail to your own address: you see it
+   arrive exactly as the client will.
+3. *Send* sends it to the client and records the date. If you try again, the
+   page warns you that it is already marked as sent.
 
-**Cosa cambia da cliente a cliente** (si imposta nella pagina Clienti)
+**The two text templates.** The middle sentence — the one that changes from
+mail to mail — has two versions saved in Settings: one for *Subscription*, one
+for *Session pack*. The app picks which to use by looking at the invoice lines,
+and on the sending page two buttons let you switch with *Rewrite with this
+template*. Rewriting rebuilds the text from scratch, so do it before you touch
+it by hand. The rest of the mail (the opening, the standing-order sentence, the
+sign-off) stays automatic.
 
-- *Email*: senza indirizzo il pulsante Invia resta spento.
-- *Come ti firmi*: i due saluti si scrivono in Impostazioni, qui si sceglie quale
-  usare con questa persona.
-- *Abbonamento mensile*: aggiunge la frase sull'ordine permanente e fa dire
-  «this month's invoice» invece di «your invoice» — perché un pacchetto da dieci
-  sessioni non è mensile.
+**One template per language.** You write the email text, so the app cannot
+translate it — those are your words. It can however keep one version per
+language and use the one matching the **client's** language. In Settings, four
+tabs — *For everyone*, Italiano, English, Deutsch — swap the fields without
+reloading; they are all in the same form, so Save saves them together. Where
+you write nothing, the "for everyone" version is used, so leaving all of it
+alone changes nothing.
 
-**Il registro.** La voce **Email inviate** nel menu elenca tutto quello che è
-partito dall'app: giorno e ora, destinatario, oggetto, allegati, in quale
-cartella è finita la copia. Cliccando *leggi* si riapre **la mail intera**, con
-mittente, copia nascosta e il testo esatto che ha letto il cliente — un
-messaggio pesa circa 250 byte, quindi dieci anni di fatture stanno in poco più
-di cento kilobyte. Ci finiscono anche le prove su di te e i tentativi
-falliti, con il motivo — un elenco che mostra solo i successi non serve proprio
-quando ne hai bisogno. Le righe delle fatture spedite prima che il registro
-esistesse sono state ricostruite dalla data segnata sulla fattura e dicono di
-esserlo. Questo elenco è il diario dell'app: le mail vere restano dove sono
-sempre state.
+**Your sign-off** is a field of its own, outside the templates, and is never
+translated. If it lived inside them, every translated version would keep a copy
+of it, and changing your phone number would update only one.
 
-**La copia a te stesso.** Ogni fattura spedita arriva anche nella tua posta in
-arrivo, in **copia nascosta**: il cliente non la vede (è Ccn, non Cc — e
-l'intestazione non viaggia nemmeno nel messaggio che riceve). Serve perché
-un account POP in Mail non mostra la cartella Inviata del server: così la
-fattura spedita la ritrovi comunque in Mail, cercandola.
-Si disattiva in Impostazioni con una spunta.
+**When the invoice goes to someone else.** The person training and the person
+receiving the invoice are not always the same: a parent, a spouse, a company.
+The client's card has a **Make the invoice out to** field: when filled in, the
+document and the register carry that name, while the **file name stays the
+client's** (`Anna #88.pdf`), so new documents stay in line with the old ones.
+On the *New invoice* page, once you have picked the client, the app reminds you
+before you produce the document. The address stays the one on the card.
 
-**La copia in «Inviata».** SMTP serve solo a consegnare la posta: la copia nella
-cartella Inviata la scrive chi spedisce, ed è per questo che le mail partite
-dall'iPhone si vedono anche sul Mac. L'app fa lo stesso, depositando il
-messaggio via IMAP subito dopo l'invio. Ritrovi quindi le fatture spedite in
-Inviata come tutte le altre mail, da Mail, dal telefono e dal webmail.
-La cartella la trova da sola (il server marca `INBOX.Sent` come Inviata). Se la
-copia non riesce la mail è comunque partita, e l'app te lo dice invece di far
-finta di niente. Anche *Prova su di me* deposita la sua copia: una prova che
-salta il deposito non proverebbe la cosa che interessa. Le prove restano quindi
-in Inviata come le altre, e le cancelli tu quando non ti servono più.
+**What changes from client to client** (set on the Clients page)
 
-**Due fatture in una mail.** Nella pagina di invio puoi allegare anche un'altra
-fattura recente, anche di un altro cliente: il caso tipico è chi riceve la sua
-più quella del coniuge. L'apertura diventa «Attached are two
-invoices». Vengono proposte solo le fatture fatte con l'app negli ultimi 90
-giorni e non ancora spedite: quelle vecchie dello storico esistono solo in Word
-e non si possono allegare come PDF.
+- *Email*: without an address, the Send button stays off.
+- *Language*: which language their documents and emails come out in.
+- *Your sign-off*: the two sign-offs are written in Settings, here you pick
+  which one to use with this person.
+- *Monthly subscription*: adds the standing-order sentence and makes it say
+  "this month's invoice" instead of "your invoice" — because a ten-session pack
+  is not monthly.
 
-## Sapere quando sei stato pagato
+**The register.** The **Sent emails** entry in the menu lists everything that
+left the app: day and time, recipient, subject, attachments, and which folder
+the copy ended up in. Clicking *read* reopens **the whole message**, with
+sender, blind copy and the exact text the client read — one message weighs
+about 250 bytes, so ten years of invoices fit in a little over a hundred
+kilobytes. Tests to yourself and failed attempts go in too, with the reason: a
+list that shows only the successes is useless precisely when you need it. Rows
+for invoices sent before the register existed were reconstructed from the date
+written on the invoice, and say so. This list is the app's diary: the real
+emails stay where they have always been.
 
-Scarica dall'e-banking i movimenti e appoggia i file in **`Estratti conto/`**.
-L'app legge tre formati: **camt.053 / camt.054** (XML), i **CSV** e gli
-**estratti in PDF**. Del CSV riconosce le colonne dal nome dell'intestazione,
-perché ogni banca lo scrive a modo suo. Poi apri la pagina **Banca**.
+**The copy to yourself.** Every invoice sent also arrives in your own inbox, as
+a **blind copy**: the client does not see it (it is Bcc, not Cc — and the
+header does not even travel in the message they receive). It exists because a
+POP account in Mail does not show the server's Sent folder: this way you can
+still find the invoice you sent in Mail, by searching. You turn it off in
+Settings with a checkbox.
 
-Il PDF merita una spiegazione. Quando il testo viene estratto, le colonne
-*Addebito* e *Accredito* collassano in una sola e non si vedrebbe più se un
-importo è entrato o uscito. Il segno si ricava dal **saldo**, che non può
-mentire: i movimenti sono in ordine dal più recente e il saldo della riga sotto,
-più o meno l'importo, deve ridare quello della riga sopra. Se torna col più è un
-accredito, se torna col meno è un addebito, e se non torna con nessuno dei due
-la riga si scarta invece di indovinarla. Se i conti non tornano su più di una
-riga su dieci, l'app rifiuta tutto il file e ti dice di scaricare il CSV: meglio
-niente che un elenco inventato.
+**The copy in "Sent".** SMTP only delivers mail: the copy in the Sent folder is
+written by whoever sends, which is why mails sent from an iPhone also show up
+on the Mac. The app does the same, depositing the message over IMAP right after
+sending. So you find sent invoices in Sent like every other mail, from Mail,
+from the phone, from webmail. It finds the folder by itself (the server marks
+`INBOX.Sent` as Sent). If the copy fails the mail has still gone out, and the
+app tells you instead of pretending otherwise. *Test to yourself* deposits its
+copy too: a test that skips the deposit would not test the thing that matters.
 
-**Il collegamento automatico.** All'avvio dell'app e ogni volta che apri la
-pagina Banca, i versamenti su cui non c'è niente da decidere vengono collegati
-da soli: importo esatto, **un solo** candidato forte, e il nome del cliente (o
-la data della fattura) nella causale. Tutto il resto continua a chiederlo a te.
-Provato sui 18 mesi di estratti veri prima di attivarlo: **30 collegamenti
-automatici, 30 corretti, nessuno sbagliato**, e i 19 casi dubbi sono rimasti
-dubbi. Ogni riga decisa dall'app resta marcata «dall'app» e si annulla con un
-click. Si spegne in Impostazioni.
+**Two invoices in one mail.** On the sending page you can attach another recent
+invoice as well, even one belonging to a different client: the typical case is
+someone who gets their own plus their spouse's. The opening becomes "Attached
+are two invoices". Only invoices made with the app in the last 90 days and not
+yet sent are offered: the old ones from the archive exist only in Word and
+cannot be attached as PDFs.
 
-Regole che non cambiano:
+## Knowing when you have been paid
 
-- **L'app non segna niente da sola.** Propone e aspetta la conferma. Un
-  accostamento sbagliato fatto in silenzio è peggio di nessun accostamento:
-  ti farebbe credere di essere stato pagato quando non lo sei.
-- Legge **solo le entrate**. Quello che spendi non lo guarda.
-- I file non vengono spostati né modificati, e lo stesso mese riscaricato due
-  volte non produce doppioni (ogni versamento ha la sua impronta).
-- *Annulla* riporta la fattura esattamente com'era, stato compreso.
+Download the transactions from your e-banking and drop the files into
+**`Estratti conto/`** (bank statements). The app reads three formats:
+**camt.053 / camt.054** (XML), **CSV**, and **PDF statements**. In a CSV it
+recognises the columns by their header names, because every bank writes them
+differently. Then you open the **Bank** page.
 
-Come vengono accostati: importo esatto, finestra di **60 giorni** prima del
-versamento (5 dopo, per chi paga in anticipo) e nome del cliente cercato nella
-causale — anche scritto senza dieresi, come fanno le banche («Mueller» o
-«Muller» per Müller). La finestra è stretta di proposito: gli
-abbonamenti mensili sono tutti da 110.00, e con sei mesi di margine ogni
-versamento troverebbe sei fatture identiche.
+The PDF deserves an explanation. When the text is extracted, the *Debit* and
+*Credit* columns collapse into one and you could no longer tell whether an
+amount went in or out. The sign is recovered from the **balance**, which cannot
+lie: transactions are listed most recent first, and the balance of the row
+below, plus or minus the amount, must give back the balance of the row above.
+If it works out with a plus it is a credit, with a minus a debit, and if it
+works out with neither the row is discarded rather than guessed at. If the
+figures fail on more than one row in ten, the app rejects the whole file and
+tells you to download the CSV: nothing is better than an invented list.
 
-Altri tre casi che capitano davvero e che l'app gestisce:
+**Automatic matching.** When the app starts, and every time you open the Bank
+page, the payments where there is nothing to decide are matched by themselves:
+exact amount, **one single** strong candidate, and the client's name (or the
+invoice date) in the reference text. Everything else is still asked of you.
+Tested against 18 months of real statements before it was switched on: **30
+automatic matches, 30 correct, none wrong**, and the 19 doubtful cases stayed
+doubtful. Every row decided by the app stays marked "by the app" and is undone
+with one click. It is switched off in Settings.
 
-- **La data nella causale.** Qualche cliente non scrive il numero della fattura
-  ma la sua data («INVOICE 21-04-26»). È l'indizio più preciso che esista senza
-  QR-fattura, e distingue due mensilità identiche dello stesso cliente.
-- **Chi paga non è l'intestatario.** Sul conto arriva il nome del marito, della
-  moglie, di un'azienda. Il nome di
-  chi versa si scrive nella scheda del cliente, campo *Sull'estratto conto paga
-  come* (più nomi separati da punto e virgola).
-- **Un bonifico, due fatture.** Due fatture della stessa famiglia pagate con un
-  versamento solo. Se nessuna fattura da sola fa quell'importo, l'app cerca
-  combinazioni di due o tre fatture **dello stesso cliente** che insieme lo
-  facciano esattamente. Solo dello stesso cliente: senza quel vincolo si
-  troverebbero somme che tornano per caso.
+Rules that do not change:
 
-Le fatture già spuntate *pagata* a mano restano proponibili: confermarle non
-cambia lo stato, aggiunge la data vera del versamento, e la riga lo dice.
-Conviene lavorare dall'alto verso il basso (l'elenco è già in ordine di tempo):
-ogni conferma toglie quella fattura dai candidati delle successive, e le
-ambiguità fra mensilità uguali si sciolgono da sole.
+- **The app never marks anything by itself.** It proposes and waits for
+  confirmation. A wrong match made silently is worse than no match: it would
+  have you believe you had been paid when you had not.
+- It reads **incoming payments only**. What you spend, it does not look at.
+- Files are neither moved nor modified, and the same month downloaded twice
+  does not produce duplicates (every payment has its own fingerprint).
+- *Undo* puts the invoice back exactly as it was, state included.
 
-- 🔵 importo e nome combaciano → un pulsante *Conferma*
-- ⚪️ combacia solo l'importo → l'app mostra i candidati e ti fa scegliere
-- 🟢 il riferimento del pagamento combacia → comparirà con le QR-fatture, e da
-  lì l'accostamento non sarà più un'ipotesi
+How they are matched: exact amount, a window of **60 days** before the payment
+(5 after, for those who pay in advance) and the client's name looked for in the
+reference — including written without umlauts, as banks do ("Mueller" or
+"Muller" for Müller). The window is deliberately narrow: monthly subscriptions
+are all for the same amount, and with six months of leeway every payment would
+find six identical invoices.
 
-Il riferimento **non** viene dedotto dal numero di fattura: un riferimento di un
-altro creditore può finire con le stesse cifre, e l'app direbbe «certo» su una
-fattura sbagliata. Vale solo un riferimento che l'app ha stampato lei.
+Three more cases that really happen, and that the app handles:
 
-Quando confermi, la fattura prende la data vera del versamento (`paid_at`) oltre
-allo stato *pagata*: la spunta messa a mano e il giorno in cui i soldi sono
-arrivati restano due informazioni diverse.
+- **The date in the reference.** Some clients write not the invoice number but
+  its date ("INVOICE 21-04-26"). It is the most precise clue there is without a
+  QR-bill, and it tells apart two identical monthly invoices from the same
+  client.
+- **The payer is not the addressee.** The name arriving in the account is the
+  husband's, the wife's, a company's. The payer's name goes on the client's
+  card, field *On the bank statement pays as* (several names separated by
+  semicolons).
+- **One transfer, two invoices.** Two invoices for the same household paid with
+  a single transfer. If no single invoice makes that amount, the app looks for
+  combinations of two or three invoices **from the same client** that make it
+  exactly. Same client only: without that constraint it would find sums that
+  add up by coincidence.
 
-**Chi non ha ancora pagato.** In Dashboard, sotto *Stato fatture*, l'app separa
-due cose che sembrano uguali e non lo sono: le fatture **davvero scoperte** —
-emesse da abbastanza tempo che il versamento sarebbe già dovuto comparire
-nell'estratto che hai — e quelle **troppo recenti per saperlo**, il cui
-pagamento finirà in un estratto che non hai ancora scaricato. Il confine sono 45
-giorni prima dell'ultimo movimento letto, perché i tuoi clienti pagano fra i 4 e
-i 47 giorni dalla fattura. Senza questa distinzione l'elenco dei ritardi sarebbe
-pieno di falsi allarmi e smetteresti di guardarlo.
+Invoices already ticked *paid* by hand stay proposable: confirming them does
+not change the state, it adds the real payment date, and the row says so. It
+pays to work from the top down (the list is already in time order): every
+confirmation removes that invoice from the candidates for the following ones,
+and ambiguities between identical monthly invoices resolve themselves.
 
-Il riquadro *Salute dell'app* mostra fino a che data arrivano gli estratti e
-diventa giallo dopo 40 giorni: è il promemoria per scaricarne uno nuovo.
+- 🔵 amount and name match → a *Confirm* button
+- ⚪️ only the amount matches → the app shows the candidates and lets you choose
+- 🟢 the payment reference matches → this will appear with QR-bills, and from
+  there the match will no longer be a hypothesis
 
-## Copie di sicurezza
+The reference is **not** deduced from the invoice number: another creditor's
+reference can end with the same digits, and the app would say "certain" about
+the wrong invoice. Only a reference the app itself printed counts.
 
-Due reti, non una.
+When you confirm, the invoice takes the real payment date (`paid_at`) as well
+as the state *paid*: a tick put there by hand and the day the money arrived
+stay two different pieces of information.
 
-**Dentro l'app** (`data/backups/`): copia del solo database, a ogni avvio e prima
-di ogni operazione che può distruggere dati. Serve a tornare indietro di
-mezz'ora, non a sopravvivere a un disco rotto — sta sullo stesso disco.
+**Who has not paid yet.** On the Dashboard the app separates two things that
+look alike and are not: invoices **genuinely outstanding** — issued long enough
+ago that the payment should already have shown up in the statement you have —
+and those **too recent to tell**, whose payment will land in a statement you
+have not downloaded yet. The boundary is 45 days before the last transaction
+read. Without this distinction the list of late payments would be full of false
+alarms and you would stop looking at it.
 
-**Fuori dal Mac** (iCloud Drive, cartella *Fatture App - Backup*): due archivi.
+The *safety nets* panel in Checks shows how far the statements reach and turns
+amber after 40 days: that is the reminder to download a new one.
 
-- `fatture-app-AAAAMMGG-hhmmss.zip` — database, registro delle sessioni e i PDF
-  della cartella `Fatture/`. Creato all'avvio (una volta al giorno) e **dopo ogni
-  fattura nuova**. Circa 140 KB. Si tengono le ultime 30 copie più la prima di
-  ogni mese, che non viene mai cancellata.
-- `storico-AAAAMMGG-hhmmss.zip` — i documenti della cartella dello storico, dove
-  vivono le fatture più vecchie dell'app. Qualche MB, quindi viene rifatto **solo
-  quando quella cartella cambia davvero**: l'app ne confronta l'impronta e se è
-  identica non riscrive niente. Se ne tengono 3. La cartella viene solo letta,
-  mai modificata.
+## Backups
 
-Appena scritto, ogni archivio viene riaperto: il database dentro deve passare
-`PRAGMA integrity_check` e contenere lo stesso numero di fatture dell'originale.
-Se non passa, l'archivio viene buttato e l'errore compare in Impostazioni. Un
-backup che non si riapre non è un backup.
+Two nets, not one.
 
-In Impostazioni trovi data dell'ultima copia, le ultime dieci, il pulsante
-*Fai una copia adesso* e la cartella di destinazione, che puoi cambiare.
+**Inside the app** (`data/backups/`): a copy of the database alone, at every
+start and before every operation that could destroy data. It is there to take
+you back half an hour, not to survive a broken disk — it sits on the same disk.
 
-## Note pratiche
-- Prezzi: scrivi come sei abituato (`110.-`, `1'800.00`, `150,00 CHF`).
-- Il numero fattura è automatico (max esistente + 1) e l'app rifiuta duplicati
-  e non sovrascrive mai file esistenti.
-- Le fatture eliminate finiscono in `Cestino/` dentro questa cartella.
-- Backup: basta copiare questa cartella (il database è `data/fatture.db`).
+**Off the Mac** (iCloud Drive, folder *Fatture App - Backup*): two archives.
 
-## Provare l'app senza toccare i dati veri
+- `fatture-app-YYYYMMDD-hhmmss.zip` — database, session register and the PDFs
+  in the `Fatture/` folder. Created at startup (once a day) and **after every
+  new invoice**. About 140 KB. The last 30 copies are kept, plus the first of
+  each month, which is never deleted.
+- `storico-YYYYMMDD-hhmmss.zip` — the documents in the archive folder, where
+  the invoices older than the app live. A few MB, so it is remade **only when
+  that folder really changes**: the app compares its fingerprint and if it is
+  identical it rewrites nothing. Three are kept. The folder is only read, never
+  modified.
 
-Queste variabili d'ambiente deviano l'app su una copia. Servono a chi mette le
-mani nel codice: si fanno prove vere, con dati veri, senza rischiare i propri.
+As soon as it is written, every archive is reopened: the database inside must
+pass `PRAGMA integrity_check` and hold the same number of invoices as the
+original. If it does not pass, the archive is thrown away and the error appears
+in Settings. A backup that does not reopen is not a backup.
 
-| Variabile | Devia |
+In Settings you find the date of the last copy, the last ten, a *Make a copy
+now* button, and the destination folder, which you can change.
+
+## Practical notes
+
+- Prices: write them the way you are used to (`110.-`, `1'800.00`,
+  `150,00 CHF`).
+- The invoice number is automatic (highest existing + 1); the app refuses
+  duplicates and never overwrites existing files.
+- Deleted invoices end up in `Cestino/` (trash) inside this folder.
+- Backup: just copy this folder (the database is `data/fatture.db`).
+
+## Trying the app without touching real data
+
+These environment variables divert the app onto a copy. They are for anyone
+putting their hands in the code: you get to run real tests, with real data,
+without risking your own.
+
+| Variable | Diverts |
 |---|---|
-| `FATTURE_DB` | il database |
-| `FATTURE_DIR` | la cartella dove finiscono i documenti |
-| `FATTURE_SESSIONS` | il registro delle sessioni |
-| `FATTURE_ESTRATTI` | gli estratti conto |
-| `FATTURE_ORARI` | gli orari dell'Agenda |
-| `FATTURE_LOGO` | il logo |
-| `FATTURE_BACKUP` | le copie di sicurezza |
-| `FATTURE_PORT` | la porta (di serie 8471) |
+| `FATTURE_DB` | the database |
+| `FATTURE_DIR` | the folder where documents end up |
+| `FATTURE_SESSIONS` | the session register |
+| `FATTURE_ESTRATTI` | the bank statements |
+| `FATTURE_ORARI` | the session times |
+| `FATTURE_LOGO` | the logo |
+| `FATTURE_BACKUP` | the backups |
+| `FATTURE_PORT` | the port (8471 by default) |
 
-`FATTURE_BACKUP` passa davanti anche all'impostazione salvata: un'app di prova
-parte quasi sempre da una copia del database vero, e senza questo depositerebbe
-le sue copie in mezzo a quelle buone — dove, col ricambio delle ultime 30,
-finirebbero per spingere fuori le vere.
+`FATTURE_BACKUP` also takes precedence over the saved setting: a test app
+almost always starts from a copy of the real database, and without this it
+would drop its copies in among the good ones — where, with the rotation of the
+last 30, they would end up pushing the real ones out.

@@ -118,7 +118,7 @@
       {% set tot_srv = services | sum(attribute=1) %}
       {% for name, v in services %}
       <tr>
-        <td>{{ name }}</td>
+        <td>{{ _(name) }}</td>
         <td style="width:40%">
           <div style="background:#e2e8f0;border-radius:6px;height:10px">
             <div style="background:{{ '#b91c1c' if v < 0 else '#10b981' }};width:{{ ((v | abs) / max_service * 100) | round(1) }}%;height:10px;border-radius:6px"></div>
