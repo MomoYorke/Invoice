@@ -109,12 +109,16 @@ import zipfile
 import tempfile
 import hashlib
 
-ICLOUD = os.path.expanduser('~/Library/Mobile Documents/com~apple~CloudDocs')
+from . import desktop
+
+# Dove vanno a finire, se nessuno ha detto altrove: lo decide desktop.py,
+# che sa cosa offre il sistema su cui stiamo girando (iCloud sul Mac,
+# OneDrive su Windows, Documenti quando non c'e' ne' l'uno ne' l'altro).
 # Si puo' deviare con INVOICE_BACKUP, come per il database: cosi' un'app di
 # prova non va a depositare le sue copie fra quelle vere, dove col ricambio
 # spingerebbero fuori le buone.
 DEST_DEFAULT = (db.env('INVOICE_BACKUP', 'FATTURE_BACKUP')
-                or os.path.join(ICLOUD, 'Fatture App - Backup'))
+                or desktop.cartella_backup())
 TIENI_GIORNALIERI = 30          # quante copie recenti conservare
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

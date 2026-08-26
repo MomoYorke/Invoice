@@ -13,7 +13,6 @@ import shutil
 import datetime
 import logging
 import traceback
-import subprocess
 
 from flask import (Flask, render_template, request, redirect, url_for,
                    send_file, jsonify, flash, abort, g)
@@ -28,6 +27,7 @@ from core import sessions as sess
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
 from core import branding
+from core import desktop
 from core import services as srv
 from core import welcome as ben
 from core import icons
@@ -997,7 +997,7 @@ def commercialista_genera():
         msg += lng.t(' — PDF non trovati per: {elenco}', lg).format(
             elenco=', '.join(res['missing'][:6]))
     flash(msg, 'ok')
-    subprocess.Popen(['open', res['folder']])
+    desktop.apri(res['folder'])
     return redirect(url_for('commercialista'))
 
 
@@ -1807,10 +1807,8 @@ def api_client(cid):
 @app.route('/apri-cartella', methods=['POST'])
 def apri_cartella():
     target = request.form.get('path', INVOICE_DIR)
-    if os.path.isdir(target):
-        subprocess.Popen(['open', target])
-    elif os.path.isfile(target):
-        subprocess.Popen(['open', '-R', target])
+    if os.path.exists(target):
+        desktop.apri(target)
     return redirect(request.referrer or url_for('dashboard'))
 
 
@@ -1851,6 +1849,15 @@ def _avvia(porta):
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     # threaded come fa Flask da sola: senza, una pagina lenta blocca le altre
     server = make_server('127.0.0.1', porta, app, threaded=True)
+    # Il browser lo apre l'app, se chi l'ha accesa glielo chiede con
+    # INVOICE_OPEN_BROWSER. Sembra un mestiere dell'avviatore, ma questo e'
+    # l'unico punto che sa DAVVERO che il server sta in piedi: make_server ha
+    # gia' preso la porta, quindi la pagina non puo' arrivare troppo presto.
+    # E scritto qui vale su ogni sistema, invece di rifare l'attesa una volta
+    # per il Mac e una per Windows.
+    if db.env('INVOICE_OPEN_BROWSER'):
+        import webbrowser
+        webbrowser.open('http://127.0.0.1:%d' % porta)
     try:
         server.serve_forever()
     except KeyboardInterrupt:                           # pragma: no cover

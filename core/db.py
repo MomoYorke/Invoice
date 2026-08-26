@@ -4,6 +4,8 @@ import os
 import sqlite3
 import datetime
 
+from . import desktop
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Il database vero. Si può puntare a una COPIA con la variabile FATTURE_DB:
 # serve per provare modifiche senza mai toccare i dati reali.
@@ -286,8 +288,7 @@ DEFAULT_SETTINGS = {
     # righe della fattura; nell'anteprima si cambia con un click e si riscrive.
     'email_corpo_coaching': 'Thank you again for your trust.',
     'email_corpo_pt': 'Thank you again for your trust.',
-    'backup_dir': os.path.expanduser(
-        '~/Library/Mobile Documents/com~apple~CloudDocs/Fatture App - Backup'),
+    'backup_dir': desktop.cartella_backup(),
 }
 
 # --- i modelli della mail, uno per lingua -----------------------------------
