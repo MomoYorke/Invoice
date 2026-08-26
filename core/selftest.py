@@ -1830,6 +1830,7 @@ def _test_banca(r):
     _test_intestatario(r)
     _test_pacchetto(r)
     _test_pacchetto_lingua(r)
+    _test_modelli_lingua(r)
     """Leggere l'estratto e accostarlo: qui un errore costa caro, si prova bene."""
     import os
     import sqlite3
@@ -2088,6 +2089,16 @@ def _test_pacchetto_lingua(r):
     _check(r, 'Pacchetto commercialista', 'e cambiano con la lingua dell’app',
            (L.mesi_elenco('en')[0], L.mesi_elenco('de')[0]), ('January', 'Januar'))
 
+    # la lingua del pacchetto e' quella di chi lo legge, non quella dell'app
+    _check(r, 'Pacchetto commercialista', 'di serie il pacchetto segue l’app',
+           ('accountant_lingua' in _db.DEFAULT_SETTINGS,
+            _db.DEFAULT_SETTINGS.get('accountant_lingua', '(manca)'),
+            E.lingua_pacchetto({}, 'de')),
+           (True, '', 'de'))
+    _check(r, 'Pacchetto commercialista',
+           'ma se la commercialista legge un’altra lingua vince la sua',
+           E.lingua_pacchetto({'accountant_lingua': 'it'}, 'en'), 'it')
+
     con = sqlite3.connect(':memory:')
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
@@ -2131,4 +2142,97 @@ def _test_pacchetto_lingua(r):
            (letto['it']['importo'], letto['de']['importo'],
             letto['it']['numero'], letto['de']['numero']),
            (1800.0, 1800.0, '#1', '#1'))
+
+
+def _test_modelli_lingua(r):
+    """I modelli della mail hanno una versione per lingua, e la firma no.
+
+    Due cose vanno provate insieme: che scrivendo il tedesco la mail esca in
+    tedesco, e che NON scrivendolo esca esattamente come prima. La seconda
+    conta di piu': le mail che manda oggi non devono cambiare di una virgola.
+    """
+    import sqlite3
+    from . import mailer as M
+    from . import db as _db
+    from .db import SCHEMA
+
+    # --- il ripiego: senza versione per quella lingua vale quella per tutti ---
+    s = {'email_corpo_pt': 'per tutti', 'email_corpo_pt_de': 'auf Deutsch',
+         'email_corpo_pt_it': '   '}
+    _check(r, 'Modelli della mail', 'la versione nella lingua del cliente vince',
+           _db.modello_email(s, 'email_corpo_pt', 'de'), 'auf Deutsch')
+    _check(r, 'Modelli della mail', 'se quella lingua non è scritta si usa quella per tutti',
+           _db.modello_email(s, 'email_corpo_pt', 'en'), 'per tutti')
+    _check(r, 'Modelli della mail', 'e anche se è scritta ma è solo spazi',
+           _db.modello_email(s, 'email_corpo_pt', 'it'), 'per tutti')
+    _check(r, 'Modelli della mail', 'una lingua che non esiste non inventa una chiave',
+           _db.chiave_modello('email_corpo_pt', 'klingon'), 'email_corpo_pt')
+
+    # --- la migrazione: la firma esce dal modello e la mail resta uguale ---
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(SCHEMA)
+    vecchio = 'Dear {nome},\n\n{apertura}\n{corpo}\n\n{saluto}Anna Muster\n+41 00 000 00 00\n'
+    con.execute("INSERT INTO settings(key, value) VALUES('email_body', ?)", (vecchio,))
+    con.commit()
+    _db._migra_firma_email(con)
+    con.commit()
+    def leggi(k):
+        x = con.execute('SELECT value FROM settings WHERE key=?', (k,)).fetchone()
+        return x['value'] if x else None
+    _check(r, 'Modelli della mail', 'la firma esce dal modello e diventa sua',
+           (leggi('email_body'), leggi('email_firma')),
+           ('Dear {nome},\n\n{apertura}\n{corpo}\n\n{saluto}{firma}',
+            'Anna Muster\n+41 00 000 00 00\n'))
+    valori = {'nome': 'Anna', 'apertura': 'A.', 'corpo': 'C.', 'saluto': 'Best,\n',
+              'firma': leggi('email_firma')}
+    _check(r, 'Modelli della mail', 'e la mail che ne esce è identica a prima',
+           leggi('email_body').format(**valori), vecchio.format(**valori))
+
+    # girata due volte non deve staccare la firma una seconda volta
+    _db._migra_firma_email(con)
+    con.commit()
+    _check(r, 'Modelli della mail', 'rifarla non rovina niente',
+           leggi('email_body'),
+           'Dear {nome},\n\n{apertura}\n{corpo}\n\n{saluto}{firma}')
+
+    # un modello riscritto senza {saluto} non si tocca: meglio non staccarla
+    con.execute("UPDATE settings SET value='Ciao {nome}' WHERE key='email_body'")
+    con.execute("DELETE FROM settings WHERE key='email_firma'")
+    con.commit()
+    _db._migra_firma_email(con)
+    con.commit()
+    _check(r, 'Modelli della mail', 'un modello senza {saluto} resta com’è',
+           (leggi('email_body'), leggi('email_firma')), ('Ciao {nome}', None))
+    con.close()
+
+    # --- la mail vera, composta in due lingue ---
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(SCHEMA)
+    _db._migrate(con)
+    con.execute("""INSERT INTO invoices(number, client_name, date, year, total_cents,
+                                        status, pdf_path) VALUES(?,?,?,?,?,?,?)""",
+                (1, 'Anna Muster', '2026-01-15', 2026, 11000, 'emessa', ''))
+    con.commit()
+    inv = con.execute('SELECT * FROM invoices WHERE number=1').fetchone()
+    imp = dict(_db.DEFAULT_SETTINGS,
+               email_body='Dear {nome},\n{corpo}\n{saluto}{firma}',
+               email_corpo_pt='Thank you.', email_saluto_informale='Best,\n',
+               email_firma='Anna Muster', email_corpo_pt_de='Vielen Dank.',
+               email_body_de='Guten Tag {nome}\n{corpo}\n{saluto}{firma}')
+    cliente = _Finta(name='Anna Muster', email='a@b.ch', abbonamento=0,
+                     tono='informale', lingua='de', intestatario='')
+    tedesca = M.componi(inv, cliente, imp)['body']
+    cliente['lingua'] = 'en'
+    inglese = M.componi(inv, cliente, imp)['body']
+    _check(r, 'Modelli della mail', 'al cliente tedesco arriva la mail tedesca',
+           tedesca, 'Guten Tag Anna\nVielen Dank.\nBest,\nAnna Muster')
+    _check(r, 'Modelli della mail', 'e all’inglese la sua, invariata',
+           inglese, 'Dear Anna,\nThank you.\nBest,\nAnna Muster')
+    # la firma sta in una chiave sola: in ogni lingua compare una volta e
+    # basta, e non serve ricopiarla in ogni modello tradotto
+    _check(r, 'Modelli della mail', 'la firma compare una volta sola in tutte e due',
+           (tedesca.count('Anna Muster'), inglese.count('Anna Muster')), (1, 1))
+    con.close()
 

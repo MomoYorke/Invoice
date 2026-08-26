@@ -26,6 +26,7 @@ import mimetypes
 from email.message import EmailMessage
 
 from .money import fmt_chf
+from . import db
 from . import lingua as L
 from . import servizi as srv
 
@@ -152,9 +153,9 @@ def mese_oggetto(descrizioni=(), oggetti_cliente=(), oggetti_stile=None):
     return etichetta_mesi(mesi, stile)
 
 
-def oggetto_modello(settings, modello):
+def oggetto_modello(settings, modello, lingua=None):
     """L'oggetto grezzo del modello scelto, segnaposti compresi."""
-    return settings.get('email_oggetto_' + modello, '') or ''
+    return db.modello_email(settings, 'email_oggetto_' + modello, lingua) or ''
 
 
 def _riconosciuto(descrizioni, settings):
@@ -171,15 +172,15 @@ def modello_di(descrizioni, settings):
     return _riconosciuto(descrizioni, settings)[1] or 'pt'
 
 
-def testo_modello(settings, modello):
-    return settings.get('email_corpo_' + modello, '') or ''
+def testo_modello(settings, modello, lingua=None):
+    return db.modello_email(settings, 'email_corpo_' + modello, lingua) or ''
 
 
 # Come si chiude la mail. Il testo lo scrive chi usa l'app, in Impostazioni:
 # con chi ci si da' del tu ci si firma in un modo, con gli altri in un altro.
-def saluto_di(settings, tono):
+def saluto_di(settings, tono, lingua=None):
     chiave = 'email_saluto_formale' if tono == 'formale' else 'email_saluto_informale'
-    return settings.get(chiave, '')
+    return db.modello_email(settings, chiave, lingua)
 
 
 def nome_di_battesimo(nome_completo):
@@ -236,16 +237,18 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         if extra and extra not in allegati:
             allegati.append(extra)
 
+    # la lingua della mail e' quella del CLIENTE: e' lui che la legge. Si
+    # decide per prima, perche' da lei dipende quale modello si va a prendere.
+    lingua = L.normalizza_doc(
+        cliente['lingua'] if cliente and 'lingua' in cliente.keys() else None)
+
     abbonato = bool(cliente['abbonamento']) if cliente and 'abbonamento' in cliente.keys() else False
     tono = (cliente['tono'] if cliente and 'tono' in cliente.keys() else '') or 'informale'
     if modello not in NOMI_MODELLO:
         modello = modello_di(descrizioni, settings)
-    corpo = testo_modello(settings, modello) if corpo is None else corpo
+    corpo = testo_modello(settings, modello, lingua) if corpo is None else corpo
     corpo = (corpo or '').strip()
 
-    # la lingua della mail e' quella del CLIENTE: e' lui che la legge
-    lingua = L.normalizza_doc(
-        cliente['lingua'] if cliente and 'lingua' in cliente.keys() else None)
     servizio = servizio_di(descrizioni, settings)
     if len(allegati) > 1:
         quante = QUANTE.get(len(allegati))
@@ -257,7 +260,7 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
     else:
         apertura = L.t_doc(APERTURA_MENSILE_ANONIMA if abbonato
                            else APERTURA_SEMPLICE_ANONIMA, lingua)
-    oggetto_grezzo = oggetto_modello(settings, modello)
+    oggetto_grezzo = oggetto_modello(settings, modello, lingua)
     valori = {
         'apertura': apertura,
         'mese': mese or SEGNAPOSTO_MESE,
@@ -267,11 +270,13 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         'servizio': servizio,
         'riga_abbonamento': L.t_doc(FRASE_ABBONAMENTO, lingua) if abbonato else '',
         'corpo': corpo,
-        'saluto': saluto_di(settings, tono),
+        'saluto': saluto_di(settings, tono, lingua),
+        # la firma non si traduce: e' il suo nome e i suoi recapiti
+        'firma': settings.get('email_firma', ''),
     }
     try:
         oggetto = oggetto_grezzo.format(**valori)
-        testo = settings.get('email_body', '').format(**valori)
+        testo = db.modello_email(settings, 'email_body', lingua).format(**valori)
     except KeyError as e:
         problemi.append(f'Nel modello dell\'email c\'e\' un segnaposto sconosciuto: {e}. '
                         'Correggilo in Impostazioni.')
@@ -279,7 +284,7 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
 
     return {'to': destinatario, 'subject': oggetto, 'body': testo,
             'allegato': allegato, 'allegati': allegati, 'problemi': problemi,
-            'modello': modello, 'mese': mese,
+            'modello': modello, 'mese': mese, 'lingua': lingua,
             # il personal training il mese non lo nomina: la nota sul mese ha
             # senso solo per il coaching
             'usa_mese': '{mese}' in oggetto_grezzo,

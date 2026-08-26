@@ -150,6 +150,10 @@ DEFAULT_SETTINGS = {
     'terms': 'Payable within 30 days net to:',
     'accountant_name': '',
     'accountant_city': '',
+    # In che lingua esce il pacchetto: chi lo legge e' la commercialista, non
+    # tu. Vuoto vuol dire «come l'app», che e' il caso normale; si scrive solo
+    # quando i due non coincidono - l'app in inglese e lei che legge italiano.
+    'accountant_lingua': '',
     # una cartella di fatture vecchie da leggere all'avvio, se ne hai una.
     # Vuoto = si parte da zero. Viene solo letta, mai modificata.
     'source_folder': '',
@@ -220,7 +224,13 @@ DEFAULT_SETTINGS = {
         "{apertura}\n"
         "{riga_abbonamento}"
         "{corpo}\n\n"
-        "{saluto}"),
+        "{saluto}"
+        "{firma}"),
+    # Come ti firmi: nome, titolo, telefono, siti. Sta fuori dal modello e non
+    # si traduce mai, perche' un numero di telefono e' quello in ogni lingua.
+    # Se stesse dentro al modello, ogni versione tradotta ne terrebbe una
+    # copia, e cambiando numero se ne aggiornerebbe una sola.
+    'email_firma': '',
     # Come chiudi la mail. Due versioni, perche' con qualcuno ci si da' del tu
     # e con qualcun altro no: nella scheda del cliente si sceglie quale usare.
     'email_saluto_informale': 'Best,\n',
@@ -235,6 +245,41 @@ DEFAULT_SETTINGS = {
     'backup_dir': os.path.expanduser(
         '~/Library/Mobile Documents/com~apple~CloudDocs/Fatture App - Backup'),
 }
+
+# --- i modelli della mail, uno per lingua -----------------------------------
+# Il testo delle mail lo scrive chi usa l'app, quindi l'app non puo' tradurlo:
+# sono parole sue. Puo' pero' tenerne una versione per lingua e usare quella
+# giusta secondo la lingua del CLIENTE, che e' chi la legge. La chiave senza
+# suffisso vale per tutti; «email_corpo_pt_de» vale solo per chi e' in tedesco.
+# Vuota vuol dire «non ho scritto niente per questa lingua»: si usa quella per
+# tutti, che e' meglio di una mail mezza vuota.
+MODELLI_EMAIL_TESTO = ('email_body', 'email_corpo_coaching', 'email_corpo_pt',
+                       'email_saluto_informale', 'email_saluto_formale')
+MODELLI_EMAIL_RIGA = ('email_oggetto_coaching', 'email_oggetto_pt')
+MODELLI_EMAIL = MODELLI_EMAIL_TESTO + MODELLI_EMAIL_RIGA
+LINGUE_MODELLI = ('it', 'en', 'de')
+
+for _chiave in MODELLI_EMAIL:
+    for _lingua in LINGUE_MODELLI:
+        DEFAULT_SETTINGS['%s_%s' % (_chiave, _lingua)] = ''
+
+# Il testo va salvato com'e' scritto: gli a capo in fondo a un saluto sono lo
+# spazio prima della firma, e toglierli lo rovina.
+TESTI_INTOCCABILI = frozenset(
+    MODELLI_EMAIL_TESTO
+    + tuple('%s_%s' % (c, l) for c in MODELLI_EMAIL_TESTO for l in LINGUE_MODELLI)
+    + ('email_firma', 'servizi', 'servizi_abbonamento', 'servizi_pacchetto'))
+
+
+def chiave_modello(chiave, lingua=None):
+    """Il nome dell'impostazione che tiene quel modello in quella lingua."""
+    return '%s_%s' % (chiave, lingua) if lingua in LINGUE_MODELLI else chiave
+
+
+def modello_email(settings, chiave, lingua=None):
+    """Il modello nella lingua del cliente, o quello per tutti se non c'e'."""
+    suo = settings.get(chiave_modello(chiave, lingua))
+    return suo if (suo or '').strip() else settings.get(chiave, '')
 
 
 def connect():
@@ -301,6 +346,7 @@ def _migrate(con):
     _migra_oggetti_email(con)
     _migra_registro_email(con)
     _migra_servizi_riconosciuti(con)
+    _migra_firma_email(con)
     mov = {r['name'] for r in con.execute('PRAGMA table_info(movimenti)')}
     if 'stato_prima' not in mov:
         con.execute('ALTER TABLE movimenti ADD COLUMN stato_prima TEXT DEFAULT ""')
@@ -319,6 +365,29 @@ def _migrate(con):
             # il testo della mail: si tiene per poterla rileggere dall'app
             con.execute(f'ALTER TABLE email_log ADD COLUMN {colonna} TEXT DEFAULT ""')
     con.commit()
+
+
+def _migra_firma_email(con):
+    """La firma esce dal modello della mail e diventa un'impostazione sua.
+
+    Prima stava in fondo a «email_body», dopo il segnaposto {saluto}: va
+    staccata li'. La mail che ne esce e' identica a prima, perche' il modello
+    finisce con {firma} e la firma e' esattamente il pezzo che c'era.
+
+    Se qualcuno ha riscritto il modello e {saluto} non c'e' piu', non si tocca
+    niente: meglio una firma non staccata che un modello rotto.
+    """
+    r = con.execute("SELECT value FROM settings WHERE key='email_body'").fetchone()
+    if r is None or '{firma}' in r['value']:
+        return
+    testo = r['value']
+    if '{saluto}' not in testo:
+        return
+    taglio = testo.index('{saluto}') + len('{saluto}')
+    con.execute("INSERT OR IGNORE INTO settings(key, value) VALUES('email_firma', ?)",
+                (testo[taglio:],))
+    con.execute("UPDATE settings SET value=? WHERE key='email_body'",
+                (testo[:taglio] + '{firma}',))
 
 
 def _migra_servizi_riconosciuti(con):
