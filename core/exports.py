@@ -7,6 +7,7 @@ Pacchetto per la commercialista:
 - tutto in una cartella Esporti/Commercialista_YYYY + zip
 """
 import os
+import re
 import shutil
 import zipfile
 import datetime
@@ -201,6 +202,71 @@ def build_summary_pdf(con, year, out_path, settings):
     return out_path
 
 
+# --- il PDF che sta accanto al Word ------------------------------------------
+# Nell'archivio storico lo stesso documento porta due nomi diversi: «Sofia
+# #58.docx» e «Sofia ^N58.pdf». Cambia solo il segno davanti al numero (#, ^N,
+# ^LN, ^, _, uno spazio): il nome davanti e il numero in fondo restano quelli.
+_CODA_NUMERO = re.compile(r'[\s_#]*(?:\^[A-Za-z]*)?[\s_#]*(\d+)\s*$')
+
+
+def _nome_e_numero(percorso):
+    """Il nome e il numero scritti nel nome del file, separati."""
+    base = os.path.splitext(os.path.basename(percorso))[0]
+    m = _CODA_NUMERO.search(base)
+    if not m:
+        return ' '.join(base.split()).lower(), None
+    return ' '.join(base[:m.start()].split()).lower(), int(m.group(1))
+
+
+def pdf_gemello(percorso):
+    """Il PDF dello stesso documento, anche se i due nomi non coincidono.
+
+    Si cerca il numero SCRITTO NEL NOME DEL FILE, non il numero della fattura:
+    una fattura rinumerata (la #58 diventata #59) sul disco porta ancora il
+    vecchio nome, e cercare «59» non troverebbe niente.
+
+    A parita' di numero vince chi ha lo stesso nome davanti, perche' proprio
+    una rinumerazione lascia due «58» di due persone diverse nella stessa
+    cartella: mandare alla commercialista la fattura di Tizio col numero di
+    Caio sarebbe molto peggio che non mandarne nessuna. Se il nome non
+    combacia con nessuno, il PDF va bene solo se e' l'unico con quel numero.
+    """
+    base = os.path.splitext(percorso)[0]
+    if os.path.exists(base + '.pdf'):
+        return base + '.pdf'
+    cartella = os.path.dirname(percorso)
+    if not os.path.isdir(cartella):
+        return None
+    nome, numero = _nome_e_numero(percorso)
+    if numero is None:
+        return None
+    ripiego = []
+    for f in sorted(os.listdir(cartella)):
+        if not f.lower().endswith('.pdf'):
+            continue
+        altro_nome, altro_numero = _nome_e_numero(f)
+        if altro_numero != numero:
+            continue
+        if altro_nome == nome:
+            return os.path.join(cartella, f)
+        ripiego.append(os.path.join(cartella, f))
+    return ripiego[0] if len(ripiego) == 1 else None
+
+
+def _nome_copia(inv, src):
+    """Come si chiama la copia del PDF dentro il pacchetto.
+
+    Sul disco i file storici portano nomi di ogni tipo, e a volte un numero
+    che non e' piu' quello della fattura: la #58 rinumerata #59 si chiama
+    ancora «Sofia ^N58.pdf». Dentro il pacchetto il nome deve combaciare col
+    registro, se no chi lo riceve non sa quale riga sta guardando.
+    """
+    if not inv['number']:
+        return os.path.basename(src)
+    nome = re.sub(r'[\\/:]', '-', (inv['client_name'] or '').strip())
+    return ('#%s %s' % (inv['number'], nome)).strip() + '.pdf'
+
+
 def build_package(con, year, settings, source_root):
     """Crea la cartella Esporti/Commercialista_YYYY con Excel, PDF riepilogo,
     copie delle fatture PDF e uno zip pronto da mandare."""
@@ -225,21 +291,9 @@ def build_package(con, year, settings, source_root):
             if cand.lower().endswith('.pdf') and os.path.exists(cand):
                 src = cand
             else:
-                base = os.path.splitext(cand)[0]
-                for alt in (base + '.pdf',):
-                    if os.path.exists(alt):
-                        src = alt
-                        break
-                if not src:
-                    # cerca varianti tipo 'Nome ^N75.pdf' nella stessa cartella
-                    import glob as g
-                    num = inv['number']
-                    if num:
-                        for alt in g.glob(os.path.join(os.path.dirname(cand), f'*{num}.pdf')):
-                            src = alt
-                            break
+                src = pdf_gemello(cand)
         if src:
-            shutil.copy2(src, os.path.join(inv_dir, os.path.basename(src)))
+            shutil.copy2(src, os.path.join(inv_dir, _nome_copia(inv, src)))
             copied += 1
         else:
             missing.append(f"#{inv['number'] or '—'} {inv['client_name']}")
