@@ -35,10 +35,10 @@ from core import menu
 from core import lingua as lng
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-# La cartella delle fatture si puo' deviare con FATTURE_DIR: serve per provare
+# La cartella delle fatture si puo' deviare con INVOICE_DIR: serve per provare
 # modifiche senza scrivere documenti nella cartella vera.
-INVOICE_DIR = os.environ.get('FATTURE_DIR') or os.path.join(APP_DIR, 'Fatture')
-TRASH_DIR = os.path.join(APP_DIR, 'Cestino')
+INVOICE_DIR = db.DIR_FATTURE
+TRASH_DIR = db.DIR_CESTINO
 
 app = Flask(__name__)
 app.secret_key = 'em-fatture-locale'
@@ -1652,11 +1652,11 @@ def reimporta():
 def _cartella_backup():
     """Dove va la copia esterna. Impostabile; se manca, iCloud.
 
-    FATTURE_BACKUP passa davanti a tutto, anche all'impostazione salvata:
+    INVOICE_BACKUP passa davanti a tutto, anche all'impostazione salvata:
     un'app di prova parte spesso da una copia del database vero, e senza
     questo si metterebbe a scrivere le sue copie in mezzo a quelle buone."""
-    if os.environ.get('FATTURE_BACKUP'):
-        return os.environ['FATTURE_BACKUP']
+    if db.env('INVOICE_BACKUP', 'FATTURE_BACKUP'):
+        return db.env('INVOICE_BACKUP', 'FATTURE_BACKUP')
     try:
         con = get_con()
         d = db.get_settings(con).get('backup_dir') or backup.DEST_DEFAULT
@@ -1706,6 +1706,7 @@ def impostazioni():
     con.close()
     dest = settings.get('backup_dir') or backup.DEST_DEFAULT
     return render_template('impostazioni.html', settings=settings,
+                           cartella_estratti=os.path.basename(db.DIR_ESTRATTI),
                            copie=backup.elenco_esterni(dest)[:10],
                            ultimo=backup.ultimo_esterno(dest),
                            pausa=_pausa_smtp(settings),
@@ -1821,7 +1822,7 @@ def apri_cartella():
 # Il nome porta la porta dentro: una copia di prova su un'altra porta scrive il
 # suo file e non fa credere all'avviatore che l'app vera sia gia' aggiornata.
 def _segnale_avvio(porta):
-    return os.path.join(APP_DIR, 'data', '.avviata-%s' % porta)
+    return os.path.join(APP_DIR, 'data', '.started-%s' % porta)
 
 
 def _segna_avvio(porta):
@@ -1857,7 +1858,12 @@ def _avvia(porta):
 
 
 if __name__ == '__main__':
-    PORTA = int(os.environ.get('FATTURE_PORT') or 8471)
+    PORTA = int(db.env('INVOICE_PORT', 'FATTURE_PORT') or 8471)
+    # prima di ogni altra cosa: se le cartelle hanno ancora i nomi vecchi le
+    # rinomina. Dopo il makedirs qui sotto sarebbe troppo tardi — la cartella
+    # nuova esisterebbe gia' vuota e i documenti resterebbero nella vecchia.
+    for _prima, _dopo in db.migra_cartelle():
+        print('  Cartella «%s» rinominata «%s».' % (_prima, _dopo))
     os.makedirs(INVOICE_DIR, exist_ok=True)
     _segna_avvio(PORTA)
     con = db.init()
@@ -1892,6 +1898,6 @@ if __name__ == '__main__':
         if os.path.isdir(s['source_folder']):
             importer.import_all(con, s['source_folder'])
     con.close()
-    # la porta si puo' cambiare con FATTURE_PORT: serve per far girare una
+    # la porta si puo' cambiare con INVOICE_PORT: serve per far girare una
     # copia di prova (per esempio un ripristino da backup) accanto all'app vera
     _avvia(PORTA)

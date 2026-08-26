@@ -241,7 +241,7 @@
 <div class="panel mt" style="max-width:760px">
   <h2 style="margin-top:0">{{ _('Banca — collegamento automatico') }}</h2>
   <p class="sub">{{ _('Quando metti un estratto nuovo nella cartella {cartella}, l’app può collegare da sola i versamenti su cui non c’è niente da decidere: importo esatto, un solo candidato, e il nome (o la data della fattura) nella causale. Tutto il resto continua a chiederlo a te.').format(
-       cartella='<code>' + _('Estratti conto') + '</code>') | safe }}</p>
+       cartella='<code>' + cartella_estratti + '</code>') | safe }}</p>
   <form method="post">
     <input type="hidden" name="banca_marcatore" value="1">
     <label style="font-weight:400"><input type="checkbox" name="banca_auto" value="1"

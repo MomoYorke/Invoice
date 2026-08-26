@@ -999,8 +999,8 @@ TESTI = {
         '{esito} controlli': '{esito} checks',
         'Ultima {eta}.': 'Last one {eta}.',
         'Estratto conto': 'Bank statement',
-        'Scarica i movimenti dall’e-banking e mettili in «Estratti conto».':
-            'Download the transactions from e-banking and put them in «Estratti conto».',
+        'Scarica i movimenti dall’e-banking e mettili in «{cartella}».':
+            'Download the transactions from e-banking and put them in «{cartella}».',
         'fino al {data}': 'up to {data}',
         'Da lì in poi l’app non sa chi ti ha pagato: scaricane uno nuovo.':
             'From then on the app does not know who paid you: download a new one.',
@@ -1123,6 +1123,8 @@ TESTI = {
 
         'Altro': 'Other',
         'Non dettagliato': 'Not itemised',
+
+        'prima di aggiornare il programma': 'before updating the program',
 
     },
     'de': {
@@ -2085,8 +2087,8 @@ TESTI = {
         '{esito} controlli': '{esito} Prüfungen',
         'Ultima {eta}.': 'Letzte {eta}.',
         'Estratto conto': 'Kontoauszug',
-        'Scarica i movimenti dall’e-banking e mettili in «Estratti conto».':
-            'Lade die Bewegungen aus dem E-Banking und leg sie in «Estratti conto» ab.',
+        'Scarica i movimenti dall’e-banking e mettili in «{cartella}».':
+            'Lade die Bewegungen aus dem E-Banking und leg sie in «{cartella}» ab.',
         'fino al {data}': 'bis {data}',
         'Da lì in poi l’app non sa chi ti ha pagato: scaricane uno nuovo.':
             'Ab dann weiss die App nicht, wer dich bezahlt hat: lad einen neuen herunter.',
@@ -2209,6 +2211,8 @@ TESTI = {
 
         'Altro': 'Sonstiges',
         'Non dettagliato': 'Ohne Aufstellung',
+
+        'prima di aggiornare il programma': 'vor dem Aktualisieren des Programms',
 
     },
 }

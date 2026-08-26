@@ -26,8 +26,10 @@ from . import stats
 from . import lingua as L
 from .money import fmt_chf
 
+from . import db as _db
+
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-EXPORT_DIR = os.path.join(APP_DIR, 'Esporti')
+EXPORT_DIR = _db.DIR_ESPORTI
 
 HDR_FILL = PatternFill('solid', fgColor='1F4E5F')
 HDR_FONT = Font(bold=True, color='FFFFFF')

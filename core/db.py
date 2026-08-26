@@ -7,7 +7,51 @@ import datetime
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Il database vero. Si può puntare a una COPIA con la variabile FATTURE_DB:
 # serve per provare modifiche senza mai toccare i dati reali.
-DB_PATH = os.environ.get('FATTURE_DB') or os.path.join(APP_DIR, 'data', 'fatture.db')
+
+
+def env(nome, vecchio=None):
+    """Una variabile d'ambiente, accettando anche il vecchio nome.
+
+    Le variabili si chiamavano FATTURE_*, come le cartelle si chiamavano in
+    italiano. Il vecchio nome continua a funzionare: chi ha uno script di prova
+    che lo usa non se lo ritrova rotto da un aggiornamento.
+    """
+    return os.environ.get(nome) or (os.environ.get(vecchio) if vecchio else None)
+
+
+DB_PATH = env('INVOICE_DB', 'FATTURE_DB') or os.path.join(APP_DIR, 'data', 'fatture.db')
+
+# --- le quattro cartelle dei dati -------------------------------------------
+# Stavano scritte in tre file diversi, ognuno con la sua copia della stringa.
+# Adesso stanno qui, una volta sola: chi le rinomina non ne dimentica una.
+DIR_FATTURE = env('INVOICE_DIR', 'FATTURE_DIR') or os.path.join(APP_DIR, 'Invoices')
+DIR_ESPORTI = os.path.join(APP_DIR, 'Exports')
+DIR_CESTINO = os.path.join(APP_DIR, 'Trash')
+DIR_ESTRATTI = (env('INVOICE_STATEMENTS', 'FATTURE_ESTRATTI')
+                or os.path.join(APP_DIR, 'Bank statements'))
+
+# Come si chiamavano prima. Chi aggiorna da una versione italiana se le ritrova
+# rinominate, non ricreate vuote accanto alle sue con i documenti nell'altra.
+RINOMINATE = (('Fatture', 'Invoices'), ('Esporti', 'Exports'),
+              ('Cestino', 'Trash'), ('Estratti conto', 'Bank statements'))
+
+
+def migra_cartelle(base=None):
+    """Rinomina le cartelle dei dati rimaste col nome vecchio.
+
+    Va chiamata PRIMA che qualcuno crei le nuove, se no la cartella nuova
+    esiste gia' vuota e i documenti restano nella vecchia. Se ci sono
+    tutt'e due non si tocca niente: unire due cartelle e' una decisione,
+    non una migrazione, e la prende chi ha i file davanti.
+    """
+    base = base or APP_DIR
+    fatte = []
+    for vecchio, nuovo in RINOMINATE:
+        prima, dopo = os.path.join(base, vecchio), os.path.join(base, nuovo)
+        if os.path.isdir(prima) and not os.path.exists(dopo):
+            os.rename(prima, dopo)
+            fatte.append((vecchio, nuovo))
+    return fatte
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS clients(
@@ -347,6 +391,7 @@ def _migrate(con):
     _migra_registro_email(con)
     _migra_servizi_riconosciuti(con)
     _migra_firma_email(con)
+    _migra_percorsi(con)
     mov = {r['name'] for r in con.execute('PRAGMA table_info(movimenti)')}
     if 'stato_prima' not in mov:
         con.execute('ALTER TABLE movimenti ADD COLUMN stato_prima TEXT DEFAULT ""')
@@ -365,6 +410,35 @@ def _migrate(con):
             # il testo della mail: si tiene per poterla rileggere dall'app
             con.execute(f'ALTER TABLE email_log ADD COLUMN {colonna} TEXT DEFAULT ""')
     con.commit()
+
+
+def _migra_percorsi(con):
+    """Raddrizza i percorsi rimasti puntati alle cartelle col nome vecchio.
+
+    Le fatture fatte con l'app si portano dietro il percorso del loro PDF e del
+    loro Word. Se la cartella cambia nome, quel percorso non trova piu' niente:
+    la fattura non si puo' allegare a una mail e sparisce dal pacchetto per la
+    commercialista, pur essendo li' sul disco.
+
+    Si tocca un percorso solo quando il file vecchio davvero non c'e' e quello
+    nuovo c'e'. Se il vecchio esiste ancora, quel percorso e' giusto e non e'
+    affare di questa migrazione.
+    """
+    cambi = [(os.path.join(APP_DIR, vecchio) + os.sep,
+              os.path.join(APP_DIR, nuovo) + os.sep)
+             for vecchio, nuovo in RINOMINATE]
+    for rid, pdf, docx in con.execute(
+            'SELECT id, pdf_path, docx_path FROM invoices').fetchall():
+        for colonna, valore in (('pdf_path', pdf), ('docx_path', docx)):
+            if not valore or os.path.exists(valore):
+                continue
+            for prima, dopo in cambi:
+                if valore.startswith(prima):
+                    rifatto = dopo + valore[len(prima):]
+                    if os.path.exists(rifatto):
+                        con.execute('UPDATE invoices SET %s=? WHERE id=?' % colonna,
+                                    (rifatto, rid))
+                    break
 
 
 def _migra_firma_email(con):
