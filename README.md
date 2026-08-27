@@ -35,8 +35,24 @@ Either way the browser opens at `http://127.0.0.1:8471`. Leave the window that
 came up with it open while you use the app (to stop it: Ctrl+C, or close the
 window).
 
-> The first time on a Mac, macOS may ask for confirmation: right-click the
-> file → "Open" → "Open".
+> The first time on a Mac, macOS will refuse to open it: *"Apple could not
+> verify it is free of malware"*. That is Gatekeeper, and it says nothing about
+> the file — it blocks every unsigned script that arrived from the internet.
+> Let it fail once, then go to **System Settings → Privacy & Security**, scroll
+> down to **Security**, and click **Open Anyway** next to the line naming the
+> launcher. Double-click it again and choose **Open**. Once, and never again.
+>
+> (Older guides say to right-click → "Open". That worked up to macOS Sonoma;
+> from Sequoia on, Apple removed that shortcut for unsigned scripts.)
+>
+> If the button is not there, Terminal does the same thing — type
+> `xattr -dr com.apple.quarantine ` and then drag the app folder onto the
+> Terminal window to fill in the path.
+>
+> On a Mac that has never been used for development, the launcher may also
+> trigger a macOS box asking to install the **command line developer tools**:
+> that is where `python3` lives. Accept it, wait for it to finish, and start
+> the app again.
 
 > On Windows, install **Python** first: it is the one thing Windows does not
 > bring by itself. Take it from
@@ -45,6 +61,21 @@ window).
 > if it is missing, instead of failing later with something unreadable.
 > Everything else — the libraries the app needs — it installs by itself the
 > first time, which takes a minute or two.
+
+> Also on Windows: **extract the zip before running anything**. Double-clicking
+> the launcher from inside the zip window pulls out that one file on its own,
+> without the program it is supposed to start, and it fails. Windows warns you
+> about this, and it is right.
+>
+> Before extracting, right-click the zip → **Properties** → tick **Unblock** →
+> OK. Do it on the zip, not afterwards on the files: the "came from the
+> internet" mark is copied to every file as it comes out. Without it Windows
+> greets the launcher with *"Windows protected your PC"* — click **More info**
+> → **Run anyway** if it happens.
+>
+> Extract it somewhere OneDrive does not sync — `C:\Users\<you>\Invoice` is a
+> good spot. Inside a synced Desktop or Documents, OneDrive tries to upload the
+> 1'800 files of the Python environment while they are still being written.
 
 > Coming from an older version, the data folders were named in Italian
 > (`Fatture`, `Esporti`, `Cestino`, `Estratti conto`). The app renames them to
