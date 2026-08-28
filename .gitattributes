@@ -8,3 +8,8 @@
 # set in their own git.
 *.bat       text eol=crlf
 *.command   text eol=lf
+
+# The program inside Invoice.app is a script too, and it breaks the same way:
+# a CRLF after «#!/bin/zsh» and macOS says «bad interpreter» - if it says
+# anything at all, because a double-click on a broken app does nothing.
+Invoice.app/Contents/MacOS/*   text eol=lf

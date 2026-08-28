@@ -1,0 +1,38 @@
+{# La pagina che resta quando il motore si e' fermato.
+   Non eredita da base.html apposta: il menu porterebbe a pagine che fra un
+   attimo non risponderanno piu', e sembrerebbe tutto rotto. Anche lo stile
+   sta qui dentro invece che nel foglio esterno, perche' il browser potrebbe
+   chiederlo quando il server non c'e' gia' piu'. #}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ _('App chiusa') }}</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center;
+         justify-content: center; background: #f4f6f8; color: #24323d;
+         font: 15px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .foglio { max-width: 460px; padding: 40px 36px; background: #fff;
+            border: 1px solid #dfe6ec; border-radius: 14px; text-align: center; }
+  h1 { margin: 0 0 12px; font-size: 21px; }
+  p { margin: 0 0 10px; color: #55697a; }
+  .cerchio { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 50%;
+             background: #eef2f6; display: flex; align-items: center; justify-content: center; }
+  svg { width: 26px; height: 26px; fill: none; stroke: #7f96a8; stroke-width: 1.9;
+        stroke-linecap: round; stroke-linejoin: round; }
+</style>
+<div class="foglio">
+  <div class="cerchio">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.4v7.6"/><path d="M17.1 6.5a7.3 7.3 0 1 1-10.2 0"/>
+    </svg>
+  </div>
+  {% if si_spegne %}
+    <h1>{{ _('L’app è chiusa.') }}</h1>
+    <p>{{ _('Puoi chiudere questa scheda del browser.') }}</p>
+    <p>{{ _('Per riaprirla, fai doppio clic su Invoice come al solito.') }}</p>
+  {% else %}
+    <h1>{{ _('Da qui non riesco a chiuderla.') }}</h1>
+    <p>{{ _('Questa copia dell’app è stata accesa in un altro modo. Chiudila dalla finestra da cui è partita.') }}</p>
+  {% endif %}
+  <p style="margin-top:18px;font-size:13px;color:#8296a6">
+    {{ _('Il lavoro fatto è già salvato: non c’è niente da confermare.') }}</p>
+</div>

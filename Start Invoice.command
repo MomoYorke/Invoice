@@ -2,6 +2,48 @@
 # Starts the Invoice app.
 # Double-click and go: it opens the browser by itself.
 cd "$(dirname "$0")"
+
+# Started from Invoice.app there is no Terminal behind us. Nothing printed
+# here would be read by anyone, and a question asked with «read» would wait
+# for an answer that can never come. So in that case the report goes to a
+# file and the questions become system dialogs. Same script, same logic - it
+# just notices whether anyone is listening.
+no_terminal() { [ -n "$INVOICE_NO_TERMINAL" ]; }
+
+# Something that must be seen, wherever we are. In the Terminal it is a line;
+# without one it is the box with an OK button. It is defined before anything
+# else because it is the only way to speak when even the log cannot be written.
+tell() {
+  echo "  $1"
+  # «giving up after»: a warning nobody is there to see must not sit in the
+  # middle of the screen for ever
+  no_terminal && osascript -e "display dialog \"$1\" buttons {\"OK\"} \
+    default button 1 with title \"Invoice\" with icon note giving up after 300" \
+    >/dev/null 2>&1
+  return 0
+}
+
+# --- 0. may we work in this folder at all? ---
+# macOS protects Desktop, Documents and Downloads: a program may only touch
+# them with permission, and an unsigned app is never even asked - it is
+# refused, silently. The Terminal was granted that permission once, long ago,
+# which is why double-clicking the .command there has always worked. The app
+# bundle has nothing of the sort.
+#
+# This has to come FIRST, before the log: from one of those folders we cannot
+# even create the file that would explain what happened, so the dialog is the
+# only voice left. Everything below assumes this passed.
+if no_terminal && ! { mkdir -p data && touch data/.writable; } 2>/dev/null; then
+  tell "macOS will not let Invoice use this folder, because it sits inside Desktop, Documents or Downloads. Move the whole app folder somewhere else - your home folder works well - and open it again. Nothing is lost in the move."
+  exit 1
+fi
+rm -f data/.writable 2>/dev/null
+
+if no_terminal; then
+  exec >>"data/start.log" 2>&1
+  echo "--- $(date '+%Y-%m-%d %H:%M:%S') ---"
+fi
+
 PORT=8471
 URL="http://127.0.0.1:$PORT"
 # the app reads the port from here, so changing it in one place really is
@@ -31,6 +73,27 @@ build_environment() {
   ./venv/bin/pip install --quiet -r requirements.txt || return 1
   shasum requirements.txt | cut -d' ' -f1 > venv/.requirements
 }
+# --- 1a. is macOS refusing to let us read this folder at all? ---
+# The Desktop, Documents and Downloads folders are protected: an app may only
+# read them with permission, and an unsigned app is not even asked - it is
+# simply refused, silently. The Terminal has that permission, granted once
+# long ago, which is why the launcher works when double-clicked there. The
+# app bundle does not, so from one of those three folders Python cannot even
+# read its own pyvenv.cfg.
+#
+# This has to be asked FIRST. The environment check just below runs Python to
+# see whether the libraries are there; it would read the refusal as «broken
+# environment» and rebuild it - deleting a perfectly good one on the way, and
+# failing anyway, because pip is Python too.
+refused_by_macos() {
+  [ -x "venv/bin/python" ] || return 1
+  ./venv/bin/python -c "pass" 2>&1 | grep -q "Operation not permitted"
+}
+if refused_by_macos; then
+  tell "macOS will not let Invoice read this folder, because it sits inside Desktop, Documents or Downloads. Move the whole app folder somewhere else - your home folder works well - and open it again. Nothing is lost in the move."
+  exit 1
+fi
+
 venv_ok || build_environment
 
 # --- 1b. is there a new version of the program? ---
@@ -92,7 +155,7 @@ check_for_updates() {
       git log --format='  │  · %s' "$here..$out_there" 2>/dev/null | head -8
       echo "  └───────────────────────────────────────────────────────────"
       warn_local_changes
-      ask_and_apply "  Install it?" "$here" "$out_there" || return
+          ask_and_apply "Install it?" "$here" "$out_there" || return
       ;;
     diverged)
       # The published history was rewritten (old commits replaced by new ones
@@ -108,7 +171,7 @@ check_for_updates() {
       echo "  │  statements and backups live outside the repository."
       echo "  └───────────────────────────────────────────────────────────"
       warn_local_changes
-      ask_and_apply "  Line up with the published version?" "$here" "$out_there" || return
+      ask_and_apply "Line up with the published version?" "$here" "$out_there" || return
       ;;
   esac
 }
@@ -139,16 +202,35 @@ warn_local_changes() {
 
 # Asks, and if the answer is yes replaces the program files. Backs the data up
 # first, and writes down where we were, so there is always a way back.
-ask_and_apply() {
-  local question=$1 here=$2 target=$3 answer
-  echo -n "$question [Enter = yes, n = not now] "
+# Yes or no, 0 for yes. Two ways of asking the same thing: a line to type in
+# the Terminal, a box to click without one. Both give up after two minutes and
+# both read no answer as «no»: a window left open by mistake must not hold the
+# app hostage for ever.
+ask_yes_no() {
+  local question=$1 answer
+  if no_terminal; then
+    osascript -e "display dialog \"$question\" buttons {\"Not now\", \"Install\"} \
+      default button 2 with title \"Invoice\" giving up after 120" 2>/dev/null \
+      | grep -q "Install"
+    return $?
+  fi
+  echo -n "  $question [Enter = yes, n = not now] "
   if ! read -t 120 -r answer; then
     echo ""; echo "  No answer: starting the version you already have."
     return 1
   fi
   case "$answer" in
-    [nN]*) echo "  All right, I will offer it again next time."; return 1 ;;
+    [nN]*) return 1 ;;
   esac
+  return 0
+}
+
+ask_and_apply() {
+  local question=$1 here=$2 target=$3
+  if ! ask_yes_no "$question"; then
+    echo "  All right, I will offer it again next time."
+    return 1
+  fi
 
   if [ -x "venv/bin/python" ]; then
     ./venv/bin/python -c "from core import backup; backup.make_backup('prima-aggiornamento')" \
@@ -213,16 +295,22 @@ for i in $(seq 1 30); do
   fi
   # if the process died while starting, show the error and stop
   if ! kill -0 $APP_PID 2>/dev/null; then
-    echo ""
-    echo "  ⚠️  The app did not start. Details in: data/error.log"
-    echo "  Press a key to close."
-    read -k1
+    tell "The app did not start. What went wrong is written in data/error.log, inside the app folder."
+    no_terminal || { echo "  Press a key to close."; read -k1; }
     exit 1
   fi
   sleep 0.5
 done
 
-echo "  App ready. Leave this window open."
-echo "  To stop the app: Ctrl+C, or close the window."
+if no_terminal; then
+  echo "  App ready. Close it from inside: the power button at the foot of the menu."
+else
+  echo "  App ready. Leave this window open."
+  echo "  To stop the app: Ctrl+C, or close the window, or use the power button"
+  echo "  at the foot of the menu inside the app."
+fi
 echo ""
+# Quitting Invoice.app from the Dock stops this script: without the trap the
+# app itself would stay behind, holding the port with nobody watching it.
+trap 'kill $APP_PID 2>/dev/null' TERM INT HUP
 wait $APP_PID

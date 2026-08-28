@@ -71,7 +71,28 @@ TESTI = {
         # --- cornice, presente su ogni pagina ---
         'Indietro': 'Back',
         'Torna alla schermata precedente': 'Back to the previous screen',
-        'App locale · dati sul tuo Mac': 'Local app · data on your Mac',
+        'App locale · dati sul tuo computer':
+            'Local app · your data stays on your computer',
+        'Chiudi l’app':
+            'Close the app',
+        'Chiudo l’app? Il lavoro fatto è già salvato.':
+            'Close the app? Everything you did is already saved.',
+        'App chiusa':
+            'App closed',
+        'L’app è chiusa.':
+            'The app is closed.',
+        'Puoi chiudere questa scheda del browser.':
+            'You can close this browser tab.',
+        'Per riaprirla, fai doppio clic su Invoice come al solito.':
+            'To open it again, double-click Invoice as usual.',
+        'Da qui non riesco a chiuderla.':
+            'I cannot close it from here.',
+        'Questa copia dell’app è stata accesa in un altro modo. Chiudila dalla finestra da cui è partita.':
+            'This copy of the app was started some other way. Close it from the window it started in.',
+        'Il lavoro fatto è già salvato: non c’è niente da confermare.':
+            'Everything you did is already saved: there is nothing to confirm.',
+        'Se ricapita spesso, chiudi l’app e riaprila.':
+            'If it keeps happening, close the app and open it again.',
         'Nascondi gli importi (screenshot, luogo pubblico)':
             'Hide amounts (screenshots, public places)',
         'Importi nascosti — clicca per mostrarli': 'Amounts hidden — click to show',
@@ -937,8 +958,6 @@ TESTI = {
         'Cosa puoi fare adesso:': 'What you can do now:',
         'Torna alla {dashboard} o alle {fatture}.':
             'Go back to the {dashboard} or to {fatture}.',
-        'Se ricapita spesso, chiudi la finestra del Terminale e riapri <em>Avvia Fatture.command</em>.':
-            'If it keeps happening, close the Terminal window and open <em>Avvia Fatture.command</em> again.',
         'Dettaglio tecnico (utile se me lo mostri)':
             'Technical detail (useful if you show it to me)',
         'Pagina:': 'Page:',
@@ -1150,7 +1169,28 @@ TESTI = {
         # --- Rahmen, auf jeder Seite ---
         'Indietro': 'Zurück',
         'Torna alla schermata precedente': 'Zurück zum vorherigen Bildschirm',
-        'App locale · dati sul tuo Mac': 'Lokale App · Daten auf deinem Mac',
+        'App locale · dati sul tuo computer':
+            'Lokale App · deine Daten bleiben auf deinem Computer',
+        'Chiudi l’app':
+            'App schliessen',
+        'Chiudo l’app? Il lavoro fatto è già salvato.':
+            'App schliessen? Alles Erledigte ist bereits gespeichert.',
+        'App chiusa':
+            'App geschlossen',
+        'L’app è chiusa.':
+            'Die App ist geschlossen.',
+        'Puoi chiudere questa scheda del browser.':
+            'Du kannst diesen Browser-Tab schliessen.',
+        'Per riaprirla, fai doppio clic su Invoice come al solito.':
+            'Zum erneuten Öffnen doppelklicke wie gewohnt auf Invoice.',
+        'Da qui non riesco a chiuderla.':
+            'Von hier aus kann ich sie nicht schliessen.',
+        'Questa copia dell’app è stata accesa in un altro modo. Chiudila dalla finestra da cui è partita.':
+            'Diese Kopie der App wurde anders gestartet. Schliesse sie über das Fenster, aus dem sie gestartet wurde.',
+        'Il lavoro fatto è già salvato: non c’è niente da confermare.':
+            'Alles Erledigte ist bereits gespeichert: es gibt nichts zu bestätigen.',
+        'Se ricapita spesso, chiudi l’app e riaprila.':
+            'Wenn das öfter passiert, schliess die App und öffne sie erneut.',
         'Nascondi gli importi (screenshot, luogo pubblico)':
             'Beträge ausblenden (Screenshots, öffentliche Orte)',
         'Importi nascosti — clicca per mostrarli':
@@ -2025,8 +2065,6 @@ TESTI = {
         'Cosa puoi fare adesso:': 'Was du jetzt tun kannst:',
         'Torna alla {dashboard} o alle {fatture}.':
             'Geh zurück zum {dashboard} oder zu den {fatture}.',
-        'Se ricapita spesso, chiudi la finestra del Terminale e riapri <em>Avvia Fatture.command</em>.':
-            'Wenn das öfter passiert, schliess das Terminal-Fenster und öffne <em>Avvia Fatture.command</em> erneut.',
         'Dettaglio tecnico (utile se me lo mostri)':
             'Technisches Detail (nützlich, wenn du es mir zeigst)',
         'Pagina:': 'Seite:',
