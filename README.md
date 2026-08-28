@@ -30,7 +30,9 @@ You can go back whenever you like, from that reminder.
 
 On a **Mac**, double-click **`Invoice`** — the app with the icon. No black
 window: it behaves like any other program on your Mac.
-On **Windows**, double-click **`Start Invoice.bat`**.
+On **Windows**, double-click **`Start Invoice.bat`**. A black window appears
+while it gets ready — a minute or two the first time, a few seconds after that
+— and then **closes by itself**. The app stays open without it.
 
 Either way the browser opens at `http://127.0.0.1:8471`.
 

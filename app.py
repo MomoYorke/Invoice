@@ -8,6 +8,7 @@ La cartella dello storico, se ne indichi una, viene letta ma MAI modificata.
 """
 import os
 import re
+import sys
 import glob
 import shutil
 import datetime
@@ -57,6 +58,25 @@ err_logger.propagate = False
 _h = logging.FileHandler(ERROR_LOG, encoding='utf-8')
 _h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
 err_logger.addHandler(_h)
+
+
+def _errore_fatale(tipo, valore, traccia):
+    """Un guasto che spegne l'app finisce scritto, sempre.
+
+    error.log qui sopra raccoglie i guai che capitano dentro una pagina:
+    quelli hanno una pagina che li mostra. Un guasto all'AVVIO non ce l'ha, e
+    finora si vedeva solo perche' qualcuno stava guardando la finestra nera.
+    Adesso quella finestra non c'e' quasi mai: su Windows l'app parte con
+    pythonw, che non ha console, e sul Mac dentro Invoice.app non c'e'
+    terminale. Senza questo, l'app non partirebbe e nessuno saprebbe perche' —
+    che e' il modo peggiore di rompersi.
+    """
+    if not issubclass(tipo, KeyboardInterrupt):          # Ctrl+C non e' un guasto
+        err_logger.error('Avvio non riuscito', exc_info=(tipo, valore, traccia))
+    sys.__excepthook__(tipo, valore, traccia)
+
+
+sys.excepthook = _errore_fatale
 
 
 @app.route('/logo.png')
