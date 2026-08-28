@@ -69,8 +69,12 @@ build_environment() {
   echo "Setting up the environment (needs internet, 1-2 minutes)..."
   rm -rf venv
   python3 -m venv venv || return 1
-  ./venv/bin/pip install --quiet --upgrade pip
-  ./venv/bin/pip install --quiet -r requirements.txt || return 1
+  # «python -m pip», not «venv/bin/pip»: that wrapper has the path of the
+  # folder written inside it, so it stops working the moment the folder is
+  # moved. Here it would work anyway, the environment being brand new — but
+  # the habit is what saves the day elsewhere, and Windows already does this.
+  ./venv/bin/python -m pip install --quiet --upgrade pip
+  ./venv/bin/python -m pip install --quiet -r requirements.txt || return 1
   shasum requirements.txt | cut -d' ' -f1 > venv/.requirements
 }
 # --- 1a. is macOS refusing to let us read this folder at all? ---
