@@ -1865,6 +1865,7 @@ def _test_banca(r):
     _test_windows(r)
     _test_invoice_app(r)
     _test_spegnimento(r)
+    _test_trasloco(r)
     import os
     import sqlite3
     import tempfile
@@ -2768,3 +2769,86 @@ def _test_spegnimento(r):
             "err_logger.error('Avvio non riuscito'" in programma), (True, True))
     _check(r, 'Spegnimento', 'ma Ctrl+C non viene scambiato per un guasto',
            'issubclass(tipo, KeyboardInterrupt)' in programma, True)
+
+
+def _test_trasloco(r):
+    """Spostare la cartella dell'app non deve staccare le fatture dai loro file.
+
+    Su macOS lo spostamento non e' un capriccio: dentro Scrivania, Documenti o
+    Download il sistema non lascia lavorare l'app. Ma i percorsi dei PDF sono
+    scritti per intero nel database, quindi dopo il trasloco puntano a una casa
+    che non c'e' piu' e le fatture non si allegano piu' a niente.
+    """
+    import sqlite3
+    import tempfile
+    from . import db as _db
+
+    with tempfile.TemporaryDirectory() as tmp:
+        nuova = os.path.join(tmp, 'nuova', 'Invoices')
+        os.makedirs(os.path.join(nuova, '2026'))
+        buono = os.path.join(nuova, '2026', 'Tizio #1.pdf')
+        io.open(buono, 'w').close()
+        vecchia = os.path.join(tmp, 'vecchia', 'Invoices')
+        os.makedirs(os.path.join(vecchia, '2026'))
+        ancora = os.path.join(vecchia, '2026', 'Ancora #2.pdf')
+        io.open(ancora, 'w').close()
+
+        prima = _db.DIR_FATTURE
+        _db.DIR_FATTURE = nuova
+        try:
+            _check(r, 'Trasloco', 'riconosce il pezzo da «Invoices» in giù',
+                   _db._ricolloca(os.path.join(vecchia, '2026', 'Tizio #1.pdf')), buono)
+            # una cartella dell'app dentro una che si chiama a sua volta
+            # «Invoices» non deve mandare fuori strada: vale l'ultima
+            _check(r, 'Trasloco', 'e guarda l’ultima volta che il nome compare',
+                   _db._ricolloca('/x/Invoices/app/Invoices/2026/Tizio #1.pdf'),
+                   os.path.join(nuova, '2026', 'Tizio #1.pdf'))
+            # anche i nomi italiani: un database vecchio li ha ancora dentro
+            _check(r, 'Trasloco', 'e capisce anche i nomi vecchi in italiano',
+                   _db._ricolloca('/x/Fatture/2024/Tizio #1.pdf'),
+                   os.path.join(nuova, '2024', 'Tizio #1.pdf'))
+            _check(r, 'Trasloco', 'un percorso che non riconosce lo lascia stare',
+                   _db._ricolloca('/x/foto/gatto.png'), None)
+
+            con = sqlite3.connect(':memory:')
+            con.executescript(_db.SCHEMA)
+            sparito = os.path.join(vecchia, '2026', 'Sparito #9.pdf')
+            # Il caso pericoloso: lo STESSO nome esiste in tutt'e due i posti.
+            # Se qui si guardasse solo «il nuovo esiste», la fattura verrebbe
+            # spostata su un file che non e' il suo — ed e' esattamente il
+            # genere di scambio che ha gia' fatto finire il PDF di una persona
+            # dentro la fattura di un'altra.
+            os.makedirs(os.path.join(nuova, '2025'))
+            doppio_vecchio = os.path.join(vecchia, '2026', 'Doppio #3.pdf')
+            io.open(doppio_vecchio, 'w').close()
+            os.makedirs(os.path.join(nuova, '2026'), exist_ok=True)
+            io.open(os.path.join(nuova, '2026', 'Doppio #3.pdf'), 'w').close()
+            casi = [
+                (1, os.path.join(vecchia, '2026', 'Tizio #1.pdf'), buono),
+                (2, ancora, ancora),          # il percorso vecchio funziona ancora
+                (3, sparito, sparito),        # il file non c'e' da nessuna parte
+                (4, doppio_vecchio, doppio_vecchio),   # esiste di qua E di la'
+            ]
+            for i, p, _a in casi:
+                con.execute('INSERT INTO invoices (id, client_name, pdf_path) VALUES (?,?,?)',
+                            (i, 'X', p))
+            _db._migra_trasloco(con)
+            fuori = []
+            for i, _p, atteso in casi:
+                v = con.execute('SELECT pdf_path FROM invoices WHERE id=?', (i,)).fetchone()[0]
+                if v != atteso:
+                    fuori.append(i)
+            con.close()
+            # tre regole in un colpo: ripara chi si e' spostato, non tocca chi
+            # sta bene, e non inventa un percorso per un file che non esiste
+            _check(r, 'Trasloco', 'ripara solo dove il file c’è davvero, e non tocca il resto',
+                   fuori, [])
+        finally:
+            _db.DIR_FATTURE = prima
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'core', 'db.py'), encoding='utf-8') as f:
+        sorgente = f.read()
+    # una migrazione che nessuno chiama e' un commento lungo
+    _check(r, 'Trasloco', 'e viene davvero chiamata all’avvio',
+           '    _migra_trasloco(con)' in sorgente, True)

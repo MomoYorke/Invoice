@@ -393,6 +393,7 @@ def _migrate(con):
     _migra_servizi_riconosciuti(con)
     _migra_firma_email(con)
     _migra_percorsi(con)
+    _migra_trasloco(con)      # dopo: la rinomina e' piu' precisa
     mov = {r['name'] for r in con.execute('PRAGMA table_info(movimenti)')}
     if 'stato_prima' not in mov:
         con.execute('ALTER TABLE movimenti ADD COLUMN stato_prima TEXT DEFAULT ""')
@@ -440,6 +441,57 @@ def _migra_percorsi(con):
                         con.execute('UPDATE invoices SET %s=? WHERE id=?' % colonna,
                                     (rifatto, rid))
                     break
+
+
+def _ricolloca(vecchio):
+    """Lo stesso file, letto sotto la cartella di adesso.
+
+    Un percorso registrato dice tre cose: dov'era la cartella dell'app, in
+    quale delle sue sottocartelle stava il file, e come si chiama. Se la
+    cartella trasloca, la prima parte non vale piu' e le altre due si'. Qui si
+    tiene il pezzo da «Invoices» in giu' e gli si rimette davanti la casa
+    nuova.
+
+    Si guarda l'ULTIMA volta che il nome compare: una cartella dell'app dentro
+    una cartella che si chiama a sua volta «Invoices» non deve mandare fuori
+    strada. E si accettano anche i nomi italiani, perche' un database vecchio
+    li ha ancora scritti dentro.
+    """
+    parti = vecchio.replace('\\', '/').split('/')
+    for nome, radice in (('Invoices', DIR_FATTURE), ('Fatture', DIR_FATTURE),
+                         ('Trash', DIR_CESTINO), ('Cestino', DIR_CESTINO),
+                         ('Exports', DIR_ESPORTI), ('Esporti', DIR_ESPORTI)):
+        if nome in parti:
+            i = len(parti) - 1 - parti[::-1].index(nome)
+            return os.path.join(radice, *parti[i + 1:])
+    return None
+
+
+def _migra_trasloco(con):
+    """Raddrizza i percorsi dopo che la cartella dell'app e' stata spostata.
+
+    Spostare la cartella e' una cosa che si fa: su macOS e' addirittura
+    necessario, perche' dentro Scrivania, Documenti o Download il sistema non
+    lascia lavorare l'app. Ma le fatture si portano dietro il percorso ASSOLUTO
+    del loro PDF e del loro Word: dopo il trasloco quel percorso non trova piu'
+    niente, e la fattura non si puo' allegare a una mail ne' finisce nel
+    pacchetto per la commercialista — pur essendo li', sana, due cartelle piu'
+    in la'.
+
+    Si tocca un percorso solo se il vecchio NON esiste e il nuovo SI'. Un
+    percorso rotto e' un guaio; un percorso che punta al file di un'altra
+    persona sarebbe molto peggio, e quella e' gia' costata una fattura
+    sbagliata al commercialista.
+    """
+    for rid, pdf, docx in con.execute(
+            'SELECT id, pdf_path, docx_path FROM invoices').fetchall():
+        for colonna, valore in (('pdf_path', pdf), ('docx_path', docx)):
+            if not valore or os.path.exists(valore):
+                continue
+            rifatto = _ricolloca(valore)
+            if rifatto and os.path.exists(rifatto):
+                con.execute('UPDATE invoices SET %s=? WHERE id=?' % colonna,
+                            (rifatto, rid))
 
 
 def _migra_firma_email(con):
