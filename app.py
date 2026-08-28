@@ -1777,6 +1777,8 @@ def backup_ora():
                file=os.path.basename(st['path']), quanti=st['file'])
     else:
         avvisa('Copia dello storico NON riuscita: {guaio}', 'error', guaio=st['errore'])
+    if st.get('nota'):
+        avvisa('Storico: {nota}', 'warn', nota=st['nota'])
     return redirect(url_for('impostazioni'))
 
 
@@ -1942,6 +1944,8 @@ if __name__ == '__main__':
         else:
             print('  Storico: ' + (os.path.basename(_s['path']) if _s['ok']
                                    else 'NON riuscito — ' + _s['errore']))
+        if _s.get('nota'):
+            print('  Storico: ' + _s['nota'])
     # estratti conto: legge la cartella e collega da solo le certezze, cosi' la
     # Dashboard e' gia' aggiornata quando apri l'app
     _mov, _prob, _fatti = _leggi_banca(con)
