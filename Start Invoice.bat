@@ -88,25 +88,46 @@ if errorlevel 1 goto :launch
 echo Found a stuck instance: closing it and restarting clean...
 call :kill_port
 
-REM --- 4. start the app; it opens the browser by itself when it is ready ---
+REM --- 4. start the app, then get out of the way ---
 :launch
 echo.
 echo   Invoice - local app
 echo   Starting on %URL% ...
-REM The waiting is not done here. The app opens the browser itself the moment
-REM it has taken the port, which is the only place that knows for sure that it
-REM is up - and it works the same way on every system.
+REM pythonw is the Python with no console. Started through "start" it gets a
+REM life of its own, so this window can close and the app carries on. That is
+REM the whole point: a window you must not close is a window somebody closes,
+REM sooner or later, halfway through an invoice. If pythonw is missing - a few
+REM installs do not ship it - the ordinary one still works; it just leaves a
+REM window behind, which is what happened here every time until now.
+set "VPYW=venv\Scripts\pythonw.exe"
+if not exist "%VPYW%" set "VPYW=%VPY%"
+REM The app opens the browser itself the moment it has taken the port, which
+REM is the only place that knows for sure it is up.
 set "INVOICE_OPEN_BROWSER=1"
-echo   App starting. Leave this window open.
-echo   To stop the app: Ctrl+C, or close the window.
-echo.
-"%VPY%" app.py
-if errorlevel 1 (
-  echo.
-  echo   The app stopped with an error. Details in: data\error.log
-  echo.
-  pause
+start "" "%VPYW%" app.py
+
+REM Wait for it to answer before letting this window go. Once it closes there
+REM is nowhere left to complain: this is the last place able to say that the
+REM app never came up at all.
+for /l %%i in (1,1,40) do (
+  "%VPY%" -m core.launcher in-salute "%URL%" >nul 2>&1
+  if not errorlevel 1 goto :running
+  REM ping and not timeout: timeout refuses to run when input has been
+  REM redirected, and a refusal would send this loop through in an instant
+  REM and report a failure that never happened. ping simply waits.
+  ping -n 2 127.0.0.1 >nul
 )
+echo.
+echo   The app did not start. What went wrong is written in: data\error.log
+echo.
+pause
+exit /b 1
+
+:running
+echo.
+echo   App ready. You can close this window now - the app stays open.
+echo   To close the app: the power button at the foot of the menu, inside it.
+ping -n 5 127.0.0.1 >nul
 exit /b 0
 
 

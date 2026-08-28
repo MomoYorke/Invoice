@@ -2522,6 +2522,26 @@ def _test_avviatore_windows(r):
     # l'app per sempre: senza risposta, dopo due minuti si va avanti
     _check(r, 'I due avviatori', 'tutt’e due aspettano una risposta al massimo 120 secondi',
            ('read -t 120' in mac, '/t 120' in win), (True, True))
+    # --- e che su Windows la finestra si tolga di mezzo ---
+    # pythonw e' il Python senza console: avviato con «start» sopravvive alla
+    # chiusura di questa finestra. Senza, la finestra nera resta obbligatoria
+    # e chiuderla spegne l'app in mezzo al lavoro.
+    _check(r, 'Avviatore Windows', 'lancia l’app col Python senza finestra',
+           ('pythonw.exe' in win, 'start "" "%VPYW%" app.py' in win), (True, True))
+    _check(r, 'Avviatore Windows', 'e se pythonw non c’è ripiega su quello normale',
+           'if not exist "%VPYW%" set "VPYW=%VPY%"' in win, True)
+    # se si chiudesse subito, un'app che non parte non avrebbe piu' nessun
+    # posto dove dirlo: questa finestra e' l'ultimo
+    _check(r, 'Avviatore Windows', 'aspetta che risponda prima di chiudersi',
+           ('core.launcher in-salute' in win, 'goto :running' in win,
+            'The app did not start' in win), (True, True, True))
+    _check(r, 'Avviatore Windows', 'e non chiede più di tenere aperta la finestra',
+           'Leave this window open' in win, False)
+    # «timeout» si rifiuta di partire con l'ingresso deviato, e un rifiuto
+    # farebbe scorrere l'attesa in un lampo dichiarando un guasto inesistente
+    _check(r, 'Avviatore Windows', 'l’attesa non può essere saltata per sbaglio',
+           ('ping -n' in win, 'timeout /t' in win), (True, False))
+
     _check(r, 'I due avviatori', 'tutt’e due ricontrollano gli aggiornamenti ogni 6 ore',
            ('HOURS_BETWEEN_CHECKS=6' in mac,
             'controllato-da-poco "data\\.last-update-check" 6' in win), (True, True))
@@ -2738,3 +2758,13 @@ def _test_spegnimento(r):
     # stile esterno arriverebbe in tempo.
     _check(r, 'Spegnimento', 'la pagina di congedo non dipende da un server già spento',
            ("{% extends" not in congedo, '<style>' in congedo), (True, True))
+
+    # Senza finestra un guasto all'AVVIO non ha dove comparire: error.log
+    # raccoglie solo i guai dentro le pagine, che una pagina ce l'hanno.
+    # Questa rete e' l'unica traccia che resta a chi apre Invoice.app o il
+    # pythonw di Windows e vede... niente.
+    _check(r, 'Spegnimento', 'un guasto all’avvio finisce comunque scritto',
+           ('sys.excepthook = _errore_fatale' in programma,
+            "err_logger.error('Avvio non riuscito'" in programma), (True, True))
+    _check(r, 'Spegnimento', 'ma Ctrl+C non viene scambiato per un guasto',
+           'issubclass(tipo, KeyboardInterrupt)' in programma, True)
