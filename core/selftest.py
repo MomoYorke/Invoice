@@ -1866,6 +1866,7 @@ def _test_banca(r):
     _test_invoice_app(r)
     _test_spegnimento(r)
     _test_trasloco(r)
+    _test_backup_illeggibile(r)
     import os
     import sqlite3
     import tempfile
@@ -2852,3 +2853,94 @@ def _test_trasloco(r):
     # una migrazione che nessuno chiama e' un commento lungo
     _check(r, 'Trasloco', 'e viene davvero chiamata all’avvio',
            '    _migra_trasloco(con)' in sorgente, True)
+
+
+def _test_backup_illeggibile(r):
+    """Una cartella di backup che non si riesce a leggere non deve far cadere l'app.
+
+    Su macOS capita per davvero: iCloud Drive e' protetto, e a un'app non
+    firmata il sistema nega l'ELENCO pur lasciando scrivere e rileggere i
+    singoli file. Peggio, os.path.isdir intanto risponde di si', quindi il
+    controllo non se ne accorge e l'errore salta fuori piu' avanti — all'avvio,
+    prima ancora che l'app apra una pagina.
+
+    Qui la lettura si intercetta invece di giocare coi permessi del disco:
+    cosi' la prova vale uguale su ogni sistema, e prova la strada vera del
+    codice invece di una sua imitazione.
+    """
+    import tempfile
+    from . import backup as _bk
+
+    with tempfile.TemporaryDirectory() as tmp:
+        chiusa = os.path.join(tmp, 'chiusa')
+        os.makedirs(chiusa)
+        io.open(os.path.join(chiusa, 'fatture-app-20260101-000000.zip'), 'w').close()
+        aperta = os.path.join(tmp, 'aperta')
+        os.makedirs(aperta)
+        io.open(os.path.join(aperta, 'fatture-app-20260101-000000.zip'), 'w').close()
+        mai = os.path.join(tmp, 'mai-esistita')
+
+        vero = os.listdir
+
+        def nega(percorso, *a, **k):
+            if percorso == chiusa:
+                raise PermissionError(1, 'Operation not permitted')
+            return vero(percorso, *a, **k)
+
+        os.listdir = nega
+        try:
+            def prova(f, *a):
+                try:
+                    return f(*a)
+                except Exception as e:
+                    return 'CADUTA: %s' % type(e).__name__
+            # la caduta all'avvio era esattamente qui
+            _check(r, 'Backup illeggibile', 'elencare una cartella negata non fa cadere niente',
+                   prova(_bk.elenco_esterni, chiusa), [])
+            _check(r, 'Backup illeggibile', 'e nemmeno chiedersi se serve una copia oggi',
+                   prova(_bk.serve_backup_oggi, chiusa), True)
+            # senza distinguere i due casi, «non c'e' nessuna copia» e «non
+            # riesco a vedere se c'e'» sembrerebbero la stessa cosa, e la
+            # seconda passerebbe sotto silenzio per sempre
+            _check(r, 'Backup illeggibile', 'ma la differenza fra negata e vuota si vede',
+                   (prova(_bk.destinazione_leggibile, chiusa),
+                    prova(_bk.destinazione_leggibile, aperta),
+                    prova(_bk.destinazione_leggibile, mai)),
+                   (False, True, True))
+            _check(r, 'Backup illeggibile', 'e una cartella normale si legge come sempre',
+                   len(prova(_bk.elenco_esterni, aperta)), 1)
+        finally:
+            os.listdir = vero
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    # se l'avvio non lo chiede, il guaio torna a essere invisibile
+    _check(r, 'Backup illeggibile', 'e all’avvio l’app lo dice, invece di tacere',
+           'backup.destinazione_leggibile(_dest)' in programma, True)
+
+    # E una guardia sulla forma, non sul comportamento: nel modulo dei backup
+    # NESSUNA lettura di cartella puo' stare allo scoperto. Un solo «listdir»
+    # dimenticato in un ramo poco battuto — la rotazione dello storico, per
+    # dirne uno — rimetterebbe l'app in condizione di cadere, e proprio in quel
+    # ramo li', dove nessun collaudo passa. Questo controllo non ha bisogno di
+    # attraversarli tutti: li vede.
+    import ast as _ast
+    with io.open(os.path.join(base, 'core', 'backup.py'), encoding='utf-8') as f:
+        albero = _ast.parse(f.read())
+    # «dentro un try» non basta come definizione di protetto: la rotazione
+    # dello storico sta gia' dentro un try, che pero' ingoierebbe l'intero
+    # backup e non solo l'elenco. Quindi si e' precisi: in questo modulo
+    # possono leggere una cartella soltanto due funzioni, quelle scritte per
+    # reggere il rifiuto. Chiunque altro e' un ramo che tornerebbe a cadere.
+    AMMESSE = {'_nomi_in', 'destinazione_leggibile'}
+    scoperte = []
+    for nodo in _ast.walk(albero):
+        if not isinstance(nodo, _ast.FunctionDef):
+            continue
+        for sotto in _ast.walk(nodo):
+            if (isinstance(sotto, _ast.Call) and isinstance(sotto.func, _ast.Attribute)
+                    and sotto.func.attr == 'listdir' and nodo.name not in AMMESSE):
+                scoperte.append('%s() riga %d' % (nodo.name, sotto.lineno))
+    _check(r, 'Backup illeggibile', 'solo le due funzioni fatte apposta leggono le cartelle',
+           sorted(set(scoperte)), [])

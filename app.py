@@ -1925,7 +1925,13 @@ if __name__ == '__main__':
     backup.make_backup('avvio')
     # copia completa fuori dal Mac, una volta al giorno
     _dest = db.get_settings(con).get('backup_dir') or backup.DEST_DEFAULT
-    if backup.serve_backup_oggi(_dest):
+    if not backup.destinazione_leggibile(_dest):
+        # succede su macOS quando l'app parte dal suo pacchetto e la cartella
+        # sta su iCloud Drive: il sistema nega l'elenco a un'app non firmata
+        print('  Backup esterno: la cartella non si riesce a leggere da qui.')
+        print('    %s' % _dest)
+        print('    Le copie dentro l\'app continuano; per quelle fuori, vedi il README.')
+    elif backup.serve_backup_oggi(_dest):
         _e = backup.archivia_fuori(_dest, motivo='avvio')
         print('  Backup esterno: ' + (os.path.basename(_e['path']) if _e['ok']
                                       else 'NON riuscito — ' + _e['errore']))
