@@ -75,7 +75,7 @@ def list_backups():
     if not os.path.isdir(BACKUP_DIR):
         return []
     out = []
-    for name in os.listdir(BACKUP_DIR):
+    for name in _nomi_in(BACKUP_DIR):
         if not name.endswith('.db'):
             continue
         p = os.path.join(BACKUP_DIR, name)
@@ -238,13 +238,50 @@ def archivia_fuori(dest_dir=None, motivo='avvio'):
         return esito
 
 
+def _nomi_in(dest_dir):
+    """Cosa c'e' nella cartella, senza mai alzare le mani.
+
+    Una cartella puo' esserci ed essere comunque impossibile da guardare:
+    su macOS iCloud Drive e le cartelle Scrivania, Documenti e Download sono
+    protette, e a un'app non firmata il sistema NEGA l'elenco senza chiedere
+    niente a nessuno. os.path.isdir intanto risponde di si', quindi il
+    controllo non se ne accorge e l'errore arriva piu' avanti.
+
+    Prima questo faceva cadere l'app all'avvio. Ma il backup e' una rete di
+    sicurezza, e una rete che fa cadere quello che dovrebbe proteggere e'
+    peggio di nessuna rete: qui si risponde «non vedo niente» e si va avanti.
+    Chi ha bisogno di sapere che non e' un vuoto vero chiede a
+    destinazione_leggibile().
+    """
+    try:
+        return os.listdir(dest_dir)
+    except OSError:
+        return []
+
+
+def destinazione_leggibile(dest_dir=None):
+    """Vero se la cartella dei backup si puo' davvero guardare dentro.
+
+    Distingue «non c'e' ancora nessuna copia», che il primo giorno e' normale,
+    da «non riesco nemmeno a vedere se ce n'e' una», che va detto subito.
+    """
+    dest_dir = dest_dir or DEST_DEFAULT
+    if not os.path.isdir(dest_dir):
+        return True                      # non c'e': la si creera', nessun mistero
+    try:
+        os.listdir(dest_dir)
+        return True
+    except OSError:
+        return False
+
+
 def elenco_esterni(dest_dir=None):
     """Gli zip presenti in destinazione, dal piu' recente."""
     dest_dir = dest_dir or DEST_DEFAULT
     if not os.path.isdir(dest_dir):
         return []
     out = []
-    for nome in os.listdir(dest_dir):
+    for nome in _nomi_in(dest_dir):
         if not (nome.startswith('fatture-app-') and nome.endswith('.zip')):
             continue
         p = os.path.join(dest_dir, nome)
@@ -352,7 +389,7 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
         with open(segna, 'w', encoding='utf-8') as f:
             f.write(firma)
         for vecchio in sorted(
-                (n for n in os.listdir(dest_dir)
+                (n for n in _nomi_in(dest_dir)
                  if n.startswith('storico-') and n.endswith('.zip')),
                 reverse=True)[TIENI_STORICI:]:
             try:
