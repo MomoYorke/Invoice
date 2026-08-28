@@ -585,6 +585,7 @@ TESTI = {
         'Storico copiato: {file} — {quanti} documenti.':
             'History copied: {file} — {quanti} documents.',
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
+        'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
         'Non hai scelto nessun file.': 'You have not chosen a file.',
         'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':
@@ -1689,6 +1690,7 @@ TESTI = {
             'Historie kopiert: {file} — {quanti} Dokumente.',
         'Copia dello storico NON riuscita: {guaio}':
             'Kopie der Historie hat NICHT geklappt: {guaio}',
+        'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
         'Non hai scelto nessun file.': 'Du hast keine Datei gewählt.',
         'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':

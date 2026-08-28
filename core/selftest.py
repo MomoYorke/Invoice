@@ -100,6 +100,7 @@ def run_all():
     _test_menu(r)
     _test_finestra_stretta(r)
     _test_calendario(r)
+    _test_storico_al_buio(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -2962,3 +2963,80 @@ def _test_backup_illeggibile(r):
                 scoperte.append('%s() riga %d' % (nodo.name, sotto.lineno))
     _check(r, 'Backup illeggibile', 'solo le due funzioni fatte apposta leggono le cartelle',
            sorted(set(scoperte)), [])
+
+
+def _test_storico_al_buio(r):
+    """Il guaio peggiore che possa capitare a un backup non e' fallire: e'
+    riuscire per finta.
+
+    os.walk, se non gli si passa «onerror», ingoia i rifiuti del sistema
+    operativo e prosegue come se la cartella fosse vuota. Con quella riga
+    sola, una cartella vietata da macOS produceva un archivio vuoto,
+    verificato integro e dichiarato riuscito — e uno se ne accorge il giorno
+    in cui gli serve, cioe' il giorno peggiore.
+
+    Provato dal vero il 28.08.2026: la cartella dello storico sta sulla
+    Scrivania, che macOS protegge, e l'app lanciata dall'icona non ci entra.
+    """
+    import shutil, tempfile
+    from . import backup
+
+    base = tempfile.mkdtemp(prefix='invoice-storico-')
+    try:
+        sorg = os.path.join(base, 'Clients Invoices')
+        dest = os.path.join(base, 'Backup')
+        os.makedirs(sorg)
+        os.makedirs(dest)
+        with io.open(os.path.join(sorg, 'fattura.txt'), 'w', encoding='utf-8') as h:
+            h.write('x' * 32)
+
+        e = backup.archivia_storico(sorg, dest)
+        _check(r, 'Storico al buio', 'quando si legge tutto, la copia si fa',
+               (e['ok'], e['saltato'], e['file']), (True, False, 1))
+
+        # la stessa chiamata, subito dopo: niente e' cambiato, non si ricopia
+        e = backup.archivia_storico(sorg, dest)
+        _check(r, 'Storico al buio', 'e la seconda volta non si ricopia per niente',
+               (e['ok'], e['saltato']), (True, True))
+
+        # --- ora il sistema operativo dice di no ---
+        vero_walk = backup.os.walk
+
+        def walk_negato(percorso, onerror=None, **kw):
+            if onerror:
+                onerror(OSError(1, 'Operation not permitted', percorso))
+            return iter(())
+
+        def quanti_archivi():
+            return len([n for n in os.listdir(dest) if n.startswith('storico-')])
+
+        prima = quanti_archivi()
+        backup.os.walk = walk_negato
+        try:
+            e = backup.archivia_storico(sorg, dest, forza=True)
+        finally:
+            backup.os.walk = vero_walk
+        _check(r, 'Storico al buio', 'cartella vietata: NON si dichiara riuscito',
+               (e['ok'], e['file']), (False, 0))
+        _check(r, 'Storico al buio', 'e si dice perche\u0301',
+               'non si riesce a leggere' in e['errore'], True)
+        _check(r, 'Storico al buio', 'e non ha lasciato in giro un archivio finto',
+               quanti_archivi(), prima)
+
+        # --- e se e' il SEGNO a non si leggersi (l'ha scritto un'altra
+        #     identita'), non si salta credendo di essere a posto: si copia ---
+        # non si conta quanti archivi ci sono: due copie nello stesso secondo
+        # prendono lo stesso nome e il conteggio non si muove. Quello che
+        # distingue una copia da un salto e' «path», che sul salto resta vuoto.
+        firma = os.path.join(dest, backup.FIRMA)
+        os.chmod(firma, 0)
+        try:
+            e = backup.archivia_storico(sorg, dest)
+        finally:
+            os.chmod(firma, 0o644)
+        _check(r, 'Storico al buio', 'segno illeggibile: si copia invece di saltare',
+               (e['ok'], e['saltato'], bool(e['path'])), (True, False, True))
+        _check(r, 'Storico al buio', 'e se il segno non si scrive, la copia resta buona',
+               (e['ok'], bool(e['nota'])), (True, True))
+    finally:
+        shutil.rmtree(base, ignore_errors=True)

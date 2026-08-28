@@ -331,40 +331,71 @@ TIENI_STORICI = 3
 
 
 def _firma_cartella(percorso):
-    """Impronta del contenuto: nome, dimensione e data di ogni file."""
-    righe = []
-    for radice, _dirs, files in os.walk(percorso):
+    """Impronta del contenuto: nome, dimensione e data di ogni file.
+
+    Dice anche cosa NON e' riuscita a leggere, e non e' un dettaglio: os.walk,
+    se non gli si passa «onerror», ingoia i rifiuti del sistema e prosegue
+    come se la cartella fosse vuota. Su un backup questo e' il guaio peggiore
+    che ci sia — non un errore, ma un archivio vuoto dichiarato riuscito, che
+    ci si accorge di aver fatto solo il giorno in cui serve. Stessa storia per
+    lo stat di un singolo file: saltarlo in silenzio significa dire «non e'
+    cambiato niente» di una cartella che non si e' potuta guardare.
+    """
+    righe, problemi = [], []
+    for radice, _dirs, files in os.walk(percorso, onerror=problemi.append):
         for f in sorted(files):
             if f == '.DS_Store':
                 continue
             p = os.path.join(radice, f)
             try:
                 st = os.stat(p)
-            except OSError:
+            except OSError as guaio:
+                problemi.append(guaio)
                 continue
             righe.append(f'{os.path.relpath(p, percorso)}|{st.st_size}|{int(st.st_mtime)}')
     h = hashlib.md5()
     h.update('\n'.join(sorted(righe)).encode('utf-8'))
-    return h.hexdigest(), len(righe)
+    return h.hexdigest(), len(righe), problemi
+
+
+def _firma_segnata(percorso):
+    """La firma dell'ultima copia, o None se non si riesce a leggerla.
+
+    Il file puo' esserci ed essere lo stesso illeggibile: su macOS un'app
+    entra sempre nei file che ha creato lei, e questo puo' averlo scritto
+    un'altra — l'app lanciata dal Terminale invece che dall'icona. Non
+    sapendo se qualcosa e' cambiato, si copia: meglio una copia di troppo
+    che una copia saltata credendo di essere a posto.
+    """
+    try:
+        with open(percorso, encoding='utf-8') as f:
+            return f.read().strip()
+    except OSError:
+        return None
 
 
 def archivia_storico(sorgente, dest_dir=None, forza=False):
     """Copia lo storico solo se e' cambiato dall'ultima volta."""
     dest_dir = dest_dir or DEST_DEFAULT
-    esito = {'ok': False, 'path': None, 'errore': '', 'saltato': False, 'file': 0}
+    esito = {'ok': False, 'path': None, 'errore': '', 'saltato': False,
+             'file': 0, 'nota': ''}
     if not os.path.isdir(sorgente):
         esito['errore'] = f'cartella storico non trovata: {sorgente}'
         return esito
     try:
-        firma, quanti = _firma_cartella(sorgente)
+        firma, quanti, problemi = _firma_cartella(sorgente)
         esito['file'] = quanti
+        if problemi:
+            # meglio nessun backup che un backup finto: se la cartella non si
+            # legge per intero, quello che si archivierebbe non e' lo storico
+            esito['errore'] = ('la cartella non si riesce a leggere per intero '
+                               '(%d rifiuti, il primo: %s)' % (len(problemi), problemi[0]))
+            return esito
         os.makedirs(dest_dir, exist_ok=True)
         segna = os.path.join(dest_dir, FIRMA)
-        if not forza and os.path.exists(segna):
-            with open(segna, encoding='utf-8') as f:
-                if f.read().strip() == firma:
-                    esito.update(ok=True, saltato=True)
-                    return esito          # niente e' cambiato: nessuna copia nuova
+        if not forza and _firma_segnata(segna) == firma:
+            esito.update(ok=True, saltato=True)
+            return esito                  # niente e' cambiato: nessuna copia nuova
         stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         out = os.path.join(dest_dir, f'storico-{stamp}.zip')
         parziale = out + '.parziale'
@@ -386,8 +417,15 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
             os.remove(out)
             esito['errore'] = f'archivio danneggiato: {rotto}'
             return esito
-        with open(segna, 'w', encoding='utf-8') as f:
-            f.write(firma)
+        try:
+            with open(segna, 'w', encoding='utf-8') as f:
+                f.write(firma)
+        except OSError as guaio:
+            # l'archivio c'e' ed e' gia' stato verificato: non si dichiara
+            # fallito un backup riuscito. Senza segno, la prossima volta si
+            # ricopia — spreco, non perdita. Ma lo si dice.
+            esito['nota'] = ('copia riuscita, ma il segno non si e\' potuto '
+                             'scrivere (%s): la prossima volta si ricopia' % guaio)
         for vecchio in sorted(
                 (n for n in _nomi_in(dest_dir)
                  if n.startswith('storico-') and n.endswith('.zip')),
