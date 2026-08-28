@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Fatture — app locale per la fatturazione di un personal trainer.
-Flask + SQLite. Avvio: doppio click su "Avvia Fatture.command".
+Flask + SQLite. Avvio: doppio click su Invoice (Mac) o "Start Invoice.bat" (Windows).
 Il nome dell'attività, l'indirizzo, l'IBAN e il logo si mettono nelle
 Impostazioni: nel programma non c'è niente di personale.
 La cartella dello storico, se ne indichi una, viene letta ma MAI modificata.
@@ -12,6 +12,7 @@ import glob
 import shutil
 import datetime
 import logging
+import threading
 import traceback
 
 from flask import (Flask, render_template, request, redirect, url_for,
@@ -1805,6 +1806,25 @@ def api_client(cid):
                     'intestatario': (c['intestatario'] or '').strip()})
 
 
+@app.route('/spegni', methods=['POST'])
+def spegni():
+    """Ferma l'app dal di dentro.
+
+    Serve da quando si puo' partire senza nessuna finestra: prima bastava
+    chiudere quella nera, adesso non c'e' piu' niente da chiudere e senza
+    questo bottone l'unico modo per fermarla sarebbe andarla a cercare fra i
+    processi del computer.
+
+    Non si spegne subito, ed e' voluto: prima si consegna la pagina che dice
+    che e' andata, poi — mezzo secondo dopo, da un altro filo — si ferma il
+    server. Fermandolo subito, il browser resterebbe con una pagina a meta' e
+    sembrerebbe un errore invece di un congedo.
+    """
+    if _SERVER is not None:
+        threading.Timer(0.5, _SERVER.shutdown).start()
+    return render_template('spento.html', si_spegne=_SERVER is not None)
+
+
 @app.route('/apri-cartella', methods=['POST'])
 def apri_cartella():
     target = request.form.get('path', INVOICE_DIR)
@@ -1832,6 +1852,12 @@ def _segna_avvio(porta):
         pass
 
 
+# Il motore acceso, perche' il bottone «Chiudi l'app» possa fermarlo. Resta
+# None se l'app e' stata accesa in un altro modo (per esempio dai controlli):
+# in quel caso il bottone lo dice, invece di far finta di aver spento.
+_SERVER = None
+
+
 def _avvia(porta):
     """Accende il server lasciando pulita la finestra del Terminale.
 
@@ -1846,10 +1872,11 @@ def _avvia(porta):
     data/error.log. Del server restano visibili gli avvisi veri, non il
     resoconto di ogni click.
     """
+    global _SERVER
     from werkzeug.serving import make_server
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     # threaded come fa Flask da sola: senza, una pagina lenta blocca le altre
-    server = make_server('127.0.0.1', porta, app, threaded=True)
+    server = _SERVER = make_server('127.0.0.1', porta, app, threaded=True)
     # Il browser lo apre l'app, se chi l'ha accesa glielo chiede con
     # INVOICE_OPEN_BROWSER. Sembra un mestiere dell'avviatore, ma questo e'
     # l'unico punto che sa DAVVERO che il server sta in piedi: make_server ha

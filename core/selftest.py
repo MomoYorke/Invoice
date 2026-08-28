@@ -932,7 +932,6 @@ TESTO_CHE_PUO_RESTARE = frozenset((
     'Anna',                          # un nome d'esempio
     '8000 Zürich',                   # un indirizzo svizzero d'esempio
     'https://calendar.google.com/calendar/ical/.../basic.ics',
-    'Avvia Fatture.command',         # il nome vero del file da cliccare
     'vs',                            # si scrive cosi' in tutte e tre
 ))
 PAROLE_CHE_PUO_RESTARE = frozenset(('CHF', 'KB', 'MB', 'PDF', 'ok'))
@@ -1864,6 +1863,8 @@ def _test_banca(r):
     _test_avviatore(r)
     _test_avviatore_windows(r)
     _test_windows(r)
+    _test_invoice_app(r)
+    _test_spegnimento(r)
     import os
     import sqlite3
     import tempfile
@@ -2618,3 +2619,122 @@ def _test_windows(r):
            sorted(n for n in ('app.py', 'exports.py')
                   if 'desktop.nome_file_sicuro' in sorgenti.get(n, '')),
            ['app.py', 'exports.py'])
+
+
+def _test_invoice_app(r):
+    """Il pacchetto che si apre senza terminale, e il bottone per chiuderlo.
+
+    Un «.app» sul Mac non e' un programma: e' una cartella con dentro uno
+    script e una scheda che dice al sistema «eseguimi tu». Basta poco perche'
+    smetta di funzionare, e quando smette non lo dice: il doppio clic non fa
+    semplicemente niente. Qui si controlla che quel poco ci sia ancora.
+    """
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    pacco = os.path.join(base, 'Invoice.app', 'Contents')
+    scheda = os.path.join(pacco, 'Info.plist')
+    porta = os.path.join(pacco, 'MacOS', 'Invoice')
+
+    _check(r, 'Invoice.app', 'il pacchetto c’è, con scheda e programma',
+           (os.path.isfile(scheda), os.path.isfile(porta)), (True, True))
+    # senza il permesso di esecuzione il doppio clic non fa proprio niente
+    _check(r, 'Invoice.app', 'e il programma dentro è eseguibile',
+           os.access(porta, os.X_OK), True)
+
+    testo_scheda = ''
+    if os.path.isfile(scheda):
+        with io.open(scheda, encoding='utf-8') as f:
+            testo_scheda = f.read()
+    # Senza questo il Mac fa partire tutto tradotto da Rosetta anche su Apple
+    # Silicon, e Python non riesce piu' a caricare le sue librerie: l'app non
+    # parte e l'errore non dice niente di comprensibile. Costato mezz'ora.
+    # si guarda dentro l'elenco e non in tutto il file: i commenti qui sopra
+    # nominano x86_64 prima di arm64, e un confronto ingenuo li scambierebbe
+    # per l'ordine vero
+    elenco = re.search(r'<key>LSArchitecturePriority</key>\s*<array>(.*?)</array>',
+                       testo_scheda, re.S)
+    ordine = re.findall(r'<string>([^<]+)</string>', elenco.group(1)) if elenco else []
+    _check(r, 'Invoice.app', 'chiede l’architettura nativa prima della traduzione',
+           ordine, ['arm64', 'x86_64'])
+    _check(r, 'Invoice.app', 'e dichiara il nome del programma da eseguire',
+           '<key>CFBundleExecutable</key>' in testo_scheda
+           and '<string>Invoice</string>' in testo_scheda, True)
+
+    testo_porta = ''
+    if os.path.isfile(porta):
+        with io.open(porta, encoding='utf-8') as f:
+            testo_porta = f.read()
+    # il pacchetto non deve RIFARE l'avviatore: deve chiamarlo. Se un giorno
+    # qualcuno ci copiasse dentro la logica, i due prenderebbero strade
+    # diverse senza che nessuno se ne accorga
+    _check(r, 'Invoice.app', 'la porta chiama l’avviatore vero, non lo rifà',
+           ('Start Invoice.command' in testo_porta,
+            'INVOICE_NO_TERMINAL' in testo_porta,
+            len(testo_porta.splitlines()) < 20),
+           (True, True, True))
+
+    # --- l'avviatore quando nessuno lo ascolta ---
+    a = _avviatori()
+    mac = a['Start Invoice.command'].decode('utf-8', 'replace')
+    _check(r, 'Invoice.app', 'l’avviatore sa di non avere un terminale',
+           ('no_terminal()' in mac, 'INVOICE_NO_TERMINAL' in mac), (True, True))
+    # Qui l'ordine e' tutto. Dentro Scrivania, Documenti o Download macOS non
+    # lascia nemmeno CREARE il file di registro: mettendo il controllo dopo la
+    # deviazione dell'uscita, lo script muore sulla riga prima e non spiega
+    # niente a nessuno. E' successo davvero.
+    dove_guardia = mac.find('touch data/.writable')
+    dove_registro = mac.find('exec >>"data/start.log"')
+    _check(r, 'Invoice.app', 'controlla di poter scrivere PRIMA di scrivere il registro',
+           (dove_guardia > 0, dove_registro > 0, dove_guardia < dove_registro),
+           (True, True, True))
+    _check(r, 'Invoice.app', 'e se non può, lo dice con un riquadro invece di morire zitto',
+           ('display dialog' in mac, 'Desktop, Documents or Downloads' in mac), (True, True))
+    # un riquadro che nessuno vede non deve restare in mezzo allo schermo per
+    # sempre: ogni domanda e ogni avviso ha una scadenza
+    # non basta contarle nel file: un «giving up after» dentro un commento
+    # non chiude nessun riquadro. Si guarda che ogni richiamo ce l'abbia
+    # dentro, prima che il comando finisca.
+    senza_scadenza = []
+    for m in re.finditer(r'display dialog', mac):
+        pezzo = mac[m.start():m.start() + 400]
+        if 'giving up after' not in pezzo.split('>/dev/null')[0]:
+            senza_scadenza.append(mac[:m.start()].count('\n') + 1)
+    _check(r, 'Invoice.app', 'nessun riquadro può restare aperto per sempre',
+           senza_scadenza, [])
+    # senza questa, uscendo dal Dock il pacchetto se ne va e l'app resta
+    # accesa dietro, con la porta occupata e nessuno che la guardi
+    _check(r, 'Invoice.app', 'uscendo dal Dock si porta dietro anche l’app',
+           "trap 'kill $APP_PID 2>/dev/null' TERM INT HUP" in mac, True)
+
+
+def _test_spegnimento(r):
+    """Il bottone «Chiudi l'app»: l'unico modo di fermarla, senza finestra."""
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    with io.open(os.path.join(base, 'templates', 'base.html'), encoding='utf-8') as f:
+        barra = f.read()
+    with io.open(os.path.join(base, 'templates', 'spento.html'), encoding='utf-8') as f:
+        congedo = f.read()
+
+    _check(r, 'Spegnimento', 'la rotta c’è, e solo in POST',
+           ("@app.route('/spegni', methods=['POST'])" in programma,
+            'def spegni(' in programma), (True, True))
+    # senza tenersi il server da parte non ci sarebbe niente da fermare
+    _check(r, 'Spegnimento', 'il motore acceso resta raggiungibile',
+           ('_SERVER = None' in programma,
+            "server = _SERVER = make_server" in programma), (True, True))
+    # Fermarlo dentro la richiesta stessa lascerebbe il browser con una pagina
+    # a meta': prima si consegna il congedo, poi si spegne.
+    _check(r, 'Spegnimento', 'prima consegna la pagina, poi spegne',
+           'threading.Timer' in programma and '_SERVER.shutdown' in programma, True)
+    _check(r, 'Spegnimento', 'e se non sa quale motore fermare, lo dice',
+           'si_spegne=_SERVER is not None' in programma, True)
+
+    _check(r, 'Spegnimento', 'il bottone è nella barra e chiede conferma',
+           ("url_for('spegni')" in barra, 'onsubmit="return confirm' in barra),
+           (True, True))
+    # La pagina di congedo non puo' ereditare da base.html: il menu porterebbe
+    # a pagine che fra un istante non rispondono piu', e nemmeno il foglio di
+    # stile esterno arriverebbe in tempo.
+    _check(r, 'Spegnimento', 'la pagina di congedo non dipende da un server già spento',
+           ("{% extends" not in congedo, '<style>' in congedo), (True, True))

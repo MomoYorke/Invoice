@@ -28,12 +28,30 @@ You can go back whenever you like, from that reminder.
 
 ## How to start it
 
-On a **Mac**, double-click **`Start Invoice.command`**.
+On a **Mac**, double-click **`Invoice`** — the app with the icon. No black
+window: it behaves like any other program on your Mac.
 On **Windows**, double-click **`Start Invoice.bat`**.
 
-Either way the browser opens at `http://127.0.0.1:8471`. Leave the window that
-came up with it open while you use the app (to stop it: Ctrl+C, or close the
-window).
+Either way the browser opens at `http://127.0.0.1:8471`.
+
+**To close the app**, use the power button at the foot of the menu, inside the
+app itself. It stops the program properly and tells you the tab can be closed.
+Nothing is ever lost by closing it: everything you do is written down the
+moment you do it.
+
+> On a Mac there is also **`Start Invoice.command`**, which does exactly the
+> same thing but in a Terminal window, showing what it is doing while it does
+> it. Useful when something is not working; the black window has to stay open
+> for as long as you use the app, because that window *is* the app.
+
+> **Where you put the folder matters on a Mac.** macOS protects Desktop,
+> Documents and Downloads: a program may only work in there with permission,
+> and an app that has not been signed by a registered developer is never even
+> asked - it is refused, silently. `Invoice` cannot start from those three
+> folders (it will say so and stop, without touching anything). Put the app
+> folder in your home folder, or anywhere else, and it runs. The Terminal
+> version is unaffected, because the Terminal was granted that permission
+> long ago.
 
 > The first time on a Mac, macOS will refuse to open it: *"Apple could not
 > verify it is free of malware"*. That is Gatekeeper, and it says nothing about

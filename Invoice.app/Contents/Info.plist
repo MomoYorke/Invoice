@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- What macOS needs in order to treat this folder as a program and run it
+       itself, instead of handing it to the Terminal. That is the whole
+       difference between a black window and an app. -->
+  <key>CFBundleName</key>              <string>Invoice</string>
+  <key>CFBundleDisplayName</key>       <string>Invoice</string>
+  <key>CFBundleExecutable</key>        <string>Invoice</string>
+  <key>CFBundleIdentifier</key>        <string>ch.invoice.local</string>
+  <key>CFBundlePackageType</key>       <string>APPL</string>
+  <key>CFBundleVersion</key>           <string>1.0</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleIconFile</key>          <string>Invoice</string>
+  <!-- Senza questo il Mac fa partire il pacchetto TRADOTTO (x86_64 sotto
+       Rosetta) anche su un Mac Apple Silicon, e da li' Python non riesce piu'
+       a caricare le sue librerie, che sono arm64: l'app non parte e l'errore
+       non dice niente di comprensibile. Qui si chiede la nativa per prima;
+       su un Mac Intel la lista scivola sulla seconda da sola. -->
+  <key>LSArchitecturePriority</key>
+  <array>
+    <string>arm64</string>
+    <string>x86_64</string>
+  </array>
+  <key>LSMinimumSystemVersion</key>    <string>10.13</string>
+  <key>NSHighResolutionCapable</key>   <true/>
+</dict>
+</plist>

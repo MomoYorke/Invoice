@@ -1,0 +1,10 @@
+#!/bin/zsh
+# The door with no Terminal behind it.
+#
+# Inside a Mac app the program itself sits at Contents/MacOS/, so the folder
+# holding the app is three steps up. From there on it is the same launcher as
+# always: this file adds nothing except the one sentence that changes
+# everything - «there is no Terminal here» - and then steps aside.
+cd "$(dirname "$0")/../../.." || exit 1
+export INVOICE_NO_TERMINAL=1
+exec ./"Start Invoice.command"

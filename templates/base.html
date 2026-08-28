@@ -56,11 +56,19 @@
       {% endfor %}
     {% endfor %}
   </nav>
-  <button type="button" class="privacy-mini privacy-toggle no-blur" onclick="toggleRiservato()"
-          aria-pressed="false" title="{{ _('Nascondi gli importi (screenshot, luogo pubblico)') }}">
-    {% include '_eye.html' %}
-  </button>
-  <div class="sidebar-foot">{{ _('App locale · dati sul tuo Mac') }}</div>
+  <div class="sidebar-mini">
+    <button type="button" class="privacy-mini privacy-toggle no-blur" onclick="toggleRiservato()"
+            aria-pressed="false" title="{{ _('Nascondi gli importi (screenshot, luogo pubblico)') }}">
+      {% include '_eye.html' %}
+    </button>
+    <form method="post" action="{{ url_for('spegni') }}" class="no-blur"
+          onsubmit="return confirm('{{ _('Chiudo l’app? Il lavoro fatto è già salvato.') }}')">
+      <button class="privacy-mini spegni-mini" title="{{ _('Chiudi l’app') }}">
+        {{ icona('spegni') }}
+      </button>
+    </form>
+  </div>
+  <div class="sidebar-foot">{{ _('App locale · dati sul tuo computer') }}</div>
 </aside>
 <main>
   <div class="barra-alta">

@@ -208,13 +208,16 @@ html.privacy .eye-off { display: block; }
 }
 .privacy-btn:hover { color: var(--ink); border-color: var(--accent-2); }
 html.privacy .privacy-btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sidebar .sidebar-mini { margin-top: auto; display: flex; justify-content: center; gap: 2px; }
 .sidebar .privacy-mini {
-  margin-top: auto;
   display: flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; padding: 0; border-radius: 50%;
   background: none; border: none; color: #7f96a8; cursor: pointer;
 }
 .sidebar .privacy-mini:hover { color: #fff; background: rgba(255,255,255,.07); }
+/* lo spegnimento non e' un'azione come le altre: si accende di rosso solo
+   quando ci passi sopra, cosi' si nota senza gridare tutto il giorno */
+.sidebar .spegni-mini:hover { color: #ff8a8a; background: rgba(255,110,110,.12); }
 html.privacy .sidebar .privacy-mini { color: var(--accent-2); }
 /* ---------- logo nelle Impostazioni ---------- */
 .logo-riquadro { display: flex; gap: 20px; align-items: center; }
