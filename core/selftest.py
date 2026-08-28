@@ -2511,6 +2511,24 @@ def _test_avviatore_windows(r):
     _check(r, 'I due avviatori', 'controllano le stesse librerie', librerie(win), librerie(mac))
     _check(r, 'I due avviatori', 'e la lista non è vuota', len(librerie(mac)), 7)
 
+    # Il programma «pip» dentro l'ambiente ha il percorso della cartella scritto
+    # dentro di se': appena la cartella si sposta smette di partire. Verificato
+    # dal vero il 28.08.2026 spostando la cartella dalla Scrivania a casa —
+    # «./venv/bin/pip» cercava ancora la Scrivania. «python -m pip» invece il
+    # percorso lo ricava da dove si trova, e regge il trasloco.
+    def comandi(testo, *inizi_di_commento):
+        vive = []
+        for riga in testo.split('\n'):
+            nuda = riga.strip().lower()
+            if nuda and not any(nuda.startswith(i) for i in inizi_di_commento):
+                vive.append(riga)
+        return '\n'.join(vive).lower()
+    mac_c, win_c = comandi(mac, '#'), comandi(win, 'rem ', '::')
+    _check(r, 'I due avviatori', 'nessuno dei due chiama «pip» come programma a sé',
+           ('bin/pip' in mac_c, 'scripts\\pip' in win_c), (False, False))
+    _check(r, 'I due avviatori', 'tutt’e due installano con «python -m pip»',
+           (mac_c.count('-m pip install'), win_c.count('-m pip install')), (2, 2))
+
     for nome in ('.last-update-check', '.previous-version'):
         _check(r, 'I due avviatori', 'tutt’e due usano «data/%s»' % nome,
                (nome in mac, nome in win), (True, True))
