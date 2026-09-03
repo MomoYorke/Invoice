@@ -26,6 +26,55 @@ reminder at the top, which disappears by itself when you are done.
 
 You can go back whenever you like, from that reminder.
 
+## Installing it
+
+On a Mac there are two ways to get the app, and they are **not** equivalent.
+
+**The good one — one command, once.** Open **Terminal** (Applications →
+Utilities) and paste this line:
+
+    git clone https://github.com/MomoYorke/Invoice.git ~/Invoice
+
+That is the only time you will ever need the Terminal. You end up with a folder
+named `Invoice` in your home folder: open it and double-click **`Invoice`**.
+
+Two things come free with it, and they are the whole reason it is the good one:
+
+- **macOS does not block it.** Anything that arrives by *download* carries an
+  invisible "came from the internet" mark, and macOS refuses to open an
+  unsigned app that carries it. Arriving this way, the app has no such mark,
+  so there is nothing to get past — no warning, no trip to the settings.
+- **It can update itself.** The launcher is only able to look for a newer
+  version if the copy came from a repository. A copy unpacked from a zip is
+  frozen on the day it was downloaded, for good.
+
+If the Mac has never been used for development, that command makes macOS offer
+to install the **command line developer tools**. Accept: it is Apple's own, and
+it is where `python3` lives, which the app needs either way.
+
+**The other one — the zip.** [Download it](https://github.com/MomoYorke/Invoice/archive/refs/heads/main.zip),
+double-click to unpack, and **move the folder out of Downloads** — your home
+folder is a good place (see the note below on why it matters).
+
+The first time you open `Invoice`, macOS will refuse: *"Apple could not verify
+it is free of malware"*. Nothing is wrong with the file — that message appears
+for every unsigned app that was downloaded, and making it go away for good
+costs 99 $ a year to Apple, which this app does not pay. To get past it once:
+
+**System Settings → Privacy & Security**, scroll down to **Security**, and
+click **Open Anyway** on the line naming Invoice. Then open the app again and
+confirm. Once, and never again on that Mac.
+
+(Older guides say to right-click → "Open". That worked up to macOS Sonoma;
+from Sequoia on, Apple removed the shortcut for unsigned apps.)
+
+A copy installed this way **will not update itself**. When a new version comes
+out you download it again by hand.
+
+On **Windows** the zip is the normal way — Windows shows one blue box the first
+time (**More info** → **Run anyway**) and that is all. If Windows has `git`,
+the same clone command works there too and brings the updates with it.
+
 ## How to start it
 
 On a **Mac**, double-click **`Invoice`** — the app with the icon. No black
@@ -54,25 +103,22 @@ moment you do it.
 > folder in your home folder, or anywhere else, and it runs. The Terminal
 > version is unaffected, because the Terminal was granted that permission
 > long ago.
+>
+> **Granting Full Disk Access does not fix this** — tested on 28.08.2026, with
+> the app listed and the switch on: the Desktop stayed refused. Without a
+> signature macOS has no stable identity to check, so the entry in that list
+> counts for nothing. The same goes for **iCloud Drive**: the app gets into the
+> files it created there itself, and not into the ones written by the same app
+> started from the Terminal.
+>
+> Which is why the rule is not «grant the permission» but **keep your data out
+> of those folders**. That includes the folder holding your older documents, if
+> you point the app at one: on the Desktop it cannot be read, and the copy of it
+> will say so instead of quietly archiving nothing.
 
-> The first time on a Mac, macOS will refuse to open it: *"Apple could not
-> verify it is free of malware"*. That is Gatekeeper, and it says nothing about
-> the file — it blocks every unsigned script that arrived from the internet.
-> Let it fail once, then go to **System Settings → Privacy & Security**, scroll
-> down to **Security**, and click **Open Anyway** next to the line naming the
-> launcher. Double-click it again and choose **Open**. Once, and never again.
->
-> (Older guides say to right-click → "Open". That worked up to macOS Sonoma;
-> from Sequoia on, Apple removed that shortcut for unsigned scripts.)
->
-> If the button is not there, Terminal does the same thing — type
-> `xattr -dr com.apple.quarantine ` and then drag the app folder onto the
-> Terminal window to fill in the path.
->
-> On a Mac that has never been used for development, the launcher may also
-> trigger a macOS box asking to install the **command line developer tools**:
-> that is where `python3` lives. Accept it, wait for it to finish, and start
-> the app again.
+> If macOS refuses to open the app the first time, that is Gatekeeper and it is
+> expected: see **Installing it** above. Installing with `git clone` avoids it
+> altogether.
 
 > On Windows, install **Python** first: it is the one thing Windows does not
 > bring by itself. Take it from
