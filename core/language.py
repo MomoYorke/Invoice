@@ -438,6 +438,8 @@ TESTI = {
         'importo e nome combaciano': 'amount and name match',
         "combacia solo l'importo": 'only the amount matches',
         '{n} giorni prima': '{n} days earlier',
+        'il riferimento è di questa fattura, già segnata pagata: sembra un ordine permanente':
+            'the reference is this invoice’s, already ticked paid: it looks like a standing order',
         'il riferimento del pagamento è quello della fattura':
             'the payment reference is the one on the invoice',
         'importo esatto e la causale cita la data di questa fattura':
@@ -1542,6 +1544,8 @@ TESTI = {
         'importo e nome combaciano': 'Betrag und Name stimmen überein',
         "combacia solo l'importo": 'nur der Betrag stimmt überein',
         '{n} giorni prima': '{n} Tage vorher',
+        'il riferimento è di questa fattura, già segnata pagata: sembra un ordine permanente':
+            'die Referenz gehört zu dieser Rechnung, die schon als bezahlt markiert ist: sieht nach einem Dauerauftrag aus',
         'il riferimento del pagamento è quello della fattura':
             'die Zahlungsreferenz ist die der Rechnung',
         'importo esatto e la causale cita la data di questa fattura':

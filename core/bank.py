@@ -191,11 +191,23 @@ def leggi_camt(percorso):
         if cent is None or not data:
             continue
         dettagli = next((n for n in v.iter() if _tag(n) == 'TxDtls'), v)
-        # il riferimento della QR-fattura: quando c'e', l'accostamento è certo
+        # Il riferimento STRUTTURATO della QR-fattura, e soltanto quello: sta in
+        # RmtInf/Strd/CdtrRefInf/Ref. «AddtlRmtInf» prima finiva qui dentro, ma
+        # e' testo libero che chi paga scrive come gli pare — prenderlo per un
+        # riferimento vorrebbe dire poter dire «certo» sulla fede di una frase,
+        # ed e' esattamente cio' che questo accostamento non deve fare mai.
+        # Verificato il 06.09.2026 su un camt.053 vero di Raiffeisen: il tag
+        # «Ref» compare solo dentro CdtrRefInf, quindi non c'e' ambiguita'.
         riferimento = ''
         for n in dettagli.iter():
-            if _tag(n) in ('Ref', 'AddtlRmtInf') and (n.text or '').strip():
-                riferimento = riferimento or n.text.strip()
+            if _tag(n) != 'CdtrRefInf':
+                continue
+            for x in n.iter():
+                if _tag(x) == 'Ref' and (x.text or '').strip():
+                    riferimento = x.text.strip()
+                    break
+            if riferimento:
+                break
         nome = ''
         for n in dettagli.iter():
             if _tag(n) == 'Dbtr':
@@ -444,12 +456,27 @@ def somiglianza_nome(descrizione, nome_cliente):
 # costanti, e non scritte a mano piu' sotto, perche' cosi' il collaudo puo'
 # raccoglierle e controllare che esistano in tutte le lingue.
 PERCHE_RIFERIMENTO = 'il riferimento del pagamento è quello della fattura'
+PERCHE_RIFERIMENTO_RIPETUTO = ('il riferimento è di questa fattura, già segnata '
+                               'pagata: sembra un ordine permanente')
 PERCHE_DATA = 'importo esatto e la causale cita la data di questa fattura'
 PERCHE_NOME = 'importo esatto e il nome compare nella causale'
 PERCHE_SOLO_IMPORTO = 'importo esatto, ma il nome non compare nella causale'
 PERCHE_GRUPPO = ('{quante} fatture dello stesso cliente che insieme fanno '
                  'esattamente questo importo')
 CARTELLA_ASSENTE = 'Questa cartella non esiste.'
+
+
+def _normalizza_riferimento(testo):
+    """Il riferimento ridotto all'osso, per poterlo confrontare.
+
+    NON si tengono solo le cifre, come faceva prima. Il riferimento QRR e'
+    fatto di 27 numeri e sopravviveva; ma il Creditor Reference (SCOR)
+    comincia per «RF» e puo' contenere lettere, e buttarle via farebbe
+    combaciare due riferimenti diversi che si distinguono solo per quelle.
+    Ed e' proprio il tipo che useremo noi: il QRR vuole un QR-IBAN, che il
+    conto Raiffeisen (CH94 8080...) non e'.
+    """
+    return re.sub(r'[^0-9A-Z]', '', (testo or '').upper())
 
 
 def _riferimento_uguale(movimento, inv):
@@ -461,10 +488,10 @@ def _riferimento_uguale(movimento, inv):
     sarebbe pericoloso: il riferimento di un altro creditore puo' finire con le
     stesse cifre e l'app direbbe "certo" su una fattura sbagliata.
     """
-    rif = re.sub(r'\D', '', movimento.get('riferimento') or '')
+    rif = _normalizza_riferimento(movimento.get('riferimento'))
     if not rif or 'qr_ref' not in inv.keys():
         return False
-    mio = re.sub(r'\D', '', inv['qr_ref'] or '')
+    mio = _normalizza_riferimento(inv['qr_ref'])
     return bool(mio) and mio == rif
 
 
@@ -496,8 +523,15 @@ def candidati_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_
         somiglianza = max(somiglianza_nome(movimento['descrizione'], inv['client_name']),
                           _somiglianza_alias(con, movimento, inv))
         data_citata = bool(inv['date'] and inv['date'] in citate)
+        # Un riferimento vale come CERTEZZA una volta sola. Chi paga con un
+        # ordine permanente lo imposta una volta e poi ogni mese arriva sempre
+        # quello: il riferimento della fattura di gennaio su un versamento di
+        # giugno. Se la fattura risulta gia' pagata, la certezza sarebbe una
+        # bugia — direbbe «incassata» due volte la stessa. Resta pero' un
+        # ottimo indizio, perche' identifica il cliente senza dubbi.
         if _riferimento_uguale(movimento, inv):
-            grado, perche = CERTO, PERCHE_RIFERIMENTO
+            grado, perche = ((CERTO, PERCHE_RIFERIMENTO) if aperta
+                             else (PROBABILE, PERCHE_RIFERIMENTO_RIPETUTO))
         elif data_citata:
             grado, perche = PROBABILE, PERCHE_DATA
         elif somiglianza >= 0.5:

@@ -101,6 +101,7 @@ def run_all():
     _test_finestra_stretta(r)
     _test_calendario(r)
     _test_storico_al_buio(r)
+    _test_riferimento_qr(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -887,8 +888,14 @@ def _frasi_restituite_senza_traduzione(L):
         esito = branding.salva(dati)
         if esito:
             frasi.append(esito[0])
-    frasi += [B.PERCHE_RIFERIMENTO, B.PERCHE_DATA, B.PERCHE_NOME, B.PERCHE_SOLO_IMPORTO,
-              B.PERCHE_GRUPPO, B.CARTELLA_ASSENTE]
+    # Le spiegazioni della pagina Banca si raccolgono DA SOLE: ogni costante
+    # che si chiama PERCHE_* entra qui senza che nessuno debba ricordarsene.
+    # Prima erano elencate a mano, e il 06.09.2026 ne e' bastata una nuova
+    # (PERCHE_RIFERIMENTO_RIPETUTO) per scoprire che una guardia che protegge
+    # solo cio' che qualcuno ha elencato non protegge niente: la frase nuova
+    # non era tradotta e il collaudo era verde lo stesso.
+    frasi += [getattr(B, x) for x in dir(B) if x.startswith('PERCHE_')]
+    frasi.append(B.CARTELLA_ASSENTE)
     # finisce nel database e la pagina lo traduce quando lo mostra
     from . import db as _db
     frasi.append(_db.MOTIVO_RICOSTRUITO)
@@ -3040,3 +3047,81 @@ def _test_storico_al_buio(r):
                (e['ok'], bool(e['nota'])), (True, True))
     finally:
         shutil.rmtree(base, ignore_errors=True)
+
+
+CAMT_RIFERIMENTI = """<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt><Stmt>
+ <Ntry><Amt Ccy="CHF">200.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-09-01</Dt></BookgDt>
+  <NtryDtls><TxDtls>
+   <RltdPties><Dbtr><Nm>Vera Buergi</Nm></Dbtr></RltdPties>
+   <RmtInf><Strd><CdtrRefInf><Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp>
+    <Ref>RF18539007547034</Ref></CdtrRefInf></Strd></RmtInf>
+  </TxDtls></NtryDtls>
+ </Ntry>
+ <Ntry><Amt Ccy="CHF">110.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-09-02</Dt></BookgDt>
+  <NtryDtls><TxDtls>
+   <RltdPties><Dbtr><Nm>Céline Favre</Nm></Dbtr></RltdPties>
+   <RmtInf><Strd><AddtlRmtInf>RF18539007547034 me lo ha detto lui</AddtlRmtInf></Strd></RmtInf>
+  </TxDtls></NtryDtls>
+ </Ntry>
+</Stmt></BkToCstmrStmt></Document>
+"""
+
+
+def _test_riferimento_qr(r):
+    """La strada che porta al pallino verde, che nessuno aveva mai percorso.
+
+    Fino al 06.09.2026 l'unico estratto conto finto della batteria non aveva
+    dentro NESSUN riferimento: tutto il codice che deve rendere «certo» un
+    accostamento non era mai stato messo alla prova. Ed era il codice su cui
+    poggia la QR-fattura.
+
+    Le due trappole, tutt'e due vere e tutt'e due trovate guardando un camt.053
+    autentico di Raiffeisen:
+
+    - «AddtlRmtInf» e' testo libero, scritto da chi paga. Prima finiva nello
+      stesso paniere del riferimento vero, e bastava che qualcuno ci copiasse
+      dentro un codice perche' l'app dicesse «certo».
+    - il confronto teneva solo le CIFRE. Il riferimento QRR e' fatto di 27
+      numeri e sopravviveva, ma il SCOR — quello che useremo, non avendo un
+      QR-IBAN — comincia per «RF» e porta lettere: due riferimenti diversi
+      diventavano lo stesso.
+    """
+    import shutil, tempfile
+    from . import bank as B
+
+    cartella = tempfile.mkdtemp(prefix='invoice-rif-')
+    try:
+        with io.open(os.path.join(cartella, 'rif.xml'), 'w', encoding='utf-8') as h:
+            h.write(CAMT_RIFERIMENTI)
+        mov, problemi = B.leggi_cartella(cartella)
+        per_importo = {m['importo_cents']: m for m in mov}
+
+        _check(r, 'Riferimento QR', 'il camt viene letto senza intoppi',
+               (problemi, sorted(per_importo)), ([], [11000, 20000]))
+        _check(r, 'Riferimento QR', 'il riferimento strutturato arriva intero',
+               per_importo[20000]['riferimento'], 'RF18539007547034')
+        # la trappola: stesso codice, ma scritto in una frase
+        _check(r, 'Riferimento QR', 'il testo libero NON vale come riferimento',
+               per_importo[11000]['riferimento'], '')
+
+        certo = per_importo[20000]
+        _check(r, 'Riferimento QR', 'lo stesso riferimento, spazi a parte, e\u0300 una certezza',
+               B._riferimento_uguale(certo, {'qr_ref': 'RF18 5390 0754 7034'}), True)
+        _check(r, 'Riferimento QR', 'un riferimento diverso non conclude niente',
+               B._riferimento_uguale(certo, {'qr_ref': 'RF18539007547035'}), False)
+        # due SCOR che differiscono SOLO per una lettera: tenendo le sole
+        # cifre sarebbero stati lo stesso riferimento
+        _check(r, 'Riferimento QR', 'due riferimenti che cambiano solo per una lettera restano diversi',
+               B._riferimento_uguale({'riferimento': 'RF18AB0754'}, {'qr_ref': 'RF18XB0754'}), False)
+        _check(r, 'Riferimento QR', 'e il QRR a 27 cifre combacia lo stesso',
+               B._riferimento_uguale({'riferimento': '21 00000 00003 13947 14300 09017'},
+                                     {'qr_ref': '210000000003139471430009017'}), True)
+        # una fattura senza riferimento stampato non puo' MAI dare una certezza
+        _check(r, 'Riferimento QR', 'senza riferimento sulla fattura non si conclude niente',
+               (B._riferimento_uguale(certo, {'numero': 84}),
+                B._riferimento_uguale(certo, {'qr_ref': None})), (False, False))
+    finally:
+        shutil.rmtree(cartella, ignore_errors=True)
