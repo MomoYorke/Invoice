@@ -25,6 +25,7 @@ from core import calendar_feed
 from core import schedule as ag
 from core import overview
 from core import bank
+from core import qrbill
 from core import sessions as sess
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
@@ -408,8 +409,13 @@ def _crea_fattura(con):
         client['lingua'] if 'lingua' in client.keys() else None)
     docgen.build_docx(docx_path, number, date_str, intestatario, addr_lines, items, total,
                       settings, lingua_cliente)
+    # il riferimento della QR-fattura si decide QUI, una volta, e finisce sia
+    # sul foglio che nel database: e' il filo che riportera' il versamento a
+    # questa fattura, e i due capi devono essere lo stesso filo
+    qr_ref = (qrbill.riferimento_per(number)
+              if settings.get('qr_fattura') == '1' else '')
     pdfgen.build_pdf(pdf_path, number, date_str, intestatario, addr_lines, items,
-                     total, settings, lingua_cliente)
+                     total, settings, lingua_cliente, qr_ref)
 
     # --- VERIFICA AUTOMATICA: rileggo i file veri e controllo gli importi al centesimo.
     #     Se qualcosa non torna, NON salvo la fattura e rimuovo i file generati. ---
@@ -426,10 +432,10 @@ def _crea_fattura(con):
 
     cur = con.execute(
         'INSERT INTO invoices(number, client_id, client_name, client_address, date, year, '
-        "total_cents, status, source, docx_path, pdf_path, created_at) "
-        "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?)",
+        "total_cents, status, source, docx_path, pdf_path, created_at, qr_ref) "
+        "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?, ?)",
         (number, client['id'], intestatario, '\n'.join(addr_lines), date_iso, year,
-         total, docx_path, pdf_path, db.now_iso()))
+         total, docx_path, pdf_path, db.now_iso(), qr_ref))
     inv_id = cur.lastrowid
     for pos, it in enumerate(items):
         con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,total_cents) '
@@ -1699,6 +1705,15 @@ def impostazioni():
         if 'banca_marcatore' in request.form:    # riquadro della banca
             db.set_setting(con, 'banca_auto',
                            '1' if request.form.get('banca_auto') else '0')
+        if 'qr_marcatore' in request.form:       # riquadro della QR-fattura
+            acceso = '1' if request.form.get('qr_fattura') else '0'
+            db.set_setting(con, 'qr_fattura', acceso)
+            # accenderla e scoprire solo fra un mese che i dati non bastavano
+            # sarebbe la peggiore delle sorprese: si controlla subito e si dice
+            _mio, _motivo = qrbill.da_impostazioni(db.get_settings(con))
+            if acceso == '1' and _motivo:
+                avvisa('⚠️ QR-fattura accesa, ma non riesco ancora a farla. {motivo}',
+                       'error', motivo=_motivo)
         for k in db.DEFAULT_SETTINGS:
             if k not in request.form:
                 continue
@@ -1727,11 +1742,13 @@ def impostazioni():
     settings = db.get_settings(con)
     con.close()
     dest = settings.get('backup_dir') or backup.DEST_DEFAULT
+    qr_mio, qr_motivo = qrbill.da_impostazioni(settings)
     return render_template('settings.html', settings=settings,
                            cartella_estratti=os.path.basename(db.DIR_ESTRATTI),
                            copie=backup.elenco_esterni(dest)[:10],
                            ultimo=backup.ultimo_esterno(dest),
                            pausa=_pausa_smtp(settings),
+                           qr_mio=qr_mio, qr_motivo=qr_motivo,
                            logo_suo=branding.personalizzato())
 
 

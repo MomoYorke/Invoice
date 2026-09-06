@@ -252,6 +252,28 @@
   </form>
 </div>
 
+<div class="panel mt" style="max-width:760px">
+  <h2 style="margin-top:0">{{ _('QR-fattura') }}</h2>
+  <p class="sub">{{ _('Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.') }}</p>
+  <p class="muted" style="font-size:12.5px">{{ _('Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.') }}</p>
+  {% if qr_mio %}
+    <p style="font-size:13px">{{ _('Pronta. Sul bollettino uscirà:') }}<br>
+      <code>{{ qr_mio.iban }}</code> · {{ qr_mio.nome }}<br>
+      {{ qr_mio.indirizzo.via }} {{ qr_mio.indirizzo.civico }},
+      {{ qr_mio.indirizzo.cap }} {{ qr_mio.indirizzo.localita }} ({{ qr_mio.indirizzo.paese }})</p>
+  {% else %}
+    <p class="muted" style="font-size:13px">{{ qr_motivo }}</p>
+  {% endif %}
+  <form method="post">
+    <input type="hidden" name="qr_marcatore" value="1">
+    <label style="font-weight:400"><input type="checkbox" name="qr_fattura" value="1"
+      {{ 'checked' if settings.qr_fattura == '1' }} style="width:auto">
+      {{ _('Aggiungi il bollettino QR alle fatture nuove') }}</label>
+    <p class="muted" style="font-size:12px">{{ _('Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.') }}</p>
+    <button class="btn mt">{{ _('Salva') }}</button>
+  </form>
+</div>
+
 <div class="panel mt" style="max-width:640px">
   <h2 style="margin-top:0">{{ _('Copia di sicurezza fuori dal Mac') }}</h2>
   <p class="sub">{{ _('Uno zip con database, registro delle sessioni e tutti i PDF delle fatture. Viene creato all’avvio (una volta al giorno) e dopo ogni fattura nuova. Appena scritto viene riaperto e controllato: se il database dentro non è integro, l’archivio viene buttato e qui lo vedi scritto.') }}</p>

@@ -470,6 +470,33 @@ TESTI = {
         'Già sistemati': 'Already sorted',
         "dall'app": 'by the app',
         'messo da parte': 'set aside',
+        'QR-fattura': 'QR-bill',
+        'Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.':
+            'The Swiss payment slip with the QR code, on a sheet after the invoice. '
+            'Whoever pays scans it with their banking app and types nothing at all: '
+            'no amount, no IBAN, no message. The code carries a reference of yours, '
+            'so when the payment comes back the app recognises the invoice instead '
+            'of guessing it.',
+        'Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.':
+            'The standard is public: you need no permission from your bank or anyone else.',
+        'Pronta. Sul bollettino uscirà:': 'Ready. The slip will show:',
+        'Aggiungi il bollettino QR alle fatture nuove':
+            'Add the QR payment slip to new invoices',
+        'Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.':
+            'From here on: invoices already made stay as they are. Scan the first one '
+            'with your own banking app before you send it — that is the only proof '
+            'that counts.',
+        '⚠️ QR-fattura accesa, ma non riesco ancora a farla. {motivo}':
+            '⚠️ QR-bill switched on, but I cannot make one yet. {motivo}',
+        'Per la QR-fattura serve il tuo IBAN svizzero nelle impostazioni (21 caratteri, comincia per CH o LI).':
+            'The QR-bill needs your Swiss IBAN in the settings (21 characters, starting with CH or LI).',
+        'Per la QR-fattura serve il nome della tua attività nelle impostazioni.':
+            'The QR-bill needs your business name in the settings.',
+        'Per la QR-fattura il tuo indirizzo deve essere leggibile a pezzi: via e numero sulla prima riga, CAP e località sulla seconda. Ora c\'è «{r1}» e «{r2}»: scrivi per esempio «Musterstrasse 45» e «8000 Musterstadt».':
+            'For the QR-bill your address must be readable in parts: street and number '
+            'on the first line, postcode and town on the second. Right now it reads '
+            '«{r1}» and «{r2}»: write for example «Musterstrasse 45» and '
+            '«8000 Musterstadt».',
         'lo stesso versamento è anche in {file}: non te lo richiedo':
             'the same payment is also in {file}: I am not asking you again',
         'Annulla': 'Undo',
@@ -1578,6 +1605,35 @@ TESTI = {
         'Già sistemati': 'Bereits erledigt',
         "dall'app": 'von der App',
         'messo da parte': 'beiseitegelegt',
+        'QR-fattura': 'QR-Rechnung',
+        'Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.':
+            'Der Schweizer Zahlteil mit QR-Code, auf einem Blatt hinter der Rechnung. '
+            'Wer zahlt, scannt ihn mit der App seiner Bank und tippt gar nichts mehr: '
+            'weder Betrag noch IBAN noch Mitteilung. Im Code steht deine Referenz, und '
+            'wenn die Zahlung zurückkommt, erkennt die App die Rechnung, statt sie zu '
+            'erraten.',
+        'Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.':
+            'Der Standard ist öffentlich: du brauchst weder von deiner Bank noch von '
+            'sonst jemandem eine Erlaubnis.',
+        'Pronta. Sul bollettino uscirà:': 'Bereit. Auf dem Zahlteil steht:',
+        'Aggiungi il bollettino QR alle fatture nuove':
+            'Den QR-Zahlteil zu neuen Rechnungen hinzufügen',
+        'Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.':
+            'Gilt ab jetzt: bereits erstellte Rechnungen bleiben, wie sie sind. Scanne '
+            'die erste neue mit der App deiner eigenen Bank, bevor du sie verschickst — '
+            'das ist der einzige Beweis, der zählt.',
+        '⚠️ QR-fattura accesa, ma non riesco ancora a farla. {motivo}':
+            '⚠️ QR-Rechnung eingeschaltet, aber ich kann noch keine machen. {motivo}',
+        'Per la QR-fattura serve il tuo IBAN svizzero nelle impostazioni (21 caratteri, comincia per CH o LI).':
+            'Für die QR-Rechnung braucht es deine Schweizer IBAN in den Einstellungen '
+            '(21 Zeichen, beginnt mit CH oder LI).',
+        'Per la QR-fattura serve il nome della tua attività nelle impostazioni.':
+            'Für die QR-Rechnung braucht es den Namen deines Betriebs in den Einstellungen.',
+        'Per la QR-fattura il tuo indirizzo deve essere leggibile a pezzi: via e numero sulla prima riga, CAP e località sulla seconda. Ora c\'è «{r1}» e «{r2}»: scrivi per esempio «Musterstrasse 45» e «8000 Musterstadt».':
+            'Für die QR-Rechnung muss deine Adresse in Teilen lesbar sein: Strasse und '
+            'Nummer auf der ersten Zeile, PLZ und Ort auf der zweiten. Jetzt steht dort '
+            '«{r1}» und «{r2}»: schreibe zum Beispiel «Musterstrasse 45» und '
+            '«8000 Musterstadt».',
         'lo stesso versamento è anche in {file}: non te lo richiedo':
             'dieselbe Zahlung steht auch in {file}: ich frage dich nicht nochmals',
         'Annulla': 'Rückgängig',
@@ -2283,6 +2339,10 @@ DOCUMENTI = {
         'Condizioni': 'Terms',
         'Grazie per aver scelto {nome}!': 'Thanks for choosing {nome}!',
         'Pagabile entro 30 giorni netti a:': 'Payable within 30 days net to:',
+        # --- il foglio della QR-fattura ---
+        'Fattura {n} del {d}': 'Invoice {n} of {d}',
+        'Da staccare e usare per il pagamento.':
+            'Detach and use for payment.',
         # --- la mail ---
         'In allegato la fattura di questo mese per {servizio}.':
             "Please find attached this month's invoice for {servizio}.",
@@ -2310,6 +2370,10 @@ DOCUMENTI = {
         'Grazie per aver scelto {nome}!':
             'Vielen Dank, dass Sie sich für {nome} entschieden haben!',
         'Pagabile entro 30 giorni netti a:': 'Zahlbar innert 30 Tagen netto an:',
+        # --- das Blatt der QR-Rechnung ---
+        'Fattura {n} del {d}': 'Rechnung {n} vom {d}',
+        'Da staccare e usare per il pagamento.':
+            'Abtrennen und für die Zahlung verwenden.',
         # --- die E-Mail ---
         'In allegato la fattura di questo mese per {servizio}.':
             'Anbei die Rechnung dieses Monats für {servizio}.',

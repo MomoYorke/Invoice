@@ -104,6 +104,7 @@ def run_all():
     _test_riferimento_qr(r)
     _test_camt_vero(r)
     _test_gemelli_fra_file(r)
+    _test_qr_fattura(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -898,6 +899,11 @@ def _frasi_restituite_senza_traduzione(L):
     # non era tradotta e il collaudo era verde lo stesso.
     frasi += [getattr(B, x) for x in dir(B) if x.startswith('PERCHE_')]
     frasi.append(B.CARTELLA_ASSENTE)
+    # stessa storia per i motivi per cui la QR-fattura non si puo' fare: sono
+    # frasi che finiscono sotto gli occhi di chi usa l'app, ma passano per una
+    # variabile e nessun raccoglitore che guardi i «_()» puo' vederle
+    from . import qrbill as _qr
+    frasi += [getattr(_qr, x) for x in dir(_qr) if x.startswith('SENZA_')]
     # finisce nel database e la pagina lo traduce quando lo mostra
     from . import db as _db
     frasi.append(_db.MOTIVO_RICOSTRUITO)
@@ -3315,3 +3321,149 @@ def _test_gemelli_fra_file(r):
     _check(r, 'Gemelli', 'un versamento davvero nuovo non viene inghiottito',
            da_decidere(con, [petra_pdf, petra_xml, nuovo]), ['estratto.xml'])
     con.close()
+
+
+def _test_qr_fattura(r):
+    """La QR-fattura: il riferimento, il contenuto del codice, il foglio.
+
+    Qui dentro un errore non si vede: esce un bollettino che sembra buono, il
+    cliente lo inquadra e la sua banca dice di no — oppure, peggio, dice di si'
+    e i soldi vanno da un'altra parte. Percio' si prova contro numeri VERI:
+    l'esempio del Creditor Reference pubblicato con lo standard, e le posizioni
+    delle righe nel codice, che sono fisse e non si possono spostare di una.
+    """
+    import tempfile
+    from . import qrbill as Q
+    from . import pdfgen
+    from .db import DEFAULT_SETTINGS
+
+    # --- il riferimento -------------------------------------------------
+    # RF18539007547034 e' l'esempio che gira nella documentazione ufficiale:
+    # se le cifre di controllo tornano su questo, l'algoritmo e' quello giusto
+    _check(r, 'QR-fattura', 'le cifre di controllo del riferimento sono quelle vere',
+           Q.riferimento_scor('539007547034'), 'RF18539007547034')
+    _check(r, 'QR-fattura', 'e il riferimento che ne esce si riconosce valido',
+           Q.scor_valido('RF18539007547034'), True)
+    # cambiando UNA cifra di controllo il riferimento non deve piu' passare:
+    # e' esattamente il servizio che quelle due cifre rendono a chi paga
+    _check(r, 'QR-fattura', 'un riferimento con il controllo storto viene respinto',
+           Q.scor_valido('RF19539007547034'), False)
+    _check(r, 'QR-fattura', 'e quello che l\'app compone da sola si controlla da solo',
+           all(Q.scor_valido(Q.riferimento_per(n)) for n in (1, 7, 87, 1042, 99999)), True)
+
+    # --- che tipo di riferimento si puo' usare --------------------------
+    # QRR vuole un QR-IBAN; l'IBAN normale in uso qui NON lo e', e sbagliare
+    # questa riga vorrebbe dire stampare bollettini che la banca rifiuta
+    _check(r, 'QR-fattura', 'un IBAN normale non è un QR-IBAN',
+           Q.e_qr_iban('CH5800791123000889012'), False)
+    _check(r, 'QR-fattura', 'un IBAN con istituto 30000-31999 sì',
+           (Q.e_qr_iban('CH4431999123000889012'), Q.e_qr_iban('CH5630000123000889012')),
+           (True, True))
+
+    # --- il contenuto del codice ----------------------------------------
+    mio = Q.indirizzo_strutturato('Musterstrasse 45', 'Musterstadt, 8000')
+    suo = Q.indirizzo_strutturato('Musterweg 9', '6300 Zug')
+    _check(r, 'QR-fattura', 'il CAP scritto DOPO la località si legge lo stesso',
+           (mio or {}).get('cap'), '8000')
+    dati = Q.dati_qr('CH58 0079 1123 0008 8901 2', 'Anna Rossi Fitness',
+                     mio, 180000, 'RF8087', 'Fattura 87',
+                     debitore_nome='Erika Von Arx', debitore_ind=suo)
+    tutte = dati.split('\n')
+    # se il codice esce piu' corto del dovuto, le righe che mancano devono dare
+    # una prova ROSSA, non far saltare la batteria: una prova che si schianta
+    # ferma anche tutte quelle che vengono dopo, e allora non si sa piu' niente
+    righe = tutte + ['(manca)'] * (40 - len(tutte))
+    # le posizioni sono fisse: una riga in piu' o in meno sposta tutto quello
+    # che viene dopo, e il codice diventa un altro codice
+    _check(r, 'QR-fattura', 'il codice ha le 31 righe dello standard', len(tutte), 31)
+    _check(r, 'QR-fattura', 'apre con SPC, versione 0200, codifica 1',
+           righe[:3], ['SPC', '0200', '1'])
+    _check(r, 'QR-fattura', "l'IBAN entra senza spazi", righe[3], 'CH5800791123000889012')
+    _check(r, 'QR-fattura', "l'indirizzo è del tipo strutturato",
+           (righe[4], righe[6], righe[7], righe[8], righe[9]),
+           ('S', 'Musterstrasse', '45', '8000', 'Musterstadt'))
+    _check(r, 'QR-fattura', 'le sette righe del creditore finale restano vuote',
+           righe[11:18], [''] * 7)
+    _check(r, 'QR-fattura', "l'importo è in franchi e centesimi",
+           (righe[18], righe[19]), ('1800.00', 'CHF'))
+    _check(r, 'QR-fattura', 'il tipo di riferimento è SCOR e il riferimento lo segue',
+           (righe[27], righe[28]), ('SCOR', 'RF8087'))
+    _check(r, 'QR-fattura', 'e chiude con EPD', righe[30], 'EPD')
+    _check(r, 'QR-fattura', 'il codice sta nei 997 caratteri concessi',
+           len(dati) <= Q.MAX_CARATTERI, True)
+
+    # senza il pagante le sue sette righe restano vuote MA ci sono: e' la
+    # differenza fra un campo lasciato in bianco e un codice sfasato
+    senza = Q.dati_qr('CH5800791123000889012', 'Anna Rossi Fitness',
+                      mio, 11000, 'RF5388').split('\n')
+    _check(r, 'QR-fattura', 'senza il pagante le righe ci sono lo stesso, vuote',
+           (len(senza), (senza + ['(manca)'] * 40)[20:27]), (31, [''] * 7))
+
+    # --- quello che NON si deve fare ------------------------------------
+    def _rifiuta(f):
+        try:
+            f()
+            return False
+        except ValueError:
+            return True
+    _check(r, 'QR-fattura', 'senza indirizzo del creditore non si stampa niente',
+           _rifiuta(lambda: Q.dati_qr('CH5800791123000889012', 'X', None, 100, 'RF5388')),
+           True)
+    _check(r, 'QR-fattura', 'un riferimento inventato non entra nel codice',
+           _rifiuta(lambda: Q.dati_qr('CH5800791123000889012', 'X', mio, 100, 'RF99123')),
+           True)
+    _check(r, 'QR-fattura', 'una moneta che non sia CHF o EUR non entra',
+           _rifiuta(lambda: Q.dati_qr('CH5800791123000889012', 'X', mio, 100,
+                                      'RF5388', moneta='USD')), True)
+
+    # --- gli indirizzi che NON si capiscono -----------------------------
+    # sono indirizzi veri, presi dall'archivio: se il lettore li indovinasse,
+    # finirebbero stampati su un documento di pagamento
+    for riga1, riga2 in (('Ireland', ''), ('Address', 'Address'),
+                         ('Musterweg 227', 'Kilchberg, Zurich'),
+                         ('Musterweg', '8802 Kilchberg')):
+        _check(r, 'QR-fattura', 'non indovina l\'indirizzo «%s / %s»' % (riga1, riga2),
+               Q.indirizzo_strutturato(riga1, riga2), None)
+
+    # --- dalle impostazioni ---------------------------------------------
+    buone = dict(DEFAULT_SETTINGS, business_name='Anna Rossi Fitness',
+                 business_iban='CH5604835012345678009',
+                 business_addr1='Musterstrasse 1', business_addr2='8000 Musterstadt',
+                 qr_fattura='1')
+    ok, motivo = Q.da_impostazioni(buone)
+    _check(r, 'QR-fattura', 'con le impostazioni a posto il creditore si compone',
+           (bool(ok), motivo), (True, ''))
+    for cosa, valore in (('business_iban', 'CH94'), ('business_name', ''),
+                         ('business_addr1', 'Ireland')):
+        dati_r, perche = Q.da_impostazioni(dict(buone, **{cosa: valore}))
+        _check(r, 'QR-fattura', 'senza «%s» dice cosa manca invece di provarci' % cosa,
+               (dati_r, bool(perche)), (None, True))
+
+    # --- il foglio dentro il PDF ----------------------------------------
+    from pypdf import PdfReader
+    voci = [{'qty': 10, 'description': '10 Sessions Pack',
+             'unit_cents': 12000, 'total_cents': 120000}]
+    with tempfile.TemporaryDirectory() as tmp:
+        acceso = os.path.join(tmp, 'con.pdf')
+        spento = os.path.join(tmp, 'senza.pdf')
+        pdfgen.build_pdf(acceso, 7, '23-08-26', 'Mario Bianchi',
+                         ['Musterweg 3', '8001 Zürich'], voci, 120000, buone)
+        pdfgen.build_pdf(spento, 7, '23-08-26', 'Mario Bianchi',
+                         ['Musterweg 3', '8001 Zürich'], voci, 120000,
+                         dict(buone, qr_fattura='0'))
+        _check(r, 'QR-fattura', 'acceso, la fattura ha il foglio del bollettino in coda',
+               len(PdfReader(acceso).pages), 2)
+        _check(r, 'QR-fattura', 'spento, la fattura resta di una pagina sola',
+               len(PdfReader(spento).pages), 1)
+        testo = '\n'.join(p.extract_text() or '' for p in PdfReader(acceso).pages)
+        _check(r, 'QR-fattura', 'sul foglio ci sono ricevuta e sezione pagamento',
+               ('Ricevuta' in testo, 'Sezione pagamento' in testo), (True, True))
+        _check(r, 'QR-fattura', 'e il riferimento stampato è quello della fattura #7',
+               Q._a_gruppi(Q.riferimento_per(7)) in testo, True)
+        # la verifica automatica legge il PDF per ricavarne il totale: con una
+        # pagina in piu' dentro, e un altro importo scritto sopra, deve
+        # continuare a trovare lo stesso numero. Se non torna, la fattura non
+        # verrebbe salvata affatto — e nessuno capirebbe perche'.
+        from . import verify
+        _check(r, 'QR-fattura', 'la verifica automatica regge la pagina in più',
+               verify._pdf_total_cents(acceso), 120000)

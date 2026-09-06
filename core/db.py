@@ -356,6 +356,13 @@ def _migrate(con):
     if 'sent_at' not in cols:
         # quando la fattura e' stata spedita al cliente per email
         con.execute('ALTER TABLE invoices ADD COLUMN sent_at TEXT')
+    if 'qr_ref' not in cols:
+        # il riferimento stampato sulla QR-fattura. Sta qui e non si ricalcola
+        # ogni volta perche' e' quello che il CLIENTE ha davanti: se un domani
+        # cambiasse il modo di comporlo, i pagamenti in arrivo devono ancora
+        # trovare la fattura da cui sono partiti. Vuoto = fattura uscita senza
+        # bollettino, e allora nessun pagamento potra' mai citarlo.
+        con.execute('ALTER TABLE invoices ADD COLUMN qr_ref TEXT DEFAULT ""')
     if 'paid_at' not in cols:
         # quando i soldi sono arrivati davvero in banca. Diverso da status:
         # 'pagata' e' una spunta messa a mano, questa e' una data che viene

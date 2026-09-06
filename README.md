@@ -524,6 +524,33 @@ are two invoices". Only invoices made with the app in the last 90 days and not
 yet sent are offered: the old ones from the archive exist only in Word and
 cannot be attached as PDFs.
 
+## The QR-bill
+
+Switch it on in **Settings → QR-bill** and every new invoice gets one more
+sheet: the Swiss payment part with the QR code. Whoever pays scans it with
+their banking app and types nothing — not the amount, not the IBAN, not the
+message. Nothing has to be asked of your bank or of anyone else: the standard
+is public and the code is yours to print.
+
+It goes on a sheet of its own, after the invoice, because the payment part
+claims the bottom 105 mm of the page and on your invoice those millimetres are
+already taken. The standard allows it, and it means the invoice your clients
+have known for a year does not move by a millimetre.
+
+Each bill carries a **reference** — `RF…`, the ISO 11649 Creditor Reference,
+which works on any IBAN. (The other kind, the 27-digit QRR, needs a special
+QR-IBAN from your bank; the app uses it only if your IBAN is one.) The
+reference is what closes the loop: when the money lands, the app finds the
+reference in the bank statement and knows which invoice was paid, instead of
+comparing names and amounts and hoping.
+
+Two things the app will not do. It will not print an address it had to guess:
+if your own address cannot be read as street, number, postcode and town, it
+says so and prints nothing; if your *client's* address cannot, the "Payable by"
+field is left blank with the corner marks, which is what the standard is for.
+And it will not vouch for your first bill: **scan it with your own banking app
+before you send it to anyone.** That is the one check no test can do for you.
+
 ## Knowing when you have been paid
 
 Download the transactions from your e-banking and drop the files into

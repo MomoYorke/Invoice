@@ -6,6 +6,7 @@ tabella articoli, TOTAL DUE, ringraziamento e Terms con IBAN.
 Nessuna dipendenza da LibreOffice/Word.
 """
 import os
+import logging
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -18,6 +19,7 @@ from .money import fmt_dash
 from . import docgen
 from . import language as L
 from . import branding
+from . import qrbill
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -30,8 +32,46 @@ GRID = colors.HexColor('#808080')
 DESC_STYLE = ParagraphStyle('desc', fontName='Helvetica', fontSize=9, leading=11)
 
 
+def pagina_qr(c, number, date_str, client_name, addr_lines, total_cents,
+              settings, lingua=None, qr_ref=None):
+    """La QR-fattura, su un foglio suo, dopo la fattura. Ritorna (fatta, motivo).
+
+    Su un foglio suo, e non in fondo alla fattura, perche' la fascia del
+    bollettino si prende i 105 mm bassi del foglio tutti per se' e li' oggi ci
+    sono la tabella e le condizioni. Lo standard prevede il caso: il bollettino
+    puo' viaggiare su un foglio separato purche' sia l'ultimo. Cosi' la fattura
+    che i clienti conoscono da un anno non si sposta di un millimetro.
+    """
+    if (settings.get('qr_fattura') or '0') != '1':
+        return False, ''
+    mio, motivo = qrbill.da_impostazioni(settings)
+    if not mio:
+        return False, motivo
+
+    riferimento = qr_ref or qrbill.riferimento_per(number)
+    # l'indirizzo del cliente si stampa solo se si legge per intero: meglio il
+    # campo vuoto, che chi paga riempie in un attimo, di un indirizzo inventato
+    suo = qrbill.indirizzo_strutturato(*(list(addr_lines) + ['', ''])[:2])
+
+    c.setFont('Helvetica-Bold', 11)
+    c.drawString(ML, PAGE_H - MT - 12, settings.get('business_name', ''))
+    c.setFont('Helvetica', 10)
+    c.drawString(ML, PAGE_H - MT - 30,
+                 L.t_doc('Fattura {n} del {d}', lingua).format(n=number, d=date_str))
+    c.drawString(ML, PAGE_H - MT - 46,
+                 L.t_doc('Da staccare e usare per il pagamento.', lingua))
+    qrbill.disegna_su(c, PAGE_W, mio['iban'], mio['nome'], mio['indirizzo'],
+                      total_cents, riferimento,
+                      messaggio=L.t_doc('Fattura {n} del {d}', lingua).format(
+                          n=number, d=date_str),
+                      lingua=(lingua or 'it'),
+                      debitore_nome=(client_name if suo else ''), debitore_ind=suo)
+    c.showPage()
+    return True, ''
+
+
 def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
-              total_cents, settings, lingua=None):
+              total_cents, settings, lingua=None, qr_ref=None):
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     c = canvas.Canvas(out_path, pagesize=A4)
     c.setTitle(f"Fattura #{number} - {settings.get('business_name', '')}")
@@ -138,5 +178,15 @@ def build_pdf(out_path, number, date_str, client_name, addr_lines, items,
         c.drawString(ML, y, line)
 
     c.showPage()
+    # il bollettino, se acceso e se i dati ci sono. Un guaio qui non deve far
+    # fallire la fattura: la fattura vale da sola, il bollettino e' in piu'.
+    try:
+        pagina_qr(c, number, date_str, client_name, addr_lines, total_cents,
+                  settings, lingua, qr_ref)
+    except Exception as guaio:                               # pragma: no cover
+        # zitto no: una fattura che esce senza bollettino senza che nessuno lo
+        # sappia e' il modo migliore per accorgersene dal cliente che non paga
+        logging.getLogger('fatture.errori').error(
+            'QR-fattura #%s non stampata: %s', number, guaio)
     c.save()
     return out_path
