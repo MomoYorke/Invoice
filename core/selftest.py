@@ -102,6 +102,8 @@ def run_all():
     _test_calendario(r)
     _test_storico_al_buio(r)
     _test_riferimento_qr(r)
+    _test_camt_vero(r)
+    _test_gemelli_fra_file(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -3125,3 +3127,191 @@ def _test_riferimento_qr(r):
                 B._riferimento_uguale(certo, {'qr_ref': None})), (False, False))
     finally:
         shutil.rmtree(cartella, ignore_errors=True)
+
+
+# Un camt.053 come lo manda DAVVERO la banca. La differenza con CAMT_PROVA e
+# CAMT_RIFERIMENTI non e' un dettaglio di stile: e' esattamente il punto in cui
+# il lettore era cieco, e nessuna delle due prove precedenti poteva vederlo,
+# perche' tutt'e due erano scritte con la forma vecchia dentro un'intestazione
+# nuova. Un file finto che non somiglia a quello vero non e' una prova.
+CAMT_BANCA = """<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt><Stmt>
+ <Ntry><Amt Ccy="CHF">110.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-08-03</Dt></BookgDt>
+  <NtryDtls><TxDtls><RltdPties>
+    <Dbtr><Pty><Nm>Petra Müller</Nm>
+     <PstlAdr><StrtNm>Bahnhofstrasse</StrtNm><TwnNm>Zug</TwnNm></PstlAdr></Pty></Dbtr>
+    <Cdtr><Pty><Nm>Anna Rossi</Nm></Pty></Cdtr>
+  </RltdPties></TxDtls></NtryDtls>
+  <AddtlNtryInf>Accredito Petra Müller</AddtlNtryInf>
+ </Ntry>
+ <Ntry><Amt Ccy="CHF">1800.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-08-04</Dt></BookgDt>
+  <NtryDtls><TxDtls><RltdPties><Dbtr><Nm>Bruno Keller</Nm></Dbtr></RltdPties>
+   <RmtInf><Ustrd>Pacchetto 10 sedute</Ustrd></RmtInf>
+  </TxDtls></NtryDtls>
+ </Ntry>
+ <Ntry><Amt Ccy="CHF">0.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-08-05</Dt></BookgDt>
+  <NtryDtls><TxDtls><Amt Ccy="CHF">0.00</Amt></TxDtls></NtryDtls>
+  <AddtlNtryInf>Importo di chiusura dal 30.06.2026 al 30.09.2026</AddtlNtryInf>
+ </Ntry>
+ <Ntry><Amt Ccy="CHF">2.73</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-08-06</Dt></BookgDt>
+  <NtryDtls><TxDtls><Cdtr><Pty><Nm>Anna Rossi</Nm></Pty></Cdtr></TxDtls></NtryDtls>
+  <AddtlNtryInf>Accredito correzione tasso di cambio
+nuovo corso 0.7953</AddtlNtryInf>
+ </Ntry>
+</Stmt></BkToCstmrStmt></Document>
+"""
+
+
+def _test_camt_vero(r):
+    """Il lettore del camt messo davanti a un camt vero.
+
+    Il 06.09.2026, aperto il primo estratto conto XML autentico (Raiffeisen,
+    camt.053.001.08), il lettore ha restituito 35 versamenti e ZERO nomi. Non
+    un caso limite: zero su trentacinque, cioe' non funzionava affatto. Due
+    cause, tutt'e due invisibili alle prove che c'erano:
+
+    - il nome di chi paga non e' «Dbtr/Nm» ma «Dbtr/Pty/Nm». Fra il camt.053
+      .001.04 e il .001.08 la banca ha infilato di mezzo un «Pty», e il codice
+      cercava un figlio DIRETTO.
+    - «AddtlNtryInf», la riga che scrive la banca («Accredito Erika van
+      Arx»), e' figlia della VOCE, non del dettaglio: si cercava dentro
+      TxDtls, dove non e' mai stata.
+
+    Il risultato era un versamento senza nome e senza causale, che non puo'
+    somigliare a nessun cliente: tutti da smistare a mano.
+    """
+    import shutil, tempfile
+    from . import bank as B
+
+    cartella = tempfile.mkdtemp(prefix='invoice-camt-')
+    try:
+        with io.open(os.path.join(cartella, 'banca.xml'), 'w', encoding='utf-8') as h:
+            h.write(CAMT_BANCA)
+        mov, problemi = B.leggi_cartella(cartella)
+        per_importo = {m['importo_cents']: m for m in mov}
+
+        _check(r, 'Camt vero', 'il file viene letto senza intoppi', problemi, [])
+        _check(r, 'Camt vero', 'il nome sotto «Dbtr/Pty/Nm» arriva',
+               per_importo.get(11000, {}).get('nome'), 'Petra Müller')
+        _check(r, 'Camt vero', 'e la forma vecchia «Dbtr/Nm» continua ad arrivare',
+               per_importo.get(180000, {}).get('nome'), 'Bruno Keller')
+        _check(r, 'Camt vero', 'la riga scritta dalla banca entra nella causale',
+               'Accredito' in per_importo.get(11000, {}).get('descrizione', ''), True)
+        _check(r, 'Camt vero', 'e la causale scritta da chi paga anche',
+               'Pacchetto 10 sedute' in per_importo.get(180000, {}).get('descrizione', ''), True)
+        # il nome c'e' gia' dentro «Accredito Petra Müller»: ripeterlo davanti
+        # farebbe una riga che si legge male e non aggiunge niente
+        _check(r, 'Camt vero', 'il nome non viene ripetuto due volte',
+               per_importo.get(11000, {}).get('descrizione'), 'Accredito Petra Müller')
+        # la trappola vera: accanto a chi paga c'e' SEMPRE il creditore, che sei
+        # tu. Pescare il primo «Nm» che capita vorrebbe dire intestare a te ogni
+        # versamento — e su una correzione della banca, dove il pagante non
+        # c'e', succederebbe di sicuro.
+        _check(r, 'Camt vero', 'il tuo nome non viene mai preso per quello di chi paga',
+               [m['nome'] for m in mov if 'Rossi' in (m['nome'] or '')], [])
+        _check(r, 'Camt vero', 'una correzione della banca resta senza nome',
+               per_importo.get(273, {}).get('nome'), '')
+        # un accredito di zero franchi non e' un pagamento: e' la riga di
+        # chiusura del trimestre, e chiederne conto e' solo rumore
+        _check(r, 'Camt vero', 'un accredito di 0.00 non è un versamento',
+               sorted(per_importo), [273, 11000, 180000])
+        # le istruzioni lasciate nella cartella non sono un estratto conto, e
+        # segnalarle come file rotto a ogni apertura insegna a non leggere gli
+        # avvisi — compresi quelli che invece contano
+        with io.open(os.path.join(cartella, 'README.txt'), 'w', encoding='utf-8') as h:
+            h.write('Metti qui gli estratti scaricati dall\'e-banking.\n')
+        _check(r, 'Camt vero', 'le istruzioni nella cartella non sono un file rotto',
+               B.leggi_cartella(cartella)[1], [])
+    finally:
+        shutil.rmtree(cartella, ignore_errors=True)
+
+
+def _test_gemelli_fra_file(r):
+    """Lo stesso versamento visto in due file diversi non si decide due volte.
+
+    Il 06.09.2026, scaricato il primo estratto in XML accanto ai PDF che
+    c'erano gia', la pagina Banca ha chiesto conto di 35 versamenti: 29 erano
+    pagamenti gia' smistati mesi prima, ricomparsi soltanto perche' letti da un
+    altro file. L'impronta di un movimento e' fatta anche sulla causale, e la
+    causale della stessa operazione cambia da un formato all'altro — «Accredito
+    Erika von Arx Musterweg 9, 6300 Zug 110.00» nel PDF,
+    «Accredito Erika von Arx» nell'XML. Due impronte, un pagamento solo.
+
+    La regola qui sotto riconosce il gemello, ma NON tira a indovinare: il
+    30.04.2026 sul conto vero sono arrivati due versamenti da 110 franchi lo
+    stesso giorno, e collassarli in uno vorrebbe dire far sparire un incasso.
+    Si accostano solo quando l'accostamento e' l'unico possibile.
+    """
+    import sqlite3
+    from . import bank as B
+    from . import db as _db
+    from .db import SCHEMA
+
+    def conto(*decisi):
+        con = sqlite3.connect(':memory:')
+        con.row_factory = sqlite3.Row
+        con.executescript(SCHEMA)
+        _db._migrate(con)
+        for m in decisi:
+            con.execute('INSERT INTO movimenti(impronta, data, importo_cents, '
+                        "descrizione, file, stato) VALUES(?,?,?,?,?,'collegato')",
+                        (m['impronta'], m['data'], m['importo_cents'],
+                         m['descrizione'], m['file']))
+        return con
+
+    def da_decidere(con, movimenti):
+        return [p['m']['file'] for p in B.proposte(con, movimenti) if not p['deciso']]
+
+    petra_pdf = B._movimento('2026-08-03', 11000,
+                             'Accredito Petra Müller Bahnhofstrasse 4, 6300 Zug 110.00',
+                             'estratto.pdf', 'Petra Müller')
+    petra_xml = B._movimento('2026-08-03', 11000, 'Accredito Petra Müller',
+                             'estratto.xml', 'Petra Müller')
+    _check(r, 'Gemelli', 'due formati danno impronte diverse (è il guaio da curare)',
+           petra_pdf['impronta'] == petra_xml['impronta'], False)
+
+    con = conto(petra_pdf)
+    _check(r, 'Gemelli', 'il gemello di un versamento già deciso non si richiede',
+           da_decidere(con, [petra_pdf, petra_xml]), [])
+    # e lo dice: sparire in silenzio da una pagina di conti non va mai bene
+    p = next(x for x in B.proposte(con, [petra_pdf, petra_xml]) if x['deciso'])
+    _check(r, 'Gemelli', 'e la riga superstite dice da quale altro file arriva',
+           p.get('anche_in'), ['estratto.xml'])
+    con.close()
+
+    # due versamenti uguali lo stesso giorno: il caso vero del 30.04.2026
+    bruno_pdf = B._movimento('2026-08-03', 11000, 'Accredito Bruno Keller 110.00',
+                             'estratto.pdf', 'Bruno Keller')
+    bruno_xml = B._movimento('2026-08-03', 11000, 'Accredito Bruno Keller',
+                             'estratto.xml', 'Bruno Keller')
+    con = conto(petra_pdf, bruno_pdf)
+    _check(r, 'Gemelli', 'due versamenti gemelli lo stesso giorno si separano per nome',
+           da_decidere(con, [petra_pdf, bruno_pdf, petra_xml, bruno_xml]), [])
+    con.close()
+
+    # gli stessi due, ma senza nome: qui non si sa chi è chi, e non si indovina
+    muto_a = B._movimento('2026-08-03', 11000, 'Versamento', 'muto.xml')
+    muto_b = B._movimento('2026-08-03', 11000, 'Versamento e-banking', 'muto.xml')
+    con = conto(petra_pdf, bruno_pdf)
+    _check(r, 'Gemelli', 'senza nome non si accosta niente: si chiede',
+           da_decidere(con, [petra_pdf, bruno_pdf, muto_a, muto_b]),
+           ['muto.xml', 'muto.xml'])
+    con.close()
+
+    # DUE PAGAMENTI VERI nello stesso file: non sono gemelli, sono due incassi
+    con = conto(petra_pdf)
+    _check(r, 'Gemelli', 'due incassi uguali nello stesso file restano due incassi',
+           da_decidere(con, [petra_pdf, bruno_pdf]), ['estratto.pdf'])
+    con.close()
+
+    # un versamento nuovo, che non somiglia a niente di deciso, resta da fare
+    con = conto(petra_pdf)
+    nuovo = B._movimento('2026-08-09', 20000, 'Accredito Bruno Keller',
+                         'estratto.xml', 'Bruno Keller')
+    _check(r, 'Gemelli', 'un versamento davvero nuovo non viene inghiottito',
+           da_decidere(con, [petra_pdf, petra_xml, nuovo]), ['estratto.xml'])
+    con.close()

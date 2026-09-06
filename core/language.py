@@ -470,6 +470,8 @@ TESTI = {
         'Già sistemati': 'Already sorted',
         "dall'app": 'by the app',
         'messo da parte': 'set aside',
+        'lo stesso versamento è anche in {file}: non te lo richiedo':
+            'the same payment is also in {file}: I am not asking you again',
         'Annulla': 'Undo',
         "Il pallino verde comparirà quando le fatture usciranno come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.":
             'The green dot will appear once invoices go out as QR-invoices with a reference: from then on the match is no longer a guess.',
@@ -1576,6 +1578,8 @@ TESTI = {
         'Già sistemati': 'Bereits erledigt',
         "dall'app": 'von der App',
         'messo da parte': 'beiseitegelegt',
+        'lo stesso versamento è anche in {file}: non te lo richiedo':
+            'dieselbe Zahlung steht auch in {file}: ich frage dich nicht nochmals',
         'Annulla': 'Rückgängig',
         "Il pallino verde comparirà quando le fatture usciranno come QR-fattura con riferimento: da lì in poi l'accostamento non è più un'ipotesi.":
             'Der grüne Punkt erscheint, sobald die Rechnungen als QR-Rechnung mit Referenz hinausgehen: ab dann ist die Zuordnung keine Vermutung mehr.',

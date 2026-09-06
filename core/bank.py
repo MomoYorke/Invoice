@@ -24,6 +24,7 @@ import csv
 import glob
 import hashlib
 import datetime
+import collections
 import xml.etree.ElementTree as ET
 
 from . import db as _db
@@ -188,7 +189,10 @@ def leggi_camt(percorso):
         cent = _importo(_testo_di(v, 'Amt'))
         data = (_testo_di(v, 'BookgDt', 'Dt') or _testo_di(v, 'ValDt', 'Dt')
                 or _testo_di(v, 'BookgDt', 'DtTm')[:10])
-        if cent is None or not data:
+        # un accredito di zero franchi non e' un pagamento: e' la riga con cui
+        # la banca chiude il trimestre. Chiederne conto e' rumore, e il rumore
+        # su una pagina di conti costa attenzione a chi la guarda.
+        if cent is None or cent <= 0 or not data:
             continue
         dettagli = next((n for n in v.iter() if _tag(n) == 'TxDtls'), v)
         # Il riferimento STRUTTURATO della QR-fattura, e soltanto quello: sta in
@@ -208,14 +212,32 @@ def leggi_camt(percorso):
                     break
             if riferimento:
                 break
+        # Il nome di chi ha pagato. Sta sotto «Dbtr», ma non alla stessa
+        # profondita' in tutte le versioni: fino al camt.053.001.04 era
+        # «Dbtr/Nm», dal .001.08 la banca infila di mezzo un «Pty» e diventa
+        # «Dbtr/Pty/Nm». Si prende quindi il primo «Nm» che sta DENTRO Dbtr, a
+        # qualunque livello — ma dentro Dbtr e basta: accanto, sotto «Cdtr», c'e'
+        # sempre il nome del creditore, cioe' il tuo, e pescare il primo «Nm»
+        # che capita vorrebbe dire intestare a te stesso i versamenti su cui il
+        # pagante non e' indicato.
         nome = ''
-        for n in dettagli.iter():
-            if _tag(n) == 'Dbtr':
-                nome = _testo_di(n, 'Nm')
-                break
-        note = ' '.join(x.text.strip() for x in dettagli.iter()
-                        if _tag(x) in ('Ustrd', 'AddtlNtryInf') and (x.text or '').strip())
-        fuori.append(_movimento(_data(data), cent, ' '.join(filter(None, [nome, note])),
+        dbtr = next((n for n in dettagli.iter() if _tag(n) == 'Dbtr'), None)
+        if dbtr is not None:
+            nome = next((x.text.strip() for x in dbtr.iter()
+                         if _tag(x) == 'Nm' and (x.text or '').strip()), '')
+        # La causale, da due posti diversi: «Ustrd» e' quella scritta da chi
+        # paga e sta nei dettagli; «AddtlNtryInf» e' la riga scritta dalla banca
+        # ed e' figlia della VOCE, non del dettaglio — cercarla dentro TxDtls
+        # voleva dire non trovarla mai.
+        pezzi = [x.text for x in dettagli.iter()
+                 if _tag(x) == 'Ustrd' and (x.text or '').strip()]
+        pezzi += [x.text for x in v
+                  if _tag(x) == 'AddtlNtryInf' and (x.text or '').strip()]
+        note = ' '.join(' '.join(p.split()) for p in pezzi)
+        # il nome, se la banca l'ha gia' scritto nella sua riga, non si ripete
+        testo = note if nome and nome.lower() in note.lower() else \
+            ' '.join(filter(None, [nome, note]))
+        fuori.append(_movimento(_data(data), cent, testo,
                                 os.path.basename(percorso), nome, riferimento))
     return fuori, ''
 
@@ -377,7 +399,11 @@ def leggi_cartella(cartella=None):
     for percorso in sorted(glob.glob(os.path.join(cartella, '*'))):
         if not percorso.lower().endswith(ESTENSIONI):
             continue
-        if os.path.basename(percorso).upper().startswith('LEGGIMI'):
+        # le istruzioni lasciate nella cartella non sono un estratto conto, e
+        # segnalarle come «file che non ho capito» a ogni apertura della pagina
+        # e' un allarme che non vuol dire niente: chi lo legge tutti i giorni
+        # smette di leggere anche quelli veri
+        if os.path.basename(percorso).upper().startswith(('LEGGIMI', 'README')):
             continue
         try:
             if percorso.lower().endswith('.xml'):
@@ -659,6 +685,62 @@ def gruppi_per(con, movimento, giorni_prima=GIORNI_PRIMA, giorni_dopo=GIORNI_DOP
     return fuori[:3]
 
 
+def _gemelli(decisi, movimenti):
+    """Lo stesso versamento letto in due file diversi.
+
+    L'impronta di un movimento e' fatta anche sulla causale, e la causale della
+    stessa identica operazione cambia da un formato all'altro: nel PDF
+    «Accredito Erika von Arx Musterweg 9, 6300 Zug 110.00»,
+    nell'XML «Accredito Erika von Arx». Due impronte, un pagamento solo —
+    e chi ha smistato quel pagamento a marzo se lo ritrova da smistare di nuovo
+    a settembre, per il solo fatto di aver scaricato l'estratto in un altro
+    formato. E' quello che e' successo il 06.09.2026: 29 versamenti gia' decisi
+    tornati da decidere.
+
+    Riconoscere il gemello vuol dire dire «questi due sono la stessa cosa», e
+    sbagliare qui significa far sparire un incasso da una pagina di conti. Cosi'
+    si accosta soltanto quando l'accostamento e' l'UNICO possibile:
+
+    - stessa data e stesso importo, ma in un FILE diverso (nello stesso file due
+      importi uguali lo stesso giorno sono due incassi veri, non un doppione);
+    - e o l'accostamento e' uno a uno, o i nomi lo risolvono senza residui.
+
+    Il caso che obbliga a questa prudenza e' vero: il 30.04.2026 sul conto sono
+    arrivati due versamenti da 110 franchi lo stesso giorno, Erika e Céline.
+
+    Ritorna {impronta del gemello nuovo: riga gia' decisa}.
+    """
+    per_chiave = collections.defaultdict(list)
+    for m in movimenti:
+        if m['impronta'] not in decisi:
+            per_chiave[(m['data'], m['importo_cents'])].append(m)
+    vecchi_per_chiave = collections.defaultdict(list)
+    for riga in decisi.values():
+        vecchi_per_chiave[(riga['data'], riga['importo_cents'])].append(riga)
+
+    fuori = {}
+    for chiave, nuovi in per_chiave.items():
+        for n in nuovi:
+            vecchi = [d for d in vecchi_per_chiave.get(chiave, [])
+                      if d['file'] != n['file']]
+            if not vecchi:
+                continue
+            if len(vecchi) == 1 and len(nuovi) == 1:
+                fuori[n['impronta']] = vecchi[0]
+                continue
+            # piu' d'uno: si separano per nome, e solo se torna senza residui.
+            # Senza nome non si prova nemmeno: si chiede.
+            if not n['nome']:
+                continue
+            suoi = [d for d in vecchi
+                    if somiglianza_nome(d['descrizione'], n['nome']) == 1.0]
+            rivali = [o for o in nuovi if o is not n and o['nome'] and len(suoi) == 1
+                      and somiglianza_nome(suoi[0]['descrizione'], o['nome']) == 1.0]
+            if len(suoi) == 1 and not rivali:
+                fuori[n['impronta']] = suoi[0]
+    return fuori
+
+
 def proposte(con, movimenti):
     """Per ogni versamento non ancora deciso, le fatture candidate.
 
@@ -667,6 +749,15 @@ def proposte(con, movimenti):
     indovinare fra due fatture uguali.
     """
     decisi = {r['impronta']: r for r in con.execute('SELECT * FROM movimenti')}
+    # lo stesso versamento visto in due file: si tiene la riga gia' decisa e si
+    # scrive su di essa da quale altro file arriva il gemello. Sparire in
+    # silenzio da una pagina di conti non va mai bene, nemmeno quando e' giusto.
+    gemelli = _gemelli(decisi, movimenti)
+    anche_in = collections.defaultdict(list)
+    for impronta, riga in gemelli.items():
+        anche_in[riga['impronta']].append(
+            next(m['file'] for m in movimenti if m['impronta'] == impronta))
+    movimenti = [m for m in movimenti if m['impronta'] not in gemelli]
     fatture = {r['id']: r for r in con.execute(
         'SELECT id, number, client_name FROM invoices')}
     fuori = []
@@ -690,6 +781,7 @@ def proposte(con, movimenti):
             collegate = [fatture[deciso['invoice_id']]]
         fuori.append({'m': m, 'candidati': cand, 'gruppi': gruppi, 'deciso': deciso,
                       'collegate': collegate,
+                      'anche_in': sorted(set(anche_in.get(m['impronta'], []))),
                       'chiaro': len(forti) == 1 and cand[0] is forti[0]})
     fuori.sort(key=lambda x: (x['deciso'] is not None, x['m']['data'] or ''))
     return fuori

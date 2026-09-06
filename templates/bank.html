@@ -135,7 +135,9 @@
           {{ p.collegate[0].client_name }}
         {% else %}<span class="muted">{{ _('messo da parte') }}</span>{% endif %}
       </td>
-      <td class="muted" style="font-size:12px">{{ p.m.descrizione[:50] }}</td>
+      <td class="muted" style="font-size:12px">{{ p.m.descrizione[:50] }}
+        {% if p.anche_in %}<br><span style="font-size:11px">{{ _('lo stesso versamento è anche in {file}: non te lo richiedo').format(file=p.anche_in | join(', ')) }}</span>{% endif %}
+      </td>
       <td class="right">
         <form method="post" action="{{ url_for('banca_collega') }}" style="display:inline">
           <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
