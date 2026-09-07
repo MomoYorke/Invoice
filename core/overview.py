@@ -9,6 +9,7 @@ I tre riquadri della Dashboard che raccontano lo stato delle cose.
 - attivita():      cos'e' successo da quando non guardavi, in un'unica colonna.
 """
 import os
+import logging
 import datetime
 
 from . import backup
@@ -333,6 +334,29 @@ def da_fare(con, settings, registro=None):
                           else L.t('nessuna in ritardo, sono tutte recenti', lg)),
             'urgenza': RITARDO if tardi else ATTESA,
             'link': ('fatture', {'stato': 'emessa', 'anno': ''}),
+        })
+
+    # gli abbonamenti scaduti: fatture che tornano uguali ogni mese e che
+    # aspettano solo un tuo clic. Vanno prima delle altre cose perche' sono le
+    # uniche in cui il ritardo dipende soltanto dal fatto che nessuno guarda.
+    try:
+        from . import recurring as _ric
+        arretrati = _ric.da_fare(con)
+    except Exception as guaio:                             # pragma: no cover
+        logging.getLogger('fatture.errori').error('Abbonamenti non letti: %s', guaio)
+        arretrati = []
+    if arretrati:
+        chi = ', '.join(sorted({x['cliente'].split()[0] for x in arretrati})[:4])
+        voci.append({
+            'chiave': 'abbonamenti', 'icona': 'ricicla',
+            'titolo': L.t('Abbonamenti da fatturare', lg),
+            'quante': len(arretrati),
+            'unita': L.t('fatture' if len(arretrati) != 1 else 'fattura', lg),
+            'importo': sum(x['importo_cents'] or 0 for x in arretrati),
+            'dettaglio': L.t('{chi} — sono già compilate, basta confermarle',
+                             lg).format(chi=chi),
+            'urgenza': ATTESA,
+            'link': ('abbonamenti', {}),
         })
 
     stato = stato_fatture(con, datetime.date.today().year)

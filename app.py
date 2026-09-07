@@ -26,6 +26,7 @@ from core import schedule as ag
 from core import overview
 from core import bank
 from core import qrbill
+from core import recurring as ric
 from core import sessions as sess
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
@@ -296,10 +297,39 @@ def nuova():
     cestinata = con.execute('SELECT client_name FROM invoices WHERE number=? '
                             'AND deleted_at IS NOT NULL', (nxt,)).fetchone()
     elenco_servizi = srv.elenco(con, db.get_settings(con))
+    pre = _precompila_abbonamento(con, request.args.get('abbonamento', type=int),
+                                  request.args.get('mese', ''))
     con.close()
     return render_template('new_invoice.html', clients=clients, next_number=nxt,
                            today=today.isoformat(), servizi=elenco_servizi,
+                           precompilato=pre,
                            cestinata=cestinata['client_name'] if cestinata else None)
+
+
+def _precompila_abbonamento(con, ric_id, mese):
+    """Il modulo già scritto per un mese di abbonamento, o None.
+
+    Ritorna None anche quando quel mese NON è più da fare: un collegamento
+    vecchio, o due schede aperte, non devono poter far nascere due volte la
+    fattura dello stesso mese. Il controllo si rifà qui, sui fatti, e non ci si
+    fida di quello che c'è scritto nell'indirizzo.
+    """
+    if not ric_id or not ric.valido(mese):
+        return None
+    reg = con.execute('SELECT r.*, c.name AS cliente, c.lingua AS lingua_cliente '
+                      'FROM ricorrenti r JOIN clients c ON c.id=r.client_id '
+                      'WHERE r.id=?', (ric_id,)).fetchone()
+    if not reg:
+        return None
+    if mese in ric.periodi_coperti(con, ric_id):
+        return None
+    nomi = lng.MESI_DOC.get(reg['lingua_cliente'] or 'en', lng.MESI_DOC['en'])
+    mesi_app = lng.MESI_DOC.get(_lingua_app(), lng.MESI_DOC['it'])
+    return {'ricorrente_id': reg['id'], 'client_id': reg['client_id'],
+            'cliente': reg['cliente'], 'mese': mese,
+            'mese_scritto': '%s %s' % (mesi_app[int(mese[5:7]) - 1], mese[:4]),
+            'descrizione': ric.descrizione_per(reg['descrizione'], mese, nomi),
+            'importo': fmt_dash(reg['importo_cents'])}
 
 
 def _crea_fattura(con):
@@ -409,6 +439,21 @@ def _crea_fattura(con):
         client['lingua'] if 'lingua' in client.keys() else None)
     docgen.build_docx(docx_path, number, date_str, intestatario, addr_lines, items, total,
                       settings, lingua_cliente)
+    # Da quale abbonamento nasce, e quale mese copre. Il mese si accetta solo
+    # se e' ancora da fare: due schede aperte sulla stessa proposta non devono
+    # poter produrre due fatture per settembre. La verifica si rifa' qui, un
+    # attimo prima di scrivere, e non ci si fida di cio' che arriva dal modulo.
+    ric_id = f.get('ricorrente_id', type=int)
+    periodo = (f.get('periodo') or '').strip()
+    if not ric_id:
+        ric_id, periodo = None, ''
+    elif not ric.valido(periodo) or periodo in ric.periodi_coperti(con, ric_id):
+        con.close()
+        avvisa('Quel mese risulta già fatturato: non ne faccio una seconda. '
+               'Se la prima non va bene, buttala nel Cestino e il mese torna da fare.',
+               'error')
+        return redirect(url_for('abbonamenti'))
+
     # il riferimento della QR-fattura si decide QUI, una volta, e finisce sia
     # sul foglio che nel database: e' il filo che riportera' il versamento a
     # questa fattura, e i due capi devono essere lo stesso filo
@@ -432,10 +477,11 @@ def _crea_fattura(con):
 
     cur = con.execute(
         'INSERT INTO invoices(number, client_id, client_name, client_address, date, year, '
-        "total_cents, status, source, docx_path, pdf_path, created_at, qr_ref) "
-        "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?, ?)",
+        "total_cents, status, source, docx_path, pdf_path, created_at, qr_ref, "
+        'ricorrente_id, periodo) '
+        "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?, ?, ?, ?)",
         (number, client['id'], intestatario, '\n'.join(addr_lines), date_iso, year,
-         total, docx_path, pdf_path, db.now_iso(), qr_ref))
+         total, docx_path, pdf_path, db.now_iso(), qr_ref, ric_id, periodo))
     inv_id = cur.lastrowid
     for pos, it in enumerate(items):
         con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,total_cents) '
@@ -931,6 +977,92 @@ def cestino_ripristina(inv_id):
     avvisa('Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).', 'ok',
            n=inv['number'], quanti=restored)
     return redirect(url_for('fattura', inv_id=inv_id))
+
+
+# ------------------------------------------------------------ abbonamenti
+@app.route('/abbonamenti')
+def abbonamenti():
+    """Le fatture che tornano uguali ogni mese: la regola, e cosa è da fare."""
+    con = get_con()
+    lg = _lingua_app()
+    coda = ric.da_fare(con, mesi_per_lingua=lng.MESI_DOC)
+    regole = ric.regole(con)
+    saltati = {}
+    for reg in regole:
+        righe = con.execute('SELECT periodo FROM ricorrenti_saltati WHERE ricorrente_id=? '
+                            'ORDER BY periodo DESC LIMIT 6', (reg['id'],)).fetchall()
+        if righe:
+            saltati[reg['id']] = [x['periodo'] for x in righe]
+    clienti = con.execute('SELECT id, name FROM clients WHERE archived=0 '
+                          'ORDER BY name').fetchall()
+    con.close()
+    mesi = lng.MESI_DOC.get(lg, lng.MESI_DOC['it'])
+    return render_template('subscriptions.html', coda=coda, regole=regole,
+                           clienti=clienti, saltati=saltati, mesi=mesi,
+                           mese_corrente=ric.mese_di(datetime.date.today()))
+
+
+@app.route('/abbonamenti/nuovo', methods=['POST'])
+def abbonamenti_nuovo():
+    f = request.form
+    client_id = f.get('client_id', type=int)
+    importo = parse_amount(f.get('importo', ''))
+    descrizione = (f.get('descrizione') or '').strip()
+    giorno = min(max(f.get('giorno', type=int) or 1, 1), 31)
+    dal = (f.get('dal') or '').strip()
+    if not client_id or importo is None or importo <= 0 or not descrizione:
+        avvisa('Per un abbonamento servono il cliente, la riga della fattura e '
+               "un importo maggiore di zero.", 'error')
+        return redirect(url_for('abbonamenti'))
+    if not ric.valido(dal):
+        dal = ric.mese_di(datetime.date.today())
+    con = get_con()
+    con.execute('INSERT INTO ricorrenti(client_id, descrizione, importo_cents, '
+                'giorno, dal, attiva, creata_il) VALUES(?,?,?,?,?,1,?)',
+                (client_id, descrizione, importo, giorno, dal, db.now_iso()))
+    con.commit()
+    con.close()
+    avvisa('Abbonamento salvato. Da qui in avanti te lo ricordo io: '
+           "l'app prepara la fattura, la crei tu.", 'ok')
+    return redirect(url_for('abbonamenti'))
+
+
+@app.route('/abbonamenti/stato', methods=['POST'])
+def abbonamenti_stato():
+    """Sospende, riattiva o cancella una regola. Le fatture fatte non si toccano."""
+    ric_id = request.form.get('id', type=int)
+    azione = request.form.get('azione', '')
+    con = get_con()
+    if azione == 'cancella':
+        con.execute('DELETE FROM ricorrenti WHERE id=?', (ric_id,))
+        con.execute('DELETE FROM ricorrenti_saltati WHERE ricorrente_id=?', (ric_id,))
+        # le fatture gia' nate restano, e restano legate al loro mese: cosa e'
+        # stato fatturato e' un fatto, e non cambia perche' cambi idea adesso
+        avvisa('Abbonamento cancellato. Le fatture già fatte restano dove sono.', 'ok')
+    else:
+        con.execute('UPDATE ricorrenti SET attiva=? WHERE id=?',
+                    (0 if azione == 'sospendi' else 1, ric_id))
+        avvisa('Abbonamento sospeso: non te lo ricordo più finché non lo riattivi.'
+               if azione == 'sospendi' else 'Abbonamento riattivato.', 'ok')
+    con.commit()
+    con.close()
+    return redirect(url_for('abbonamenti'))
+
+
+@app.route('/abbonamenti/salta', methods=['POST'])
+def abbonamenti_salta():
+    """«Questo mese no». Il buco resta visibile, ma smette di essere una domanda."""
+    ric_id = request.form.get('id', type=int)
+    periodo = (request.form.get('periodo') or '').strip()
+    con = get_con()
+    if request.form.get('azione') == 'riprendi':
+        ric.riprendi(con, ric_id, periodo)
+        avvisa('Rimesso fra i mesi da fatturare.', 'ok')
+    elif ric.salta(con, ric_id, periodo):
+        avvisa('Mese saltato: non te lo chiedo più. Se cambi idea lo rimetti '
+               "da qui, in fondo alla riga dell'abbonamento.", 'ok')
+    con.close()
+    return redirect(url_for('abbonamenti'))
 
 
 # ---------------------------------------------------------------- clienti

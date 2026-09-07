@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Abbonamenti') }}{% endblock %}
+{% block content %}
+<h1>{{ _('Abbonamenti') }}</h1>
+<p class="sub">{{ _('Le fatture che tornano uguali ogni mese. L’app non ne emette nessuna da sola: te le prepara compilate, e la crei tu con un clic — come per i versamenti in banca.') }}</p>
+
+{% if coda %}
+<div class="panel">
+  <h2 style="margin-top:0">{{ _('Da fatturare adesso') }}
+    <span class="muted">{{ coda | length }}</span></h2>
+  <table>
+    {% for v in coda %}
+    <tr>
+      <td style="white-space:nowrap">
+        <strong>{{ mesi[v.mese[5:7] | int - 1] }} {{ v.mese[:4] }}</strong></td>
+      <td>{{ v.cliente }}
+        <div class="muted" style="font-size:12.5px">{{ v.descrizione }}</div>
+        {% if v.gia_a_mano %}
+        <div style="font-size:12px">{{ icona('avviso', 'ic-mini') }}
+          {{ _('In quel mese questo cliente ha già la fattura #{n}. Se è la stessa cosa, salta il mese invece di rifarla.').format(n=v.gia_a_mano) }}</div>
+        {% endif %}</td>
+      <td class="num">{{ v.importo_cents | chf(false) }}</td>
+      <td class="right" style="white-space:nowrap">
+        <a class="btn small" href="{{ url_for('nuova', abbonamento=v.regola.id, mese=v.mese) }}">{{ _('Prepara la fattura') }}</a>
+        <form method="post" action="{{ url_for('abbonamenti_salta') }}" style="display:inline">
+          <input type="hidden" name="id" value="{{ v.regola.id }}">
+          <input type="hidden" name="periodo" value="{{ v.mese }}">
+          <button class="btn small secondary">{{ _('Questo mese no') }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if coda[0].restano %}
+  <p class="muted" style="font-size:12.5px">{{ _('Ce ne sono altri {n} più vecchi, non elencati qui: se non ti aspettavi arretrati, controlla il mese di inizio dell’abbonamento.').format(n=coda[0].restano) }}</p>
+  {% endif %}
+</div>
+{% else %}
+<div class="panel">
+  <p style="margin:0">{{ _('Niente da fatturare adesso.') }}
+    <span class="muted">{{ _('Quando arriva il giorno del mese che hai scelto, l’abbonamento compare qui.') }}</span></p>
+</div>
+{% endif %}
+
+{% if regole %}
+<div class="panel mt">
+  <h2 style="margin-top:0">{{ _('Gli abbonamenti che hai') }}</h2>
+  <table>
+    <tr><th>{{ _('Cliente') }}</th><th>{{ _('Riga della fattura') }}</th>
+        <th class="num">{{ _('Importo') }}</th><th>{{ _('Quando') }}</th><th></th></tr>
+    {% for r in regole %}
+    <tr {% if not r.attiva %}style="opacity:.5"{% endif %}>
+      <td><strong>{{ r.cliente }}</strong>
+        {% if not r.attiva %}<div class="muted" style="font-size:12px">{{ _('sospeso') }}</div>{% endif %}</td>
+      <td class="muted" style="font-size:13px">{{ r.descrizione }}</td>
+      <td class="num">{{ r.importo_cents | chf(false) }}</td>
+      <td class="muted" style="font-size:13px">
+        {{ _('il {g} di ogni mese').format(g=r.giorno) }}
+        <div style="font-size:11.5px">{{ _('dal {mese}').format(mese=mesi[r.dal[5:7] | int - 1] ~ ' ' ~ r.dal[:4]) if r.dal else '' }}</div>
+        {% if saltati.get(r.id) %}
+        <div style="font-size:11.5px">{{ _('saltati:') }}
+          {% for p in saltati[r.id] %}
+          <form method="post" action="{{ url_for('abbonamenti_salta') }}" style="display:inline">
+            <input type="hidden" name="id" value="{{ r.id }}">
+            <input type="hidden" name="periodo" value="{{ p }}">
+            <input type="hidden" name="azione" value="riprendi">
+            <button class="chip" title="{{ _('rimettilo fra i mesi da fatturare') }}">{{ mesi[p[5:7] | int - 1] }} {{ p[:4] }} ✕</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </td>
+      <td class="right" style="white-space:nowrap">
+        <form method="post" action="{{ url_for('abbonamenti_stato') }}" style="display:inline">
+          <input type="hidden" name="id" value="{{ r.id }}">
+          <input type="hidden" name="azione" value="{{ 'riattiva' if not r.attiva else 'sospendi' }}">
+          <button class="btn small secondary">{{ _('Riattiva') if not r.attiva else _('Sospendi') }}</button>
+        </form>
+        <form method="post" action="{{ url_for('abbonamenti_stato') }}" style="display:inline"
+              onsubmit="return confirm({{ _('Cancello questo abbonamento? Le fatture già fatte restano dove sono.') | tojson }})">
+          <input type="hidden" name="id" value="{{ r.id }}">
+          <input type="hidden" name="azione" value="cancella">
+          <button class="btn small secondary">{{ _('Cancella') }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="panel mt" style="max-width:640px">
+  <h2 style="margin-top:0">{{ _('Aggiungi un abbonamento') }}</h2>
+  <form method="post" action="{{ url_for('abbonamenti_nuovo') }}">
+    <label>{{ _('Cliente') }}</label>
+    <select name="client_id">
+      <option value="">{{ _('— scegli cliente —') }}</option>
+      {% for c in clienti %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+    </select>
+    <label>{{ _('Riga della fattura') }}</label>
+    <input type="text" name="descrizione" placeholder="{{ _('Personal training – {mese} {anno}') }}"
+           value="{{ _('Personal training – {mese} {anno}') }}">
+    <span class="muted" style="font-size:12px">{{ _('Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente.') }}</span>
+    <div class="form-grid mt">
+      <div>
+        <label>{{ _('Importo') }}</label>
+        <input type="text" name="importo" placeholder="110.-">
+      </div>
+      <div>
+        <label>{{ _('Giorno del mese') }}</label>
+        <input type="number" name="giorno" value="1" min="1" max="31">
+        <span class="muted" style="font-size:12px">{{ _('Prima di quel giorno non te lo chiedo. Il 31 sui mesi corti diventa l’ultimo giorno che c’è.') }}</span>
+      </div>
+    </div>
+    <label>{{ _('Primo mese da fatturare') }}</label>
+    <input type="month" name="dal" value="{{ mese_corrente }}">
+    <span class="muted" style="font-size:12px">{{ _('Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.') }}</span>
+    <button class="btn mt">{{ _('Salva abbonamento') }}</button>
+  </form>
+</div>
+{% endblock %}

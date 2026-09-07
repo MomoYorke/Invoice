@@ -95,7 +95,18 @@
   }
 
   document.getElementById('add-row').onclick = () => addRow();
-  addRow(); // prima riga
+  // arrivando da un abbonamento la prima riga e' gia' scritta: cliente,
+  // servizio e importo. Non si crea niente finche' non si preme Crea.
+  const PRE = window.PRECOMPILATO || null;
+  if (PRE) {
+    if (PRE.client_id) {
+      clientSel.value = String(PRE.client_id);
+      clientSel.dispatchEvent(new Event('change'));
+    }
+    addRow(PRE.descrizione, '1', PRE.importo, '');
+  } else {
+    addRow(); // prima riga
+  }
 
   // ---- preset servizi ----
   document.querySelectorAll('.preset').forEach(btn => {

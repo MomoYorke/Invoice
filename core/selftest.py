@@ -105,6 +105,7 @@ def run_all():
     _test_camt_vero(r)
     _test_gemelli_fra_file(r)
     _test_qr_fattura(r)
+    _test_abbonamenti(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -1057,8 +1058,18 @@ def _db_fatture_finto(righe):
     con.executescript(
         'CREATE TABLE invoices(id INTEGER PRIMARY KEY, number INTEGER, client_name TEXT,'
         ' date TEXT, total_cents INTEGER, status TEXT, paid_at TEXT, deleted_at TEXT,'
-        ' year INTEGER, sent_at TEXT, source TEXT);'
-        'CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT);')
+        ' year INTEGER, sent_at TEXT, source TEXT, client_id INTEGER,'
+        ' ricorrente_id INTEGER, periodo TEXT DEFAULT "");'
+        'CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT);'
+        # senza queste due il «Da fare» inciampava sugli abbonamenti e tirava
+        # avanti in silenzio: sei prove passavano con quel pezzo mai eseguito
+        'CREATE TABLE clients(id INTEGER PRIMARY KEY, name TEXT, lingua TEXT,'
+        ' archived INTEGER DEFAULT 0);'
+        'CREATE TABLE ricorrenti(id INTEGER PRIMARY KEY, client_id INTEGER,'
+        ' descrizione TEXT, importo_cents INTEGER, giorno INTEGER DEFAULT 1,'
+        ' dal TEXT, attiva INTEGER DEFAULT 1, creata_il TEXT);'
+        'CREATE TABLE ricorrenti_saltati(ricorrente_id INTEGER, periodo TEXT,'
+        ' quando TEXT, PRIMARY KEY (ricorrente_id, periodo));')
     for i, r in enumerate(righe, 1):
         con.execute('INSERT INTO invoices(id, number, client_name, date, total_cents, status,'
                     ' paid_at, deleted_at, year, sent_at, source) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
@@ -1109,6 +1120,43 @@ def _test_da_fare(r):
            inc['link'], ('fatture', {'stato': 'emessa', 'anno': ''}))
     _check(r, 'Da fare', 'fatture recenti: in attesa, non in ritardo',
            inc['urgenza'], C.ATTESA)
+
+    # --- gli abbonamenti scaduti arrivano fin sulla Dashboard ---
+    con = _db_fatture_finto([{'data': ieri, 'stato': 'pagata', 'paid_at': ieri,
+                              'sent_at': ieri}])
+    con.execute("INSERT INTO clients(id, name, lingua, archived) "
+                "VALUES(1, 'Erika Von Arx', 'en', 0)")
+    con.execute("INSERT INTO ricorrenti(id, client_id, descrizione, importo_cents, "
+                "giorno, dal, attiva) VALUES(1, 1, 'Personal training', 11000, 1, ?, 1)",
+                ('%04d-%02d' % (oggi.year, oggi.month),))
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    ab = voce(cose, 'abbonamenti')
+    _check(r, 'Da fare', "l'abbonamento scaduto compare in Dashboard",
+           (ab is not None) and ab['quante'], 1)
+    _check(r, 'Da fare', "e porta l'importo che si andra' a fatturare",
+           ab['importo'], 11000)
+    _check(r, 'Da fare', 'il link porta alla pagina degli abbonamenti',
+           ab['link'], ('abbonamenti', {}))
+    # una fattura fatta A MANO quel mese, senza periodo addosso: l'app non puo'
+    # saperlo dai periodi, ma lo vede dalla data e AVVERTE. Non blocca: due
+    # fatture nello stesso mese possono starci, non decide lei.
+    con.execute("INSERT INTO invoices(id, number, client_name, client_id, date, "
+                "total_cents, status, year, source) "
+                "VALUES(98, 77, 'Erika Von Arx', 1, ?, 11000, 'pagata', ?, 'app')",
+                (oggi.isoformat(), oggi.year))
+    from . import recurring as _ric
+    coda = _ric.da_fare(con)
+    _check(r, 'Da fare', 'avverte se quel mese il cliente ha già una fattura a mano',
+           (len(coda), coda[0]['gia_a_mano'] if coda else None), (1, 77))
+
+    # fatturato DALL'abbonamento: la voce sparisce, non resta a chiedere per sempre
+    con.execute("INSERT INTO invoices(id, number, client_name, client_id, date, "
+                "total_cents, status, year, source, ricorrente_id, periodo) "
+                "VALUES(99, 99, 'Erika Von Arx', 1, ?, 11000, 'pagata', ?, 'app', 1, ?)",
+                (oggi.isoformat(), oggi.year, '%04d-%02d' % (oggi.year, oggi.month)))
+    cose = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Da fare', 'fatturato quel mese, la voce sparisce',
+           voce(cose, 'abbonamenti'), None)
 
     # --- una vecchia, con l'estratto aggiornato: quella e' in ritardo ---
     con = _db_fatture_finto([{'data': vecchia, 'stato': 'emessa', 'cents': 30000,
@@ -3467,3 +3515,100 @@ def _test_qr_fattura(r):
         from . import verify
         _check(r, 'QR-fattura', 'la verifica automatica regge la pagina in più',
                verify._pdf_total_cents(acceso), 120000)
+
+
+def _test_abbonamenti(r):
+    """L'aritmetica dei mesi degli abbonamenti.
+
+    E' il posto dove i guai nascono senza farsi vedere: un mese contato due
+    volte e' una fattura mandata due volte per lo stesso periodo, cioe' una
+    richiesta di soldi non dovuti. Chi la riceve non pensa a una disattenzione.
+
+    Le trappole vere sono tre, e ci sono tutte qui sotto: il passaggio d'anno,
+    i mesi corti (chi fattura il 31 non deve saltare febbraio) e il mese che
+    non e' ancora arrivato al suo giorno.
+    """
+    import datetime
+    from . import recurring as A
+
+    def reg(**kw):
+        base = {'attiva': 1, 'giorno': 1, 'dal': '2026-01'}
+        base.update(kw)
+        return base
+
+    d = datetime.date
+    _check(r, 'Abbonamenti', 'il mese dopo dicembre è gennaio dell\'anno nuovo',
+           A.mese_succ('2025-12'), '2026-01')
+    _check(r, 'Abbonamenti', 'e dentro l\'anno si va avanti di uno',
+           (A.mese_succ('2026-01'), A.mese_succ('2026-09')), ('2026-02', '2026-10'))
+
+    # il giorno 31 su un mese che non ce l'ha: l'ultimo giorno che c'e'
+    _check(r, 'Abbonamenti', 'chi fattura il 31 non salta febbraio',
+           A.giorno_di_emissione('2026-02', 31), d(2026, 2, 28))
+    _check(r, 'Abbonamenti', 'e nemmeno un febbraio bisestile',
+           A.giorno_di_emissione('2028-02', 31), d(2028, 2, 29))
+    _check(r, 'Abbonamenti', 'sui mesi lunghi il giorno resta quello',
+           A.giorno_di_emissione('2026-03', 31), d(2026, 3, 31))
+
+    # --- quali mesi sono da fare -----------------------------------------
+    mesi, _ = A.mesi_dovuti(reg(dal='2026-07'), [], d(2026, 9, 7))
+    _check(r, 'Abbonamenti', 'da luglio a settembre sono tre mesi da fare',
+           mesi, ['2026-07', '2026-08', '2026-09'])
+    mesi, _ = A.mesi_dovuti(reg(dal='2026-07'), ['2026-07', '2026-08'], d(2026, 9, 7))
+    _check(r, 'Abbonamenti', 'i mesi già fatturati non tornano',
+           mesi, ['2026-09'])
+    # il mese in mezzo saltato torna da fare: e' un buco, e i buchi si vedono
+    mesi, _ = A.mesi_dovuti(reg(dal='2026-07'), ['2026-07', '2026-09'], d(2026, 9, 7))
+    _check(r, 'Abbonamenti', 'un mese saltato in mezzo resta da fare',
+           mesi, ['2026-08'])
+
+    # il giorno non ancora arrivato: il 14, una regola del 15 non da' niente
+    _check(r, 'Abbonamenti', 'il giorno prima, il mese corrente non è ancora dovuto',
+           A.mesi_dovuti(reg(dal='2026-09', giorno=15), [], d(2026, 9, 14))[0], [])
+    _check(r, 'Abbonamenti', 'il giorno stesso sì',
+           A.mesi_dovuti(reg(dal='2026-09', giorno=15), [], d(2026, 9, 15))[0], ['2026-09'])
+
+    # a cavallo dell'anno
+    mesi, _ = A.mesi_dovuti(reg(dal='2025-11'), [], d(2026, 1, 3))
+    _check(r, 'Abbonamenti', 'il passaggio d\'anno non perde né inventa mesi',
+           mesi, ['2025-11', '2025-12', '2026-01'])
+
+    # una regola spenta non chiede niente, e nemmeno una che comincia dopo
+    _check(r, 'Abbonamenti', 'una regola spenta non chiede niente',
+           A.mesi_dovuti(reg(attiva=0, dal='2020-01'), [], d(2026, 9, 7))[0], [])
+    _check(r, 'Abbonamenti', 'una regola che comincia il mese prossimo non chiede niente',
+           A.mesi_dovuti(reg(dal='2026-10'), [], d(2026, 9, 7))[0], [])
+
+    # arretrati a valanga: si elencano fino al tetto e si DICE quanti restano,
+    # invece di troncare in silenzio
+    mesi, restano = A.mesi_dovuti(reg(dal='2015-01'), [], d(2026, 9, 7))
+    _check(r, 'Abbonamenti', 'una data d\'inizio sbagliata non riempie la pagina',
+           (len(mesi), restano > 0), (A.MAX_MESI, True))
+    _check(r, 'Abbonamenti', 'e i mesi elencati più quelli rimasti fuori tornano',
+           len(mesi) + restano, 12 * 11 + 9)
+
+    # una data scritta male non deve far saltare niente
+    _check(r, 'Abbonamenti', 'un mese scritto male non produce fatture',
+           A.mesi_dovuti(reg(dal='settembre'), [], d(2026, 9, 7)), ([], 0))
+    _check(r, 'Abbonamenti', 'e si riconosce come scritto male',
+           (A.valido('2026-09'), A.valido('2026-13'), A.valido('26-09')),
+           (True, False, False))
+
+    # --- la riga della fattura -------------------------------------------
+    from .language import MESI_DOC
+    _check(r, 'Abbonamenti', 'la riga porta il mese nella lingua del cliente',
+           A.descrizione_per('Personal training – {mese} {anno}', '2026-09',
+                             MESI_DOC['it']),
+           'Personal training – Settembre 2026')
+    _check(r, 'Abbonamenti', 'e in tedesco è il mese tedesco',
+           A.descrizione_per('Personal Training – {mese} {anno}', '2026-03',
+                             MESI_DOC['de']),
+           'Personal Training – März 2026')
+    _check(r, 'Abbonamenti', 'un modello senza segnaposti resta com\'è',
+           A.descrizione_per('Abbonamento mensile', '2026-09', MESI_DOC['it']),
+           'Abbonamento mensile')
+    # una graffa sbagliata e' un errore di chi scrive, non un motivo per
+    # spegnere la pagina: si mostra la riga com'e' e si vede subito
+    _check(r, 'Abbonamenti', 'un segnaposto sbagliato non fa saltare la pagina',
+           A.descrizione_per('Training {mesee}', '2026-09', MESI_DOC['it']),
+           'Training {mesee}')

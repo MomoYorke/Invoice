@@ -171,6 +171,30 @@ CREATE TABLE IF NOT EXISTS crediti_clienti(
   attivo INTEGER DEFAULT 1,       -- 0 = ex cliente: si riconosce ancora, non si fattura piu'
   pos INTEGER DEFAULT 0
 );
+-- Gli abbonamenti: le fatture che tornano uguali ogni mese. Qui c'e' la REGOLA
+-- (a chi, quanto, che giorno), non le fatture: quelle nascono una per una,
+-- quando le confermi tu. Quali mesi siano gia' fatti non si tiene scritto qui,
+-- si legge dalle fatture — un secondo elenco potrebbe litigare col primo, e
+-- quando due elenchi litigano si sbaglia dalla parte peggiore.
+CREATE TABLE IF NOT EXISTS ricorrenti(
+  id INTEGER PRIMARY KEY,
+  client_id INTEGER NOT NULL,
+  descrizione TEXT NOT NULL DEFAULT '',  -- «Personal training – {mese} {anno}»
+  importo_cents INTEGER NOT NULL,
+  giorno INTEGER DEFAULT 1,       -- il giorno del mese in cui va emessa
+  dal TEXT DEFAULT '',            -- primo mese da fatturare, 2026-09
+  attiva INTEGER DEFAULT 1,       -- 0 = sospesa: resta scritta, non chiede piu' niente
+  creata_il TEXT
+);
+-- I mesi saltati apposta: il cliente era via, quel mese non si fattura. Senza
+-- questa riga il buco tornerebbe da fare per sempre, e una cosa che si chiede
+-- ogni giorno per sempre e' una cosa che si smette di leggere.
+CREATE TABLE IF NOT EXISTS ricorrenti_saltati(
+  ricorrente_id INTEGER NOT NULL,
+  periodo TEXT NOT NULL,
+  quando TEXT,
+  PRIMARY KEY (ricorrente_id, periodo)
+);
 CREATE INDEX IF NOT EXISTS idx_inv_year ON invoices(year);
 CREATE INDEX IF NOT EXISTS idx_inv_number ON invoices(number);
 """
@@ -356,6 +380,12 @@ def _migrate(con):
     if 'sent_at' not in cols:
         # quando la fattura e' stata spedita al cliente per email
         con.execute('ALTER TABLE invoices ADD COLUMN sent_at TEXT')
+    if 'ricorrente_id' not in cols:
+        # da quale abbonamento e' nata questa fattura, e quale mese copre.
+        # Sono i fatti su cui si conta: senza il periodo scritto QUI, sapere se
+        # settembre e' gia' stato fatturato tornerebbe a essere un'opinione.
+        con.execute('ALTER TABLE invoices ADD COLUMN ricorrente_id INTEGER')
+        con.execute('ALTER TABLE invoices ADD COLUMN periodo TEXT DEFAULT ""')
     if 'qr_ref' not in cols:
         # il riferimento stampato sulla QR-fattura. Sta qui e non si ricalcola
         # ogni volta perche' e' quello che il CLIENTE ha davanti: se un domani

@@ -22,6 +22,7 @@ GRUPPI = [
     ]),
     ('Fatturare', [
         ('nuova', 'Nuova fattura', 'nuova', ('nuova',)),
+        ('abbonamenti', 'Abbonamenti', 'ricicla', ('abbonamenti',)),
         ('fatture', 'Fatture', 'fattura', ('fatture', 'fattura', 'fattura_email')),
         ('email_inviate', 'Email inviate', 'email', ('email_inviate', 'email_letta')),
     ]),

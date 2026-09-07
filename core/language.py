@@ -470,6 +470,62 @@ TESTI = {
         'Già sistemati': 'Already sorted',
         "dall'app": 'by the app',
         'messo da parte': 'set aside',
+        # --- gli abbonamenti ---
+        'Abbonamenti': 'Subscriptions',
+        'In quel mese questo cliente ha già la fattura #{n}. Se è la stessa cosa, salta il mese invece di rifarla.':
+            'That month this client already has invoice #{n}. If it is the same thing, skip the month instead of doing it again.',
+        'Abbonamenti da fatturare': 'Subscriptions to invoice',
+        '{chi} — sono già compilate, basta confermarle':
+            '{chi} — they are already filled in, they just need confirming',
+        'Abbonamento cancellato. Le fatture già fatte restano dove sono.':
+            'Subscription deleted. The invoices already made stay where they are.',
+        'Abbonamento di {cliente}, {mese}: ho compilato io. Controlla e premi Crea — finché non lo fai, non esiste nessuna fattura.':
+            '{cliente}’s subscription, {mese}: I filled this in. Check it and press Create — until you do, no invoice exists.',
+        "Abbonamento salvato. Da qui in avanti te lo ricordo io: l'app prepara la fattura, la crei tu.":
+            'Subscription saved. From here on I will remember it for you: the app prepares the invoice, you create it.',
+        'Aggiungi un abbonamento': 'Add a subscription',
+        'Cancella': 'Delete',
+        'Cancello questo abbonamento? Le fatture già fatte restano dove sono.':
+            'Delete this subscription? The invoices already made stay where they are.',
+        'Ce ne sono altri {n} più vecchi, non elencati qui: se non ti aspettavi arretrati, controlla il mese di inizio dell’abbonamento.':
+            'There are {n} older ones not listed here: if you were not expecting a backlog, check the subscription’s starting month.',
+        'Da fatturare adesso': 'To invoice now',
+        'Giorno del mese': 'Day of the month',
+        'Gli abbonamenti che hai': 'The subscriptions you have',
+        'Le fatture che tornano uguali ogni mese. L’app non ne emette nessuna da sola: te le prepara compilate, e la crei tu con un clic — come per i versamenti in banca.':
+            'The invoices that come back the same every month. The app issues none of them by itself: it prepares them filled in, and you create them with one click — the same way it works for bank payments.',
+        "Mese saltato: non te lo chiedo più. Se cambi idea lo rimetti da qui, in fondo alla riga dell'abbonamento.":
+            'Month skipped: I will not ask again. If you change your mind you can put it back from here, at the end of the subscription’s row.',
+        'Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.':
+            'Put a past month only if you want to catch up on a backlog: I will ask you for all of them, one by one.',
+        'Niente da fatturare adesso.': 'Nothing to invoice right now.',
+        'Per un abbonamento servono il cliente, la riga della fattura e un importo maggiore di zero.':
+            'A subscription needs the client, the invoice line and an amount greater than zero.',
+        'Personal training – {mese} {anno}':
+            'Personal training – {mese} {anno}',
+        'Prepara la fattura': 'Prepare the invoice',
+        'Prima di quel giorno non te lo chiedo. Il 31 sui mesi corti diventa l’ultimo giorno che c’è.':
+            'Before that day I will not ask you. On short months the 31st becomes the last day there is.',
+        'Primo mese da fatturare': 'First month to invoice',
+        'Quando arriva il giorno del mese che hai scelto, l’abbonamento compare qui.':
+            'When the day of the month you chose comes round, the subscription appears here.',
+        'Quel mese risulta già fatturato: non ne faccio una seconda. Se la prima non va bene, buttala nel Cestino e il mese torna da fare.':
+            'That month is already invoiced: I will not make a second one. If the first is wrong, throw it in the Bin and the month comes back to be done.',
+        'Questo mese no': 'Not this month',
+        'Riattiva': 'Resume',
+        'Riga della fattura': 'Invoice line',
+        'Rimesso fra i mesi da fatturare.':
+            'Put back among the months to invoice.',
+        'Salva abbonamento': 'Save subscription',
+        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente.':
+            'Write {mese} and {anno} where you want the month and the year to land: the app puts them in the client’s language.',
+        'Sospendi': 'Pause',
+        'dal {mese}': 'from {mese}',
+        'il {g} di ogni mese': 'on the {g} of every month',
+        'rimettilo fra i mesi da fatturare':
+            'put it back among the months to invoice',
+        'saltati:': 'skipped:',
+        'sospeso': 'paused',
         'QR-fattura': 'QR-bill',
         'Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.':
             'The Swiss payment slip with the QR code, on a sheet after the invoice. '
@@ -1605,6 +1661,63 @@ TESTI = {
         'Già sistemati': 'Bereits erledigt',
         "dall'app": 'von der App',
         'messo da parte': 'beiseitegelegt',
+        # --- die Abos ---
+        'Abbonamenti': 'Abos',
+        'In quel mese questo cliente ha già la fattura #{n}. Se è la stessa cosa, salta il mese invece di rifarla.':
+            'In diesem Monat hat dieser Kunde bereits Rechnung #{n}. Wenn es dasselbe ist, überspringe den Monat, statt sie nochmals zu machen.',
+        'Abbonamenti da fatturare': 'Zu verrechnende Abos',
+        '{chi} — sono già compilate, basta confermarle':
+            '{chi} — sie sind schon ausgefüllt, es fehlt nur deine Bestätigung',
+        'Abbonamento cancellato. Le fatture già fatte restano dove sono.':
+            'Abo gelöscht. Die bereits erstellten Rechnungen bleiben, wo sie sind.',
+        'Abbonamento di {cliente}, {mese}: ho compilato io. Controlla e premi Crea — finché non lo fai, non esiste nessuna fattura.':
+            'Abo von {cliente}, {mese}: ausgefüllt habe ich. Schau es an und drücke Erstellen — bis dahin gibt es keine Rechnung.',
+        "Abbonamento salvato. Da qui in avanti te lo ricordo io: l'app prepara la fattura, la crei tu.":
+            'Abo gespeichert. Ab jetzt erinnere ich dich daran: die App bereitet die Rechnung vor, du erstellst sie.',
+        'Aggiungi un abbonamento': 'Ein Abo hinzufügen',
+        'Cancella': 'Löschen',
+        'Cancello questo abbonamento? Le fatture già fatte restano dove sono.':
+            'Dieses Abo löschen? Die bereits erstellten Rechnungen bleiben, wo sie sind.',
+        'Ce ne sono altri {n} più vecchi, non elencati qui: se non ti aspettavi arretrati, controlla il mese di inizio dell’abbonamento.':
+            'Es gibt {n} ältere, die hier nicht stehen: wenn du keinen Rückstand erwartet hast, prüfe den Startmonat des Abos.',
+        'Da fatturare adesso': 'Jetzt zu verrechnen',
+        'Giorno del mese': 'Tag des Monats',
+        'Gli abbonamenti che hai': 'Deine Abos',
+        'Le fatture che tornano uguali ogni mese. L’app non ne emette nessuna da sola: te le prepara compilate, e la crei tu con un clic — come per i versamenti in banca.':
+            'Die Rechnungen, die jeden Monat gleich wiederkehren. Die App stellt keine davon selbst aus: sie bereitet sie ausgefüllt vor, und du erstellst sie mit einem Klick — genau wie bei den Zahlungen in der Bank.',
+        "Mese saltato: non te lo chiedo più. Se cambi idea lo rimetti da qui, in fondo alla riga dell'abbonamento.":
+            'Monat übersprungen: ich frage nicht mehr danach. Wenn du es dir anders überlegst, holst du ihn hier zurück, am Ende der Abo-Zeile.',
+        'Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.':
+            'Setze einen vergangenen Monat nur, wenn du Rückstände nachholen willst: ich frage dich dann nach allen, einen nach dem anderen.',
+        'Niente da fatturare adesso.':
+            'Im Moment nichts zu verrechnen.',
+        'Per un abbonamento servono il cliente, la riga della fattura e un importo maggiore di zero.':
+            'Für ein Abo braucht es den Kunden, die Rechnungszeile und einen Betrag über null.',
+        'Personal training – {mese} {anno}':
+            'Personal Training – {mese} {anno}',
+        'Prepara la fattura': 'Rechnung vorbereiten',
+        'Prima di quel giorno non te lo chiedo. Il 31 sui mesi corti diventa l’ultimo giorno che c’è.':
+            'Vor diesem Tag frage ich dich nicht. In kurzen Monaten wird aus dem 31. der letzte Tag, den es gibt.',
+        'Primo mese da fatturare': 'Erster zu verrechnender Monat',
+        'Quando arriva il giorno del mese che hai scelto, l’abbonamento compare qui.':
+            'Wenn der von dir gewählte Tag des Monats kommt, erscheint das Abo hier.',
+        'Quel mese risulta già fatturato: non ne faccio una seconda. Se la prima non va bene, buttala nel Cestino e il mese torna da fare.':
+            'Dieser Monat ist bereits verrechnet: eine zweite mache ich nicht. Wenn die erste nicht stimmt, wirf sie in den Papierkorb, dann steht der Monat wieder an.',
+        'Questo mese no': 'Diesen Monat nicht',
+        'Riattiva': 'Wieder aktivieren',
+        'Riga della fattura': 'Rechnungszeile',
+        'Rimesso fra i mesi da fatturare.':
+            'Zurück bei den zu verrechnenden Monaten.',
+        'Salva abbonamento': 'Abo speichern',
+        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente.':
+            'Schreibe {mese} und {anno} dorthin, wo Monat und Jahr stehen sollen: die App setzt sie in der Sprache des Kunden ein.',
+        'Sospendi': 'Pausieren',
+        'dal {mese}': 'ab {mese}',
+        'il {g} di ogni mese': 'am {g}. jedes Monats',
+        'rimettilo fra i mesi da fatturare':
+            'zurück zu den zu verrechnenden Monaten',
+        'saltati:': 'übersprungen:',
+        'sospeso': 'pausiert',
         'QR-fattura': 'QR-Rechnung',
         'Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.':
             'Der Schweizer Zahlteil mit QR-Code, auf einem Blatt hinter der Rechnung. '

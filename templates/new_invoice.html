@@ -12,9 +12,23 @@
     periodo: {{ _("Periodo proposto in automatico (mese successivo all'ultima fattura: {periodo}). Controlla le date e correggi se serve.") | tojson }},
     intestata: {{ _('La fattura sarà intestata a {chi}, non a {cliente}.') | tojson }}
   };
+  /* quando si arriva da un abbonamento il modulo è già compilato: cliente,
+     riga e importo. Resta da controllare e premere Crea, come sempre. */
+  window.PRECOMPILATO = {{ (precompilato or None) | tojson }};
 </script>
+{% if precompilato %}
+<div class="suggestion" style="display:block;max-width:860px">
+  {{ icona('ricicla', 'ic-mini') }}
+  {{ _('Abbonamento di {cliente}, {mese}: ho compilato io. Controlla e premi Crea — finché non lo fai, non esiste nessuna fattura.').format(
+       cliente=precompilato.cliente, mese=precompilato.mese_scritto) }}
+</div>
+{% endif %}
 
 <form method="post" id="invoice-form" class="panel" style="max-width:860px">
+  {% if precompilato %}
+  <input type="hidden" name="ricorrente_id" value="{{ precompilato.ricorrente_id }}">
+  <input type="hidden" name="periodo" value="{{ precompilato.mese }}">
+  {% endif %}
   <div class="form-grid">
     <div>
       <label>{{ _('Cliente') }}</label>
