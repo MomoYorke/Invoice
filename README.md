@@ -524,6 +524,32 @@ are two invoices". Only invoices made with the app in the last 90 days and not
 yet sent are offered: the old ones from the archive exist only in Word and
 cannot be attached as PDFs.
 
+## Subscriptions
+
+Some invoices come back the same every month. Set the rule once in
+**Subscriptions** — who, how much, which day, and the invoice line, writing
+`{mese}` and `{anno}` where the month and the year should land — and from then
+on the app tells you when a month is due and hands you the ordinary new-invoice
+form already filled in.
+
+It issues nothing by itself. No number is taken, no file written, nothing
+exists until you press Create: the invoice is born on the same path as every
+other one, so there is no second, less-tested way for an invoice to come into
+being. The rule holds here for the same reason it holds on the Bank page — the
+app proposes, you decide.
+
+Which months are already done is read from the invoices themselves, not kept on
+the rule: every invoice born of a subscription carries the period it covers. Bin
+the invoice and the month comes back to be done. Skip a month on purpose ("Not
+this month") and it stops being asked, until you put it back.
+
+Two safeguards worth knowing about. Opening a stale link, or a second tab, will
+not produce the same month twice — the check is made again a breath before
+writing. And if the client already has an invoice dated in that month, made by
+hand before the subscription existed, the app names it and warns you. It warns
+rather than blocks: two invoices in one month can be legitimate, and that is not
+for an automatic check to decide.
+
 ## The QR-bill
 
 Switch it on in **Settings → QR-bill** and every new invoice gets one more
