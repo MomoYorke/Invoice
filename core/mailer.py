@@ -32,6 +32,14 @@ from . import services as srv
 
 FRASE_ABBONAMENTO = ("Se ha già pagato questo mese con l'ordine permanente, può "
                      'semplicemente tenere il documento allegato per i Suoi archivi.\n')
+# L'altra faccia della stessa medaglia. Chi ha un ordine permanente paga da
+# solo ogni mese e non deve fare niente; chi paga a mano ha in fondo alla
+# fattura un codice QR che porta dentro il riferimento, ed e' quello che fa
+# ritrovare il versamento senza cercarlo. Le due frasi non compaiono mai
+# insieme: o l'una o l'altra, o nessuna delle due.
+FRASE_QR = ('Per il pagamento La preghiamo di usare soltanto il codice QR in fondo '
+            'alla fattura: porta con sé il riferimento, così il Suo versamento '
+            'viene abbinato subito a questa fattura.\n')
 # "questa fattura del mese" vale per gli abbonamenti mensili; un pacchetto di
 # dieci sessioni non e' mensile e dirlo sarebbe sbagliato
 APERTURA_MENSILE = 'In allegato la fattura di questo mese per {servizio}.'
@@ -243,6 +251,10 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         cliente['lingua'] if cliente and 'lingua' in cliente.keys() else None)
 
     abbonato = bool(cliente['abbonamento']) if cliente and 'abbonamento' in cliente.keys() else False
+    try:
+        con_qr = bool((inv['qr_ref'] or '').strip())
+    except (KeyError, IndexError, TypeError):
+        con_qr = False
     tono = (cliente['tono'] if cliente and 'tono' in cliente.keys() else '') or 'informale'
     if modello not in NOMI_MODELLO:
         modello = modello_di(descrizioni, settings)
@@ -269,6 +281,14 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         'totale': fmt_chf(inv['total_cents']),
         'servizio': servizio,
         'riga_abbonamento': L.t_doc(FRASE_ABBONAMENTO, lingua) if abbonato else '',
+        # Il codice QR si chiede solo se su QUELLA fattura c'e' davvero: il
+        # riferimento scritto nel database e' la prova che il foglio e' stato
+        # stampato. Le fatture vecchie, uscite prima della QR-fattura, non ce
+        # l'hanno — e mandare qualcuno a cercare un codice che non esiste e'
+        # peggio che non dire niente.
+        # la riga vuota in coda: la frase e' una richiesta, e una richiesta
+        # appiccicata ai ringraziamenti si legge come una sola frase confusa
+        'riga_qr': (L.t_doc(FRASE_QR, lingua) + '\n') if (con_qr and not abbonato) else '',
         'corpo': corpo,
         'saluto': saluto_di(settings, tono, lingua),
         # la firma non si traduce: e' il suo nome e i suoi recapiti

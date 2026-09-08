@@ -1246,6 +1246,10 @@ TESTI = {
             'You write the email text yourself, so the app cannot translate it: those are your words. You can however write one version per language, and the app will use the one matching the client’s language — they are the one reading it. Where you write nothing, the «for everyone» one is used.',
         'Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.':
             'How the email is built. {firma} is where your sign-off goes: you write it once below and it never changes language.',
+        'Le due righe si alternano da sole: a chi paga con ordine permanente va {riga_abbonamento}, a tutti gli altri la richiesta di pagare col codice QR — ma solo sulle fatture che il codice ce l’hanno davvero.':
+            'The two lines take turns on their own: whoever pays by standing order gets '
+            '{riga_abbonamento}, everyone else gets the request to pay by QR code — but '
+            'only on invoices that really carry one.',
         'Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.':
             'Name, title, contacts: it goes at the end of every email, in place of {firma}. It sits outside the templates and is never translated, so a phone number stays a single one even if one day you write the templates in three languages.',
 
@@ -2473,6 +2477,10 @@ TESTI = {
             'Den Text der E-Mails schreibst du selbst, deshalb kann die App ihn nicht übersetzen: das sind deine Worte. Du kannst aber eine Fassung pro Sprache schreiben, und die App nimmt die Sprache der Kundin oder des Kunden — die lesen sie ja. Wo du nichts schreibst, gilt die Fassung «für alle».',
         'Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.':
             'Wie die E-Mail aufgebaut ist. {firma} ist der Platz deiner Signatur: du schreibst sie unten einmal, und sie wechselt nie die Sprache.',
+        'Le due righe si alternano da sole: a chi paga con ordine permanente va {riga_abbonamento}, a tutti gli altri la richiesta di pagare col codice QR — ma solo sulle fatture che il codice ce l’hanno davvero.':
+            'Die beiden Zeilen wechseln sich von selbst ab: Wer per Dauerauftrag zahlt, '
+            'bekommt {riga_abbonamento}, alle anderen die Bitte, mit dem QR-Code zu '
+            'zahlen — aber nur auf Rechnungen, die wirklich einen haben.',
         'Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.':
             'Name, Titel, Kontakte: steht am Ende jeder E-Mail, anstelle von {firma}. Sie liegt ausserhalb der Vorlagen und wird nie übersetzt, damit eine Telefonnummer eine einzige bleibt, auch wenn du die Vorlagen eines Tages in drei Sprachen schreibst.',
 
@@ -2526,6 +2534,12 @@ DOCUMENTI = {
         'tenere il documento allegato per i Suoi archivi.\n':
             "If you have already completed this month's payment by standing order, "
             'you can simply keep the attached document for your records.\n',
+        'Per il pagamento La preghiamo di usare soltanto il codice QR in fondo '
+        'alla fattura: porta con sé il riferimento, così il Suo versamento '
+        'viene abbinato subito a questa fattura.\n':
+            'For payment, please use only the QR code at the foot of the invoice: '
+            'it carries the reference, so your payment is matched to this invoice '
+            'straight away.\n',
         'due': 'two', 'tre': 'three', 'quattro': 'four',
         'cinque': 'five', 'sei': 'six',
     },
@@ -2557,6 +2571,12 @@ DOCUMENTI = {
             'Falls Sie die Zahlung dieses Monats bereits per Dauerauftrag geleistet '
             'haben, können Sie das beiliegende Dokument einfach für Ihre Unterlagen '
             'behalten.\n',
+        'Per il pagamento La preghiamo di usare soltanto il codice QR in fondo '
+        'alla fattura: porta con sé il riferimento, così il Suo versamento '
+        'viene abbinato subito a questa fattura.\n':
+            'Für die Zahlung verwenden Sie bitte ausschliesslich den QR-Code am '
+            'Ende der Rechnung: Er enthält die Referenz, so wird Ihre Zahlung '
+            'sofort dieser Rechnung zugeordnet.\n',
         'due': 'zwei', 'tre': 'drei', 'quattro': 'vier',
         'cinque': 'fünf', 'sei': 'sechs',
     },

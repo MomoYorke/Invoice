@@ -225,7 +225,10 @@
     </div>
     <p class="muted" style="font-size:12px">{{ _('Segnaposti:') }} <code>{mese}</code> <code>{nome}</code> <code>{numero}</code>
        <code>{totale}</code> <code>{servizio}</code> <code>{apertura}</code>
-       <code>{riga_abbonamento}</code> <code>{corpo}</code> <code>{saluto}</code> <code>{firma}</code></p>
+       <code>{riga_abbonamento}</code> <code>{riga_qr}</code>
+       <code>{corpo}</code> <code>{saluto}</code> <code>{firma}</code></p>
+    <p class="muted" style="font-size:12px;margin-top:2px">{{ _('Le due righe si alternano da sole: a chi paga con ordine permanente va {riga_abbonamento}, a tutti gli altri la richiesta di pagare col codice QR — ma solo sulle fatture che il codice ce l’hanno davvero.').format(
+       riga_abbonamento='<code>{riga_abbonamento}</code>') | safe }}</p>
 
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <label style="margin-bottom:2px">{{ _('Come ti firmi') }}</label>

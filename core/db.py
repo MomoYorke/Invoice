@@ -293,6 +293,7 @@ DEFAULT_SETTINGS = {
         "Dear {nome},\n\n"
         "{apertura}\n"
         "{riga_abbonamento}"
+        "{riga_qr}"
         "{corpo}\n\n"
         "{saluto}"
         "{firma}"),
@@ -425,6 +426,7 @@ def _migrate(con):
         # clienti con ordine permanente: nell'email va la frase sullo standing order
         con.execute('ALTER TABLE clients ADD COLUMN abbonamento INTEGER DEFAULT 0')
     _migra_modelli_email(con)
+    _migra_riga_qr(con)
     _migra_oggetti_email(con)
     _migra_registro_email(con)
     _migra_servizi_riconosciuti(con)
@@ -602,6 +604,29 @@ def _migra_modelli_email(con):
     for k in ('email_corpo_coaching', 'email_corpo_pt'):
         con.execute('INSERT OR IGNORE INTO settings(key, value) VALUES(?,?)', (k, r['value']))
     con.execute("DELETE FROM settings WHERE key='email_corpo'")
+
+
+def _migra_riga_qr(con):
+    """Mette {riga_qr} nei modelli di posta che sono gia' stati scritti.
+
+    Il segnaposto e' nuovo: chi ha l'app da prima ha un modello che non lo
+    nomina, e senza questo la frase sul codice QR non comparirebbe mai — non
+    per un errore, ma perche' nel testo non c'e' posto dove scriverla.
+
+    Si aggiunge SOLO attaccato a {riga_abbonamento}, che e' il punto dove le
+    due frasi si alternano. Se qualcuno ha riscritto il modello e quel
+    segnaposto non c'e' piu', non si tocca niente: e' testo suo, e indovinare
+    dove infilare una riga dentro le parole di un altro non e' un affare
+    dell'app. Quel modello resta valido, semplicemente senza la frase.
+    """
+    for riga in con.execute("SELECT key, value FROM settings "
+                            "WHERE key='email_body' OR key LIKE 'email_body\\_%' ESCAPE '\\'").fetchall():
+        testo = riga['value'] or ''
+        if '{riga_qr}' in testo or '{riga_abbonamento}' not in testo:
+            continue
+        con.execute('UPDATE settings SET value=? WHERE key=?',
+                    (testo.replace('{riga_abbonamento}', '{riga_abbonamento}{riga_qr}'),
+                     riga['key']))
 
 
 def _migra_oggetti_email(con):

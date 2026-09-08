@@ -171,6 +171,69 @@ def _test_email(r):
     _check(r, 'Email', 'niente frase sull\'ordine permanente se non è abbonato',
            'standing order' in m2['body'], False)
 
+    # --- la richiesta di pagare col codice QR -----------------------------
+    # Due condizioni, e servono tutte e due: il codice su QUELLA fattura c'e'
+    # davvero, e chi la riceve non ha un ordine permanente. Mandare a cercare
+    # un codice che non e' stato stampato, o chiedere di pagare a chi paga gia'
+    # da solo, sono due modi diversi di far fare brutta figura all'app.
+    con_qr = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
+                    client_name='Petra Müller', qr_ref='RF8399')
+
+    m3 = mailer.componi(con_qr, pacchetto, S, ['10 Sessions Pack – Personal Training'])
+    _check(r, 'Email', 'col codice QR sulla fattura, la mail chiede di usarlo',
+           'QR code' in m3['body'], True)
+    _check(r, 'Email', 'e lo chiede una volta sola',
+           m3['body'].count('QR code'), 1)
+    _check(r, 'Email', 'e non resta incollata alla riga dopo',
+           '\n\nThank you' in m3['body'].replace(S['email_corpo_pt'], 'Thank you'), True)
+    _check(r, 'Email', 'senza codice sulla fattura non si nomina nessun codice',
+           'QR code' in m2['body'], False)
+
+    abbonata_con_qr = mailer.componi(con_qr, mensile, S, ['Monthly abo: running coaching'])
+    _check(r, 'Email', "a chi ha l'ordine permanente il codice QR non si chiede",
+           'QR code' in abbonata_con_qr['body'], False)
+    _check(r, 'Email', 'e resta la frase sull\'ordine permanente',
+           'standing order' in abbonata_con_qr['body'], True)
+    _check(r, 'Email', 'le due frasi non escono mai insieme',
+           ('QR code' in m3['body'], 'standing order' in m3['body']), (True, False))
+
+    # Una fattura vera arriva dal database, non da un dizionario scritto a
+    # mano: se il campo non c'e' proprio, la mail deve uscire lo stesso.
+    senza_campo = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
+                         client_name='Petra Müller')
+    _check(r, 'Email', 'una fattura senza la colonna del riferimento non fa saltare la mail',
+           _senza_scoppiare(lambda: 'QR code' in mailer.componi(
+               senza_campo, pacchetto, S, ['10 Sessions Pack'])['body']), False)
+
+    # Il segnaposto nuovo dev'essere ARRIVATO nel modello di chi l'app ce
+    # l'aveva gia': senza posto dove scriverla, la frase non comparirebbe mai.
+    from .db import _migra_riga_qr
+    import sqlite3
+    finto = sqlite3.connect(':memory:')
+    finto.row_factory = sqlite3.Row
+    finto.execute('CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT)')
+    finto.executemany('INSERT INTO settings VALUES(?,?)', [
+        ('email_body', 'Ciao {nome},\n\n{apertura}\n{riga_abbonamento}{corpo}\n{firma}'),
+        ('email_body_de', ''),
+        ('email_body_en', 'Hi {nome}, {riga_abbonamento}{corpo}'),
+        ('email_oggetto_pt', 'Invoice'),
+    ])
+    _migra_riga_qr(finto)
+    dopo = {x['key']: x['value'] for x in finto.execute('SELECT key, value FROM settings')}
+    _check(r, 'Email', 'il segnaposto nuovo entra nel modello che c\'era già',
+           '{riga_abbonamento}{riga_qr}' in dopo['email_body'], True)
+    _check(r, 'Email', 'entra anche nei modelli per lingua',
+           '{riga_abbonamento}{riga_qr}' in dopo['email_body_en'], True)
+    _check(r, 'Email', 'un modello vuoto resta vuoto',
+           dopo['email_body_de'], '')
+    _check(r, "Email", "l'oggetto della mail non viene toccato",
+           dopo['email_oggetto_pt'], 'Invoice')
+    _migra_riga_qr(finto)
+    dopo2 = {x['key']: x['value'] for x in finto.execute('SELECT key, value FROM settings')}
+    _check(r, 'Email', 'passarci due volte non lo scrive due volte',
+           dopo2['email_body'].count('{riga_qr}'), 1)
+    finto.close()
+
     _check(r, 'Email', 'nome di battesimo dal nome completo',
            mailer.nome_di_battesimo('Chiara De Santis'), 'Chiara')
 
