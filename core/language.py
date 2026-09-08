@@ -545,8 +545,8 @@ TESTI = {
         'Rimesso fra i mesi da fatturare.':
             'Put back among the months to invoice.',
         'Salva abbonamento': 'Save subscription',
-        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano 01.09.26 e 30.09.26.':
-            'Write {mese} and {anno} where you want the month and the year to land: the app puts them in the client’s language. If your invoices carry the dates, use {dal} and {al}: they become 01.09.26 and 30.09.26.',
+        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano il periodo coperto, che parte dal giorno in cui fatturi.':
+            'Write {mese} and {anno} where you want the month and the year to land: the app puts them in the client’s language. If your invoices carry the dates, use {dal} and {al}: they become the period covered, which starts on the day you bill.',
         'Sospendi': 'Pause',
         'dal {mese}': 'from {mese}',
         'il {g} di ogni mese': 'on the {g} of every month',
@@ -1770,8 +1770,8 @@ TESTI = {
         'Rimesso fra i mesi da fatturare.':
             'Zurück bei den zu verrechnenden Monaten.',
         'Salva abbonamento': 'Abo speichern',
-        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano 01.09.26 e 30.09.26.':
-            'Schreibe {mese} und {anno} dorthin, wo Monat und Jahr stehen sollen: die App setzt sie in der Sprache des Kunden ein. Wenn auf deinen Rechnungen die Daten stehen, nimm {dal} und {al}: daraus wird 01.09.26 und 30.09.26.',
+        'Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano il periodo coperto, che parte dal giorno in cui fatturi.':
+            'Schreibe {mese} und {anno} dorthin, wo Monat und Jahr stehen sollen: die App setzt sie in der Sprache des Kunden ein. Wenn auf deinen Rechnungen die Daten stehen, nimm {dal} und {al}: daraus wird der abgedeckte Zeitraum, der an dem Tag beginnt, an dem du verrechnest.',
         'Sospendi': 'Pausieren',
         'dal {mese}': 'ab {mese}',
         'il {g} di ogni mese': 'am {g}. jedes Monats',

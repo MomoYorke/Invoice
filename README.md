@@ -576,9 +576,12 @@ on the app tells you when a month is due and hands you the ordinary new-invoice
 form already filled in.
 
 If your invoice line carries the dates rather than the month's name, write
-`{dal}` and `{al}` instead: they become the first and last day of that month,
-`01.09.26` and `30.09.26`. September's invoice should look like August's —
-a line that suddenly changes shape makes the client wonder what happened.
+`{dal}` and `{al}` instead: they become the period covered. That period is not
+always the calendar month — it starts on the day you bill and ends the day
+before the next one, so billing on the 1st gives `01.09.26 – 30.09.26` and
+billing on the 13th gives `13.09.26 – 12.10.26`. September's invoice should
+look like August's: a line that suddenly changes shape makes the client
+wonder what happened.
 
 It issues nothing by itself. No number is taken, no file written, nothing
 exists until you press Create: the invoice is born on the same path as every

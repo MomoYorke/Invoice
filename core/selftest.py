@@ -3711,6 +3711,25 @@ def _test_abbonamenti(r):
            A.descrizione_per('{mese}: {dal}-{al}', '2026-12', MESI_DOC['en']),
            'December: 01.12.26-31.12.26')
 
+    # Un abbonamento non e' per forza un mese solare: ce n'e' uno, in questa
+    # app, che va dal 13 al 12 e ha undici fatture di fila scritte cosi'.
+    _check(r, 'Abbonamenti', 'il periodo comincia il giorno in cui si fattura',
+           A.descrizione_per('Monthly abo: running coaching {dal} – {al}', '2026-09',
+                             MESI_DOC['en'], 13),
+           'Monthly abo: running coaching 13.09.26 – 12.10.26')
+    _check(r, 'Abbonamenti', 'e a cavallo di dicembre passa all\'anno nuovo',
+           A.descrizione_per('{dal} – {al}', '2026-12', MESI_DOC['en'], 13),
+           '13.12.26 – 12.01.27')
+    _check(r, 'Abbonamenti', 'chi fattura il primo ha il mese solare, come prima',
+           A.descrizione_per('{dal} – {al}', '2026-09', MESI_DOC['en'], 1),
+           '01.09.26 – 30.09.26')
+    _check(r, 'Abbonamenti', 'e senza dire il giorno vale il primo',
+           A.descrizione_per('{dal} – {al}', '2026-09', MESI_DOC['en']),
+           '01.09.26 – 30.09.26')
+    _check(r, 'Abbonamenti', 'il 31 si accorcia sui mesi che non ce l\'hanno',
+           A.descrizione_per('{dal} – {al}', '2026-09', MESI_DOC['en'], 31),
+           '30.09.26 – 30.10.26')
+
 
 def _test_lavoro(r):
     """Le sedute per mese e quanto valgono.

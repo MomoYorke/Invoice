@@ -108,28 +108,34 @@ def mesi_dovuti(regola, gia_fatti=(), oggi=None):
     return fuori, restano
 
 
-def descrizione_per(modello, mese, mesi_nella_lingua):
+def descrizione_per(modello, mese, mesi_nella_lingua, giorno=1):
     """La riga della fattura per quel mese, nella lingua del cliente.
 
     Nel modello si scrive «{mese}» e «{anno}» per il nome del mese e l'anno,
-    oppure «{dal}» e «{al}» per il primo e l'ultimo giorno di quel mese
-    (01.09.26 e 30.09.26). Sono due modi di scrivere la stessa cosa e sono
-    veri tutti e due: «running coaching September 2026» e «running coaching
-    01.09.26 - 30.09.26». Chi le date le ha sempre scritte non deve cambiare
-    quello che il suo cliente legge da anni solo perche' adesso la riga la
-    compila l'app: la fattura di settembre dev'essere uguale a quella di
-    agosto, o il cliente si chiede cosa sia cambiato.
+    oppure «{dal}» e «{al}» per le date del periodo coperto. Chi le date le ha
+    sempre scritte non deve cambiare quello che il suo cliente legge da anni
+    solo perche' adesso la riga la compila l'app: la fattura di settembre
+    dev'essere uguale a quella di agosto, o il cliente si chiede cosa sia
+    cambiato.
+
+    IL PERIODO NON E' SEMPRE IL MESE SOLARE. Comincia il giorno in cui si
+    fattura e finisce il giorno prima del successivo: chi fattura il primo ha
+    01.09.26 - 30.09.26, chi fattura il 13 ha 13.09.26 - 12.10.26. E' il caso
+    di un abbonamento vero di quest'app, undici fatture di fila; con il solo
+    mese solare quelle undici righe sarebbero cambiate forma tutte insieme.
+    Il giorno si accorcia sui mesi corti, come il giorno di emissione: chi
+    fattura il 31 non salta febbraio.
 
     Un modello che non nomina niente resta com'e': c'e' chi scrive sempre la
     stessa riga e ha ragione lui.
     """
     anno, m = int(mese[:4]), int(mese[5:7])
-    ultimo = calendar.monthrange(anno, m)[1]
+    inizio = giorno_di_emissione(mese, giorno)
+    fine = giorno_di_emissione(mese_succ(mese), giorno) - datetime.timedelta(days=1)
     try:
         return (modello or '').format(
             mese=mesi_nella_lingua[m - 1], anno=anno,
-            dal='01.%02d.%02d' % (m, anno % 100),
-            al='%02d.%02d.%02d' % (ultimo, m, anno % 100))
+            dal=inizio.strftime('%d.%m.%y'), al=fine.strftime('%d.%m.%y'))
     except (KeyError, IndexError, ValueError):
         # un modello con una graffa sbagliata non deve far saltare la pagina:
         # meglio la riga cosi' com'e' scritta, che si vede ed e' correggibile
@@ -198,7 +204,8 @@ def da_fare(con, oggi=None, mesi_per_lingua=None):
             fuori.append({
                 'regola': reg, 'cliente': reg['cliente'], 'mese': mese,
                 'importo_cents': reg['importo_cents'],
-                'descrizione': descrizione_per(reg['descrizione'], mese, nomi)
+                'descrizione': descrizione_per(reg['descrizione'], mese, nomi,
+                                               _campo(reg, 'giorno', 1))
                                if nomi else reg['descrizione'],
                 'restano': restano,
                 'gia_a_mano': _fattura_a_mano(con, reg['client_id'], mese),

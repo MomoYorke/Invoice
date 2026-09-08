@@ -349,7 +349,8 @@ def _precompila_abbonamento(con, ric_id, mese):
     return {'ricorrente_id': reg['id'], 'client_id': reg['client_id'],
             'cliente': reg['cliente'], 'mese': mese,
             'mese_scritto': '%s %s' % (mesi_app[int(mese[5:7]) - 1], mese[:4]),
-            'descrizione': ric.descrizione_per(reg['descrizione'], mese, nomi),
+            'descrizione': ric.descrizione_per(reg['descrizione'], mese, nomi,
+                                               reg['giorno']),
             'importo': fmt_dash(reg['importo_cents'])}
 
 
