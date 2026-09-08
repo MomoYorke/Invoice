@@ -11,6 +11,7 @@ import re
 import json
 import glob
 import datetime
+import unicodedata
 
 from docx import Document
 import openpyxl
@@ -24,6 +25,22 @@ DATE_RE = re.compile(r'^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$')
 MAX_SANE_NUMBER = 400
 
 
+def pettinato(testo):
+    """Il testo con gli accenti scritti a un carattere solo (forma NFC).
+
+    «Bürgi» si puo' scrivere in due modi che a schermo sono identici: con
+    la u e la dieresi unite in un carattere, oppure con la u seguita da un
+    segno di dieresi a parte. Per una persona sono la stessa parola; per il
+    computer sono due parole diverse. macOS scrive i nomi dei file nel secondo
+    modo, l'app nel primo — e cosi' una cliente importata dalle cartelle e la
+    stessa cliente fatturata dall'app finivano su due righe distinte in «Top
+    clienti», con i suoi soldi divisi a meta'. E' successo davvero, con dieci
+    fatture. Qui si sceglie una forma sola, all'ingresso, e non se ne parla
+    piu'.
+    """
+    return unicodedata.normalize('NFC', testo) if isinstance(testo, str) else testo
+
+
 def trailing_number(name):
     # gruppi di 2-3 cifre NON parte di numeri piu' lunghi (esclude anni tipo '2022')
     nums = re.findall(r'(?<!\d)(\d{2,3})(?!\d)', os.path.splitext(os.path.basename(name))[0])
@@ -34,7 +51,7 @@ def trailing_number(name):
 
 
 def client_from_filename(name):
-    stem = os.path.splitext(os.path.basename(name))[0]
+    stem = pettinato(os.path.splitext(os.path.basename(name))[0])
     return re.split(r'[#^_]| \d', stem)[0].strip(' -_^N') or stem
 
 
@@ -102,7 +119,9 @@ def extract_docx(path):
     if total_cents is None and items:
         vals = [t for (_, _, _, t) in items if t is not None]
         total_cents = sum(vals) if vals else None
-    return number, client, address, date_iso, items, total_cents
+    items = [(q, pettinato(desc), u_c, t_c) for (q, desc, u_c, t_c) in items]
+    return (number, pettinato(client), pettinato(address), date_iso,
+            items, total_cents)
 
 
 def _dedupe_key(path):

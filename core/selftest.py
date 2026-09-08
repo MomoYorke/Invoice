@@ -122,6 +122,7 @@ def run_all():
     _test_qr_fattura(r)
     _test_abbonamenti(r)
     _test_lavoro(r)
+    _test_nomi_accentati(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -3764,3 +3765,44 @@ def _test_lavoro(r):
            L.primo_anno(reg), 2025)
     _check(r, 'Lavoro', 'un registro vuoto non finge di sapere da quando',
            L.primo_anno({'pacchetti': [], 'esclusi': []}), None)
+
+
+def _test_nomi_accentati(r):
+    """I nomi con gli accenti, che il computer sa scrivere in due modi.
+
+    «Bürgi» si scrive con la dieresi attaccata alla u (un carattere) o
+    staccata (due). A schermo sono identici, per il database no. macOS chiama
+    i file nel secondo modo e l'app scrive nel primo: dieci fatture importate
+    dalle cartelle e una fatta dall'app hanno diviso in due la stessa cliente
+    dentro «Top clienti», con meta' del suo fatturato per parte. Nessuno se
+    n'e' accorto per due anni, perche' non c'era niente da vedere.
+
+    Non e' un caso raro: succede a ogni cliente con un accento nel cognome, e
+    quest'app la useranno anche svizzeri tedeschi e francesi.
+    """
+    from . import importer as I
+
+    staccato = 'Bu\u0308rgi'          # u + dieresi: due caratteri
+    attaccato = 'B\u00fcrgi'          # ü: uno solo
+    _check(r, 'Nomi con accenti', 'i due modi di scrivere il cognome sono davvero diversi',
+           staccato == attaccato, False)
+
+    _check(r, 'Nomi con accenti', 'il nome preso dal file esce in una forma sola',
+           _senza_scoppiare(I.client_from_filename, '/Fatture/2024/Vera %s 33.docx' % staccato),
+           'Vera %s' % attaccato)
+    _check(r, 'Nomi con accenti', 'e chi era gia\' scritto bene non cambia',
+           _senza_scoppiare(I.client_from_filename, '/Fatture/2024/Vera %s 33.docx' % attaccato),
+           'Vera %s' % attaccato)
+    _check(r, 'Nomi con accenti', "cosi' le due grafie finiscono sullo stesso nome",
+           _senza_scoppiare(I.client_from_filename, '/x/Vera %s 1.docx' % staccato)
+           == _senza_scoppiare(I.client_from_filename, '/x/Vera %s 1.docx' % attaccato),
+           True)
+    _check(r, 'Nomi con accenti', 'un nome senza accenti resta quello che era',
+           _senza_scoppiare(I.client_from_filename, '/x/Ivan Steiner 12.docx'), 'Ivan Steiner')
+    _check(r, 'Nomi con accenti', 'e il pettine non si arrabbia se non gli danno testo',
+           _senza_scoppiare(I.pettinato, None), None)
+
+    # L'indirizzo sta accanto al nome sulla fattura: se «Zurich» si sdoppia,
+    # si sdoppia sulla busta.
+    _check(r, 'Nomi con accenti', "anche l'indirizzo esce in una forma sola",
+           _senza_scoppiare(I.pettinato, '8050 Zu\u0308rich'), '8050 Z\u00fcrich')
