@@ -156,6 +156,34 @@ TESTI = {
             'For {anno} the history is kept as yearly totals (from Excel), with no monthly detail.',
         'valori in CHF': 'values in CHF',
         'Fatturato per anno': 'Revenue by year',
+        'Allenamenti {anno}': 'Training sessions {anno}',
+        'Quanto hai lavorato, che non è quanto hai fatturato: un pacchetto si fattura in un giorno e si consuma in tre mesi.':
+            'How much you worked, which is not how much you invoiced: a package '
+            'is billed in a day and used up over three months.',
+        'Sedute fatte': 'Sessions done',
+        'più {n} non conteggiate': 'plus {n} not counted',
+        'più una non conteggiata': 'plus one not counted',
+        '{n} cancellate': '{n} cancelled',
+        'una cancellata': 'one cancelled',
+        'tutte a credito': 'all against credits',
+        'Guadagno teorico': 'Notional earnings',
+        'valore a listino delle sedute a credito':
+            'list-price value of the sessions charged to credits',
+        'Media a seduta': 'Average per session',
+        'scende se lavori di più con chi paga meno':
+            'it falls when more of your work goes to the clients who pay less',
+        'Sedute per mese': 'Sessions per month',
+        'a credito': 'against credits',
+        'non conteggiate': 'not counted',
+        'Guadagno teorico per mese': 'Notional earnings per month',
+        'Il registro delle sedute parte dal {anno}: prima di quella data non è che non lavorassi, è che il registro non c’era. Il confronto con l’anno prima arriverà da solo.':
+            'The session register starts in {anno}: before that date it is not '
+            'that you were not working, it is that the register did not exist. '
+            'The comparison with the year before will come on its own.',
+        'Il guadagno teorico è il valore a listino del tempo lavorato, non un totale di cassa: non deve quadrare col fatturato. Il prezzo a seduta si cambia in':
+            'Notional earnings are the list-price value of the time you worked, '
+            'not a cash total: it does not have to match what you invoiced. The '
+            'price per session is changed in',
         'da fatture': 'from invoices',
         'da Excel storico (2022–23)': 'from historical Excel (2022–23)',
         'Top clienti {anno}': 'Top clients {anno}',
@@ -1345,6 +1373,35 @@ TESTI = {
             'Für {anno} liegt die Historie nur als Jahrestotal vor (aus Excel), ohne Monatsdetail.',
         'valori in CHF': 'Werte in CHF',
         'Fatturato per anno': 'Umsatz nach Jahr',
+        'Allenamenti {anno}': 'Trainings {anno}',
+        'Quanto hai lavorato, che non è quanto hai fatturato: un pacchetto si fattura in un giorno e si consuma in tre mesi.':
+            'Wie viel du gearbeitet hast, und das ist nicht, wie viel du '
+            'verrechnet hast: ein Paket wird an einem Tag verrechnet und in drei '
+            'Monaten aufgebraucht.',
+        'Sedute fatte': 'Absolvierte Trainings',
+        'più {n} non conteggiate': 'plus {n} nicht gezählte',
+        'più una non conteggiata': 'plus eines nicht gezählt',
+        '{n} cancellate': '{n} abgesagt',
+        'una cancellata': 'eines abgesagt',
+        'tutte a credito': 'alle mit Guthaben',
+        'Guadagno teorico': 'Rechnerischer Verdienst',
+        'valore a listino delle sedute a credito':
+            'Listenwert der Trainings, die Guthaben verbraucht haben',
+        'Media a seduta': 'Durchschnitt pro Training',
+        'scende se lavori di più con chi paga meno':
+            'sinkt, wenn du mehr mit denen arbeitest, die weniger zahlen',
+        'Sedute per mese': 'Trainings pro Monat',
+        'a credito': 'mit Guthaben',
+        'non conteggiate': 'nicht gezählt',
+        'Guadagno teorico per mese': 'Rechnerischer Verdienst pro Monat',
+        'Il registro delle sedute parte dal {anno}: prima di quella data non è che non lavorassi, è che il registro non c’era. Il confronto con l’anno prima arriverà da solo.':
+            'Das Trainingsregister beginnt {anno}: davor hast du nicht etwa nicht '
+            'gearbeitet, es gab einfach das Register noch nicht. Der Vergleich mit '
+            'dem Vorjahr kommt von selbst.',
+        'Il guadagno teorico è il valore a listino del tempo lavorato, non un totale di cassa: non deve quadrare col fatturato. Il prezzo a seduta si cambia in':
+            'Der rechnerische Verdienst ist der Listenwert der geleisteten Zeit, '
+            'kein Kassentotal: er muss nicht mit dem Umsatz übereinstimmen. '
+            'Den Preis pro Training änderst du unter',
         'da fatture': 'aus Rechnungen',
         'da Excel storico (2022–23)': 'aus historischem Excel (2022–23)',
         'Top clienti {anno}': 'Top-Kunden {anno}',

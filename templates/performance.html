@@ -72,6 +72,89 @@
   {% endif %}
 </div>
 
+{# Prima che il registro esistesse non c'e' niente da dire: un pannello di
+   zeri non e' "nessun dato", sembra "nessun allenamento". #}
+{% if lav and lav_primo_anno and year >= lav_primo_anno %}
+<div class="panel">
+  <h2>{{ _('Allenamenti {anno}').format(anno=year) }}</h2>
+  <p class="sub" style="margin-top:-6px">{{ _('Quanto hai lavorato, che non è quanto hai fatturato: un pacchetto si fattura in un giorno e si consuma in tre mesi.') }}</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">{{ _('Sedute fatte') }}</div>
+      <div class="value no-blur">{{ lav_tot.sedute }}</div>
+      <div class="hint">
+        {%- if lav_tot.esclusi %}{{ _('più una non conteggiata') if lav_tot.esclusi == 1 else _('più {n} non conteggiate').format(n=lav_tot.esclusi) }}{% endif -%}
+        {%- if lav_tot.esclusi and lav_tot.cancellate %}, {% endif -%}
+        {%- if lav_tot.cancellate %}{{ _('una cancellata') if lav_tot.cancellate == 1 else _('{n} cancellate').format(n=lav_tot.cancellate) }}{% endif -%}
+        {%- if not lav_tot.esclusi and not lav_tot.cancellate %}{{ _('tutte a credito') }}{% endif -%}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">{{ _('Guadagno teorico') }}</div>
+      <div class="value">{{ lav_tot.cents | chf }}</div>
+      <div class="hint">{{ _('valore a listino delle sedute a credito') }}</div>
+    </div>
+    <div class="card">
+      <div class="label">{{ _('Media a seduta') }}</div>
+      <div class="value">{{ lav_tot.media_cents | chf(false) if lav_tot.media_cents else '—' }}</div>
+      <div class="hint">{{ _('scende se lavori di più con chi paga meno') }}</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:14px;margin:18px 0 4px">{{ _('Sedute per mese') }}</h3>
+  <svg viewBox="0 0 560 230" width="100%">
+    {% for m in range(12) %}
+      {% set fatte = lav[m].sedute %}
+      {% set fuori = lav[m].esclusi %}
+      {% set hp = ((lav_prec[m].sedute + lav_prec[m].esclusi) / max_sedute * 170) | round(1) %}
+      {% set hf = (fatte / max_sedute * 170) | round(1) %}
+      {% set hx = (fuori / max_sedute * 170) | round(1) %}
+      <rect x="{{ 20 + m * 45 }}" y="{{ 190 - hp }}" width="14" height="{{ hp }}" fill="#cbd5e1" rx="2"/>
+      <rect x="{{ 36 + m * 45 }}" y="{{ 190 - hf }}" width="14" height="{{ hf }}" fill="#0369a1" rx="2"/>
+      <rect x="{{ 36 + m * 45 }}" y="{{ 190 - hf - hx }}" width="14" height="{{ hx }}" fill="#7dd3fc" rx="2"/>
+      <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ _(mesi[m]) }}</text>
+      {% if fatte + fuori > 0 %}
+      <text x="{{ 43 + m * 45 }}" y="{{ 185 - hf - hx }}" class="bar-label bar-value no-blur" text-anchor="middle">{{ fatte + fuori }}</text>
+      {% endif %}
+    {% endfor %}
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#0369a1"></span>{{ _('a credito') }}</span>
+    <span><span class="dot" style="background:#7dd3fc"></span>{{ _('non conteggiate') }}</span>
+    <span><span class="dot" style="background:#cbd5e1"></span>{{ year - 1 }}</span>
+  </div>
+
+  <h3 style="font-size:14px;margin:22px 0 4px">{{ _('Guadagno teorico per mese') }}</h3>
+  <svg viewBox="0 0 560 230" width="100%">
+    {% for m in range(12) %}
+      {% set h = (lav[m].cents / max_lav * 170) | round(1) %}
+      {% set hp = (lav_prec[m].cents / max_lav * 170) | round(1) %}
+      <rect x="{{ 20 + m * 45 }}" y="{{ 190 - hp }}" width="14" height="{{ hp }}" fill="#cbd5e1" rx="2"/>
+      <rect x="{{ 36 + m * 45 }}" y="{{ 190 - h }}" width="14" height="{{ h }}" fill="#0e7490" rx="2"/>
+      <text x="{{ 35 + m * 45 }}" y="205" class="bar-label" text-anchor="middle">{{ _(mesi[m]) }}</text>
+      {% if lav[m].cents > 0 %}
+      <text x="{{ 43 + m * 45 }}" y="{{ 185 - h }}" class="bar-label bar-value" text-anchor="middle">{{ (lav[m].cents // 100) }}</text>
+      {% endif %}
+    {% endfor %}
+  </svg>
+  <div class="legend">
+    <span><span class="dot" style="background:#0e7490"></span>{{ year }}</span>
+    <span><span class="dot" style="background:#cbd5e1"></span>{{ year - 1 }}</span>
+    <span class="muted">{{ _('valori in CHF') }}</span>
+  </div>
+
+  <p class="muted" style="font-size:12.5px;margin-bottom:0">
+    {% if lav_primo_anno and year <= lav_primo_anno %}
+      {{ _('Il registro delle sedute parte dal {anno}: prima di quella data non è che non lavorassi, è che il registro non c’era. Il confronto con l’anno prima arriverà da solo.').format(anno=lav_primo_anno) }}
+    {% else %}
+      {{ _('Il guadagno teorico è il valore a listino del tempo lavorato, non un totale di cassa: non deve quadrare col fatturato. Il prezzo a seduta si cambia in') }}
+      <a href="{{ url_for('crediti_clienti') }}">{{ _('Crediti') }}</a>.
+    {% endif %}
+  </p>
+</div>
+{% endif %}
+
 <div class="panel">
   <h2>{{ _('Fatturato per anno') }}</h2>
   <svg viewBox="0 0 560 230" width="100%">

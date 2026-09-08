@@ -383,6 +383,49 @@ The sum of the entries always matches the revenue for the year:
   exact amount, only one possible service — and otherwise end up under *Not
   itemised*, so they never disappear from the count.
 
+## Training sessions, and what a month of work is worth
+
+*Performance* can tell you how much you **invoiced** each month. Right below
+that chart, the **Training sessions** panel tells you how much you **worked** —
+and for anyone selling packages the two never land in the same month. A
+twelve-session pack is billed in a day and used up over three months, so the
+month the pack arrives looks enormous and the two after it look empty.
+
+Both charts have the same shape and the same months, one under the other, so
+the lag between doing the work and being paid for it is there to see.
+
+**The price per session comes from your price list**, on the *Credits* page:
+the package price divided by the package credits. It is not divided out of the
+linked invoice, and that is deliberate. Dividing an invoice works right until a
+package contains a gifted session — then the gift is spread across all the
+others and the chart reports a price you charge nobody. A price list is
+something you **state**; deducing it after the fact from money received goes
+quietly wrong on every discount, gift, or package paid in two instalments.
+
+That is also why the number is called **notional earnings**: it is the
+list-price value of the time you worked, not a cash total, and it does not have
+to match what you invoiced.
+
+Three figures at the top of the panel:
+
+- **Sessions done** — those that used up a credit. Cancelled sessions are
+  counted separately: the credit is gone (see *Session credits*), but nobody
+  trained.
+- **Notional earnings** — sessions × your price per session for that client.
+- **Average per session** — the one to watch. It falls when more of your work
+  goes to the clients who pay less.
+
+The bars carry two shades. The solid part is sessions charged to a credit; the
+lighter part on top is calendar events tied to a client that used up nothing —
+sessions from before your first reconstructible package, or the ones still
+waiting to be sorted out. They are shown rather than folded into a rule,
+because the two answers are genuinely different and only you know which is
+right. They add nothing to the earnings: nobody paid for them.
+
+The panel only appears from the first year your session register covers. Before
+that the register did not exist, and a panel full of zeros does not read as
+"no data" — it reads as "no work".
+
 ## Sessions from the calendar
 
 The app reads the session calendar by itself and deducts the credits. You

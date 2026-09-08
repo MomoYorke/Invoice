@@ -21,6 +21,21 @@ def _check(results, cat, desc, got, expected):
     results.append((cat, desc, ok, detail))
 
 
+def _senza_scoppiare(f, *args, **kw):
+    """Il valore, oppure il nome del guasto invece del guasto.
+
+    Serve quando la cosa da provare e' proprio che una funzione NON esploda.
+    Senza questo, il giorno che esplode davvero l'eccezione porta via l'intera
+    batteria: la prova che doveva diventare rossa non diventa niente, e tutte
+    quelle dopo di lei non vengono nemmeno eseguite. Una batteria che si
+    ferma alla prima crepa non dice dove sono le altre.
+    """
+    try:
+        return f(*args, **kw)
+    except Exception as guaio:                             # pragma: no cover
+        return '%s: %s' % (type(guaio).__name__, guaio)
+
+
 def run_all():
     r = []
 
@@ -106,6 +121,7 @@ def run_all():
     _test_gemelli_fra_file(r)
     _test_qr_fattura(r)
     _test_abbonamenti(r)
+    _test_lavoro(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -3612,3 +3628,139 @@ def _test_abbonamenti(r):
     _check(r, 'Abbonamenti', 'un segnaposto sbagliato non fa saltare la pagina',
            A.descrizione_per('Training {mesee}', '2026-09', MESI_DOC['it']),
            'Training {mesee}')
+
+
+def _test_lavoro(r):
+    """Le sedute per mese e quanto valgono.
+
+    Qui l'errore non fa perdere soldi, fa perdere fiducia: chi guarda un
+    grafico non ha modo di accorgersi che una seduta e' finita nel mese
+    sbagliato o che il prezzo a seduta e' quello di un altro cliente. Un
+    numero storto in una pagina di statistiche nessuno lo va a controllare,
+    e per questo va provato con piu' cura di uno che si vede.
+    """
+    from . import lavoro as L
+
+    listino = [
+        {'nome': 'Ivan', 'prezzi': [180000, 150000], 'crediti': 12},   # 150
+        {'nome': 'Elena', 'prezzi': [200000], 'crediti': 10},         # 200
+        {'nome': 'Jonas', 'prezzi': '135000', 'crediti': 10},        # 135, riga grezza
+        {'nome': 'Nina', 'prezzi': [180000], 'crediti': 12},         # 150
+        {'nome': 'Pierre', 'prezzi': [], 'crediti': 0},                # non lo si sa
+    ]
+
+    # --- il prezzo a seduta: il pacchetto diviso i crediti -----------------
+    for nome, atteso in (('Ivan', 15000), ('Elena', 20000), ('Jonas', 13500)):
+        cfg = next(c for c in listino if c['nome'] == nome)
+        _check(r, 'Lavoro', f'{nome}: il listino diviso i crediti fa {atteso // 100}',
+               L.prezzo_a_seduta(cfg), atteso)
+    _check(r, 'Lavoro', 'i prezzi scritti come li tiene il database si leggono uguale',
+           L.prezzo_a_seduta({'prezzi': "180000,150000", 'crediti': 12}), 15000)
+    # senza listino non si inventa uno zero: uno zero in pagina sembra un fatto
+    _check(r, 'Lavoro', 'senza prezzo non si risponde zero, non si risponde',
+           L.prezzo_a_seduta({'nome': 'Pierre', 'prezzi': [], 'crediti': 0}), None)
+    _check(r, 'Lavoro', 'e nemmeno con il prezzo ma senza crediti',
+           L.prezzo_a_seduta({'prezzi': [180000], 'crediti': 0}), None)
+
+    # La trappola che in quest'app ha gia' morso una volta: nelle prove i dati
+    # sono dizionari scritti a mano, sui dati veri sono righe di database — e
+    # le righe di sqlite non hanno «get». Una prova coi soli dizionari non se
+    # ne accorge mai, e il guasto arriva all'utente invece che qui.
+    import sqlite3
+    finto_db = sqlite3.connect(':memory:')
+    finto_db.row_factory = sqlite3.Row
+    finto_db.execute('CREATE TABLE crediti_clienti(nome TEXT, prezzi TEXT, crediti INT)')
+    finto_db.execute("INSERT INTO crediti_clienti VALUES('Ivan', '180000,150000', 12)")
+    righe_vere = finto_db.execute('SELECT * FROM crediti_clienti').fetchall()
+    _check(r, 'Lavoro', 'una riga vera di database si legge come un dizionario',
+           _senza_scoppiare(L.prezzo_a_seduta, righe_vere[0]), 15000)
+    _check(r, 'Lavoro', 'e il pacchetto ci trova dentro il suo listino',
+           _senza_scoppiare(L.prezzo_del_pacchetto, {'cliente': 'Ivan'}, righe_vere), 15000)
+
+    # --- da quale listino prende un pacchetto ------------------------------
+    _check(r, 'Lavoro', 'un pacchetto in due prende il listino di chi ce l\'ha',
+           L.prezzo_del_pacchetto({'cliente': 'Nina + Pierre'}, listino), 15000)
+    _check(r, 'Lavoro', 'e uno solo prende il suo',
+           L.prezzo_del_pacchetto({'cliente': 'Elena'}, listino), 20000)
+    # la trappola dei nomi corti: «Ivan» non deve pescare dentro «Ivana»
+    _check(r, 'Lavoro', '«Ivan» non finisce dentro «Ivana»',
+           L.prezzo_del_pacchetto({'cliente': 'Ivana'}, listino), None)
+    # due prezzi diversi nello stesso pacchetto: non si sceglie, si tace
+    _check(r, 'Lavoro', 'due listini diversi nello stesso pacchetto: non si indovina',
+           L.prezzo_del_pacchetto({'cliente': 'Ivan + Elena'}, listino), None)
+    _check(r, 'Lavoro', 'un cliente che non e\' in listino non vale zero, vale niente',
+           L.prezzo_del_pacchetto({'cliente': 'Ignoto'}, listino), None)
+
+    # --- il registro finto -------------------------------------------------
+    reg = {'pacchetti': [
+        {'cliente': 'Ivan', 'sessioni': [
+            {'data': '2025-12-30', 'titolo': 'Ivan'},          # dicembre
+            {'data': '2026-01-02', 'titolo': 'Ivan'},          # gennaio: altro anno
+            {'data': '2026-03-10', 'titolo': 'Ivan'},
+            {'data': '2026-03-11', 'titolo': 'Ivan cancelled'},   # consuma, non allena
+            {'data': 'non una data', 'titolo': 'Ivan'},        # non deve far saltare
+        ]},
+        {'cliente': 'Elena', 'sessioni': [
+            {'data': '2026-03-12', 'titolo': 'Elena'},
+        ]},
+        {'cliente': 'Ignoto', 'sessioni': [                   # senza listino: vale 0
+            {'data': '2026-03-13', 'titolo': 'Ignoto'},
+        ]},
+    ], 'esclusi': [
+        {'data': '2026-03-14', 'titolo': 'Bike with Ivan'},
+        {'data': '2025-12-18', 'titolo': 'Ivan'},
+    ]}
+    for s in reg['pacchetti'][0]['sessioni']:
+        s['cancellata'] = 'cancelled' in s['titolo']
+
+    mesi = L.per_mese(reg, listino, 2026)
+    _check(r, 'Lavoro', "l'anno ha dodici mesi anche quando non succede niente",
+           len(mesi), 12)
+    _check(r, 'Lavoro', 'un mese vuoto e\' a zero, non manca',
+           mesi[10], {'sedute': 0, 'cancellate': 0, 'esclusi': 0, 'cents': 0})
+
+    marzo = mesi[2]
+    # 3 fatte (Ivan, Elena, Ignoto) + 1 cancellata; il guadagno e' 150+200+150,
+    # perche' Ignoto non ha listino e la cancellata il credito lo ha consumato
+    _check(r, 'Lavoro', 'marzo: tre sedute fatte, la cancellata non e\' un allenamento',
+           marzo['sedute'], 3)
+    _check(r, 'Lavoro', 'ma la cancellata si conta a parte, non sparisce',
+           marzo['cancellate'], 1)
+    _check(r, 'Lavoro', 'e nel guadagno c\'e\', perche\' il credito e\' andato',
+           marzo['cents'], 15000 + 20000 + 15000)
+    _check(r, 'Lavoro', 'chi non ha listino non porta franchi ma si conta lo stesso',
+           (marzo['sedute'], marzo['cents']), (3, 50000))
+    _check(r, 'Lavoro', 'gli esclusi si contano a parte',
+           marzo['esclusi'], 1)
+
+    # la trappola del confine d'anno: due sedute a tre giorni di distanza,
+    # una per parte. Se cadessero nello stesso secchio non se ne accorgerebbe
+    # nessuno guardando il grafico.
+    _check(r, 'Lavoro', 'il 30 dicembre resta a dicembre, dell\'anno suo',
+           (L.per_mese(reg, listino, 2025)[11]['sedute'],
+            L.per_mese(reg, listino, 2025)[11]['esclusi']), (1, 1))
+    _check(r, 'Lavoro', 'e il 2 gennaio va a gennaio, dell\'anno dopo',
+           mesi[0]['sedute'], 1)
+    # nel 2026 il registro ha cinque sedute a credito: una a gennaio, tre piu'
+    # una cancellata a marzo. La sesta riga ha una data illeggibile e resta
+    # fuori da tutti i mesi, senza far saltare niente.
+    _check(r, 'Lavoro', 'una data storta resta fuori invece di far saltare la pagina',
+           sum(m['sedute'] + m['cancellate'] for m in mesi), 5)
+
+    # --- i totali dell'anno ------------------------------------------------
+    t = L.totali(mesi)
+    _check(r, 'Lavoro', "l'anno somma quello che c'e' nei mesi",
+           (t['sedute'], t['cancellate'], t['esclusi']), (4, 1, 1))
+    _check(r, 'Lavoro', 'la media si fa sulle sedute che hanno consumato un credito',
+           t['media_cents'], (15000 + 50000) // 5)
+    vuoto = L.totali(L.per_mese(reg, listino, 1999))
+    _check(r, 'Lavoro', 'un anno senza sedute non vale zero franchi a seduta',
+           vuoto['media_cents'], None)
+    _check(r, 'Lavoro', 'e i suoi dodici mesi ci sono lo stesso, tutti a zero',
+           vuoto['cents'], 0)
+
+    # --- da quando i conti valgono ----------------------------------------
+    _check(r, 'Lavoro', 'il registro sa da che anno comincia a sapere',
+           L.primo_anno(reg), 2025)
+    _check(r, 'Lavoro', 'un registro vuoto non finge di sapere da quando',
+           L.primo_anno({'pacchetti': [], 'esclusi': []}), None)

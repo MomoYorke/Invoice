@@ -28,6 +28,7 @@ from core import bank
 from core import qrbill
 from core import recurring as ric
 from core import sessions as sess
+from core import lavoro
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
 from core import branding
@@ -258,17 +259,37 @@ def performance():
     clients = stats.by_client(con, year)[:8]
     services = stats.by_service(con, year)
     stato = overview.stato_fatture(con, year)
+    listino = db.crediti_clienti(con)
     max_month = max(months + months_prev + [1])
     max_year_v = max([v['invoiced'] for v in yearly.values()] + [1])
     max_client = max([c[1] for c in clients] + [1])
     max_service = max([s[1] for s in services] + [1])
     con.close()
+
+    # Quanto si e' LAVORATO, che non e' quanto si e' fatturato: un pacchetto si
+    # fattura in un giorno e si consuma in tre mesi. Il registro puo' non
+    # esserci ancora — chi non lavora a pacchetti non ne ha uno — e in quel
+    # caso il pannello non compare, senza che nessuno se ne accorga.
+    reg = sess.carica() if os.path.exists(sess.REGISTRY) else None
+    lav = lav_prec = lav_tot = None
+    lav_primo_anno = max_sedute = max_lav = 0
+    if reg:
+        lav = lavoro.per_mese(reg, listino, year)
+        lav_prec = lavoro.per_mese(reg, listino, year - 1)
+        lav_tot = lavoro.totali(lav)
+        lav_primo_anno = lavoro.primo_anno(reg)
+        max_sedute = max([m['sedute'] + m['esclusi'] for m in lav + lav_prec] + [1])
+        max_lav = max([m['cents'] for m in lav + lav_prec] + [1])
+
     return render_template('performance.html', k=k, year=year, months=months,
                            months_prev=months_prev, mesi=MESI_S, yearly=yearly,
                            clients=clients, services=services, stato=stato,
                            max_month=max_month, max_year_v=max_year_v,
                            max_client=max_client, max_service=max_service,
-                           legacy_years=stats.LEGACY_YEARS)
+                           legacy_years=stats.LEGACY_YEARS,
+                           lav=lav, lav_prec=lav_prec, lav_tot=lav_tot,
+                           lav_primo_anno=lav_primo_anno,
+                           max_sedute=max_sedute, max_lav=max_lav)
 
 
 @app.route('/benvenuto')
