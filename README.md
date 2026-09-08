@@ -575,6 +575,11 @@ Some invoices come back the same every month. Set the rule once in
 on the app tells you when a month is due and hands you the ordinary new-invoice
 form already filled in.
 
+If your invoice line carries the dates rather than the month's name, write
+`{dal}` and `{al}` instead: they become the first and last day of that month,
+`01.09.26` and `30.09.26`. September's invoice should look like August's —
+a line that suddenly changes shape makes the client wonder what happened.
+
 It issues nothing by itself. No number is taken, no file written, nothing
 exists until you press Create: the invoice is born on the same path as every
 other one, so there is no second, less-tested way for an invoice to come into

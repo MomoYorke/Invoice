@@ -3693,6 +3693,24 @@ def _test_abbonamenti(r):
            A.descrizione_per('Training {mesee}', '2026-09', MESI_DOC['it']),
            'Training {mesee}')
 
+    # Chi ha sempre scritto le date sulla riga deve poter continuare: la
+    # fattura di settembre dev'essere uguale a quella di agosto, o il cliente
+    # si chiede cosa sia cambiato.
+    _check(r, 'Abbonamenti', 'la riga può portare le date invece del nome del mese',
+           A.descrizione_per('Monthly abo: running coaching {dal} – {al}', '2026-09',
+                             MESI_DOC['en']),
+           'Monthly abo: running coaching 01.09.26 – 30.09.26')
+    _check(r, 'Abbonamenti', "l'ultimo giorno è quello vero del mese, non il 30",
+           A.descrizione_per('{dal} – {al}', '2026-08', MESI_DOC['en']),
+           '01.08.26 – 31.08.26')
+    _check(r, 'Abbonamenti', 'febbraio è di 28 giorni',
+           A.descrizione_per('{al}', '2026-02', MESI_DOC['en']), '28.02.26')
+    _check(r, 'Abbonamenti', 'e negli anni bisestili di 29',
+           A.descrizione_per('{al}', '2028-02', MESI_DOC['en']), '29.02.28')
+    _check(r, 'Abbonamenti', 'date e nome del mese possono stare insieme',
+           A.descrizione_per('{mese}: {dal}-{al}', '2026-12', MESI_DOC['en']),
+           'December: 01.12.26-31.12.26')
+
 
 def _test_lavoro(r):
     """Le sedute per mese e quanto valgono.

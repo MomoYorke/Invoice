@@ -111,13 +111,25 @@ def mesi_dovuti(regola, gia_fatti=(), oggi=None):
 def descrizione_per(modello, mese, mesi_nella_lingua):
     """La riga della fattura per quel mese, nella lingua del cliente.
 
-    Nel modello si scrive «{mese}» e «{anno}» dove vanno il nome del mese e
-    l'anno. Un modello che non li nomina resta com'e': c'e' chi scrive sempre
-    la stessa riga e ha ragione lui.
+    Nel modello si scrive «{mese}» e «{anno}» per il nome del mese e l'anno,
+    oppure «{dal}» e «{al}» per il primo e l'ultimo giorno di quel mese
+    (01.09.26 e 30.09.26). Sono due modi di scrivere la stessa cosa e sono
+    veri tutti e due: «running coaching September 2026» e «running coaching
+    01.09.26 - 30.09.26». Chi le date le ha sempre scritte non deve cambiare
+    quello che il suo cliente legge da anni solo perche' adesso la riga la
+    compila l'app: la fattura di settembre dev'essere uguale a quella di
+    agosto, o il cliente si chiede cosa sia cambiato.
+
+    Un modello che non nomina niente resta com'e': c'e' chi scrive sempre la
+    stessa riga e ha ragione lui.
     """
     anno, m = int(mese[:4]), int(mese[5:7])
+    ultimo = calendar.monthrange(anno, m)[1]
     try:
-        return (modello or '').format(mese=mesi_nella_lingua[m - 1], anno=anno)
+        return (modello or '').format(
+            mese=mesi_nella_lingua[m - 1], anno=anno,
+            dal='01.%02d.%02d' % (m, anno % 100),
+            al='%02d.%02d.%02d' % (ultimo, m, anno % 100))
     except (KeyError, IndexError, ValueError):
         # un modello con una graffa sbagliata non deve far saltare la pagina:
         # meglio la riga cosi' com'e' scritta, che si vede ed e' correggibile
