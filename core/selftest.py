@@ -126,6 +126,7 @@ def run_all():
     _test_nomi_accentati(r)
     _test_una_cartella_sola(r)
     _test_pagine_vuote(r)
+    _test_qr_di_serie(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -1475,8 +1476,16 @@ def _test_primi_passi(r):
         'CREATE TABLE crediti_clienti(chiave TEXT PRIMARY KEY);')
 
     vuoto = B.passi(con, dict(DEFAULT_SETTINGS))
-    _check(r, 'Primi passi', 'appena installata non è fatto niente',
-           B.avanzamento(vuoto)[0], 0)
+    # Appena installata, l'unica cosa gia' fatta e' quella che ha fatto l'app
+    # per te: il bollettino QR, che ora e' acceso di serie. Tutto il resto
+    # dipende da chi la usa e deve risultare da fare. La prova e' scritta
+    # cosi', e non come «zero fatti», perche' un domani che si spegnesse il
+    # bollettino o se ne accendesse un altro, questa riga lo direbbe.
+    fatti = [p['chiave'] for p in vuoto if p['fatto']]
+    _check(r, 'Primi passi', 'appena installata l’unica cosa fatta è quella che fa l’app',
+           fatti, ['qr'])
+    _check(r, 'Primi passi', 'e quindi resta da fare tutto il resto',
+           B.avanzamento(vuoto), (1, len(vuoto)))
     _check(r, 'Primi passi', 'appena installata manca l\'essenziale',
            B.manca_l_essenziale(vuoto), True)
     _check(r, 'Primi passi', 'ogni passo sa dove mandarti',
@@ -1896,6 +1905,69 @@ def _cicli_di_tabella_scoperti():
 PAGINE_DEL_PRIMO_GIORNO = ('invoices.html', 'clients.html', 'accountant.html',
                            'sessions.html', 'email_sent.html',
                            'credits_clients.html', 'subscriptions.html')
+
+
+def _test_qr_di_serie(r):
+    """Il bollettino QR e\' acceso di serie — ma solo per chi installa oggi.
+
+    Il bollettino e\' la cosa che rende svizzera quest\'app, e finche\' era
+    spento chi la comprava non sapeva nemmeno che ci fosse. Ora e\' acceso di
+    default. Il punto delicato e\' l\'altro meta\': init() rifa\' l\'INSERT OR
+    IGNORE dei default a OGNI avvio, non solo al primo, quindi un default
+    nuovo si propaga da solo anche a chi usa l\'app da mesi — e i suoi clienti
+    si troverebbero in mano un documento diverso senza che nessuno gliel\'abbia
+    detto. Il bollettino lo accende chi fattura, non un aggiornamento.
+
+    Le cinque situazioni, tutte reali:
+    """
+    import sqlite3
+    import shutil
+    import tempfile
+    from . import db as D
+
+    fattura = ("INSERT INTO invoices(id, number, client_name) "
+               "VALUES(1, 1, 'Tizio');")
+    casi = [
+        ('appena installata',                    '',                              '1'),
+        ('configurata, nessuna fattura ancora',
+         "INSERT INTO settings(key,value) VALUES('business_name','X');",          '1'),
+        ('gia\' in uso, casella mai toccata',
+         "INSERT INTO settings(key,value) VALUES('business_name','A');" + fattura, '0'),
+        ('gia\' in uso, acceso a mano',
+         "INSERT INTO settings(key,value) VALUES('qr_fattura','1');" + fattura,   '1'),
+        ('gia\' in uso, spento a mano apposta',
+         "INSERT INTO settings(key,value) VALUES('qr_fattura','0');" + fattura,   '0'),
+    ]
+    vero = D.DB_PATH
+    cartella = tempfile.mkdtemp()
+    try:
+        for i, (nome, prima, atteso) in enumerate(casi):
+            D.DB_PATH = os.path.join(cartella, 'p%d.db' % i)
+            if prima:
+                con = sqlite3.connect(D.DB_PATH)
+                con.executescript(D.SCHEMA)
+                con.executescript(prima)
+                con.commit()
+                con.close()
+            con = D.init()
+            avuto = D.get_settings(con).get('qr_fattura')
+            con.close()
+            _check(r, 'QR di serie', nome, avuto, atteso)
+    finally:
+        D.DB_PATH = vero
+        shutil.rmtree(cartella, ignore_errors=True)
+
+    # ...e la prova che il caso «appena installata» non e\' truccato: su un
+    # database nuovo in settings una riga c\'e\' gia\', messa da una migrazione.
+    # Guardare «c\'e\' qualcosa in settings?» per capire se l\'app e\' gia\' in uso
+    # spegnerebbe quindi anche le installazioni nuove. Ci sono cascato davvero.
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'core', 'db.py'), encoding='utf-8') as f:
+        sorgente = f.read()
+    corpo = sorgente[sorgente.index('def _migra_qr_gia_installato'):]
+    corpo = corpo[:corpo.index('def init(')]
+    _check(r, 'QR di serie', 'per capire se l\'app e\' in uso guarda le fatture, non le impostazioni',
+           ('FROM invoices' in corpo, 'FROM settings LIMIT' in corpo), (True, False))
 
 
 def _test_pagine_vuote(r):

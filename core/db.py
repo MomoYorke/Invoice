@@ -314,6 +314,13 @@ DEFAULT_SETTINGS = {
     'email_corpo_coaching': 'Thank you again for your trust.',
     'email_corpo_pt': 'Thank you again for your trust.',
     'backup_dir': desktop.cartella_backup(),
+    # Il bollettino QR e' la cosa che rende svizzera questa app: chi paga
+    # inquadra e non digita ne' importo ne' IBAN ne' causale, e il riferimento
+    # che porta addosso e' quello che fa riconoscere il versamento da solo
+    # nella pagina Banca. Spento non serviva a nessuno: chi comprava l'app non
+    # sapeva che ci fosse. Acceso pero' vale SOLO per chi installa da oggi —
+    # vedi _migra_qr_gia_installato() qui sotto.
+    'qr_fattura': '1',
 }
 
 # --- i modelli della mail, uno per lingua -----------------------------------
@@ -360,10 +367,40 @@ def connect():
     return con
 
 
+def _migra_qr_gia_installato(con):
+    """Chi ha gia' l'app installata resta com'era, anche se il default cambia.
+
+    init() rifa' l'INSERT OR IGNORE dei default a OGNI avvio, non solo al
+    primo. Quindi accendere il bollettino QR nei default lo accenderebbe da
+    solo, al riavvio, anche a chi usa l'app da mesi — e i suoi clienti si
+    troverebbero in mano un documento diverso senza che nessuno gliel'abbia
+    detto. Il bollettino si accende quando lo decide chi fattura, non quando
+    lo decide un aggiornamento.
+
+    Qui si scrive quindi il valore che quell'app HA GIA' — spento — cosi' il
+    default nuovo non la tocca. A dirglielo ci pensa «Primi passi», dove il
+    passo del bollettino QR resta da fare, in chiaro, invece che di nascosto.
+    """
+    if con.execute("SELECT 1 FROM settings WHERE key='qr_fattura'").fetchone():
+        return                      # ha gia' deciso: non si tocca
+
+    # «Gia' in uso» vuol dire una cosa sola: ha gia' emesso fatture. E' quella
+    # la gente i cui clienti si accorgerebbero del cambio. Guardare invece se
+    # in settings c'e' qualcosa non funziona — una migrazione ci scrive una
+    # riga di servizio anche su un database appena nato, e cosi' l'app nuova
+    # si sarebbe spenta da sola. (Ci sono cascato: e' il motivo di questa
+    # nota.) Chi ha configurato l'app ma non ha ancora fatturato non ha
+    # mandato niente a nessuno, quindi puo' partire col bollettino acceso.
+    if con.execute('SELECT 1 FROM invoices LIMIT 1').fetchone():
+        con.execute("INSERT INTO settings(key, value) VALUES('qr_fattura', '0')")
+
+
 def init():
     con = connect()
     con.executescript(SCHEMA)
     _migrate(con)
+    # prima della semina dei default: decide lei chi era gia' installato
+    _migra_qr_gia_installato(con)
     for k, v in DEFAULT_SETTINGS.items():
         con.execute('INSERT OR IGNORE INTO settings(key, value) VALUES(?,?)', (k, v))
     con.commit()
