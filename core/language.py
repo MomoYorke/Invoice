@@ -200,6 +200,9 @@ TESTI = {
         'Stato fatture {anno}': 'Invoice status {anno}',
         'Emesse': 'Issued',
         'Pagate': 'Paid',
+        'In ritardo': 'Overdue',
+        'ferma da un giorno': 'waiting one day',
+        'ferma da {n} giorni': 'waiting {n} days',
         'Spedite per email': 'Sent by email',
         "Fatte con l'app, non ancora spedite": 'Created in the app, not yet sent',
         # --- Fatture, l'elenco ---
@@ -1433,6 +1436,9 @@ TESTI = {
         'Stato fatture {anno}': 'Rechnungsstatus {anno}',
         'Emesse': 'Ausgestellt',
         'Pagate': 'Bezahlt',
+        'In ritardo': 'Überfällig',
+        'ferma da un giorno': 'wartet seit einem Tag',
+        'ferma da {n} giorni': 'wartet seit {n} Tagen',
         'Spedite per email': 'Per E-Mail versendet',
         "Fatte con l'app, non ancora spedite": 'In der App erstellt, noch nicht versendet',
         # --- Rechnungen, die Liste ---

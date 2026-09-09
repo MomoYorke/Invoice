@@ -598,7 +598,11 @@ def fatture():
     if q:
         sql += ' AND (client_name LIKE ? OR CAST(number AS TEXT) LIKE ?)'
         args += [f'%{q}%', f'%{q}%']
-    if stato:
+    if stato == 'ritardo':
+        # non e' uno stato scritto sulla fattura: e' una cosa che si sa solo
+        # incrociandola con l'estratto conto. Si filtra dopo, sui fatti.
+        pass
+    elif stato:
         sql += ' AND status=?'
         args.append(stato)
     invio = request.args.get('invio', '')
@@ -608,10 +612,23 @@ def fatture():
         sql += " AND sent_at IS NULL AND source='app'"
     sql += ' ORDER BY COALESCE(number, 0) DESC, date DESC'
     rows = con.execute(sql, args).fetchall()
+
+    # Chi non ti ha ancora pagato, e da quanto. Il conto NON si rifa' qui: e'
+    # lo stesso della Dashboard, che sa una cosa che il calendario da solo non
+    # sa — una fattura non e' in ritardo finche' l'app non ha letto un estratto
+    # conto abbastanza recente da poterlo dire. Due definizioni di «in ritardo»
+    # nella stessa app litigherebbero, e chi guarda crederebbe a quella
+    # sbagliata.
+    impostazioni = db.get_settings(con)
+    mancanti = overview.incassi_mancanti(con, impostazioni.get('banca_ultimo_estratto'))
+    in_ritardo = {r['id'] for r in mancanti['in_ritardo']}
+    ferme = overview.ferme_da(rows, in_ritardo)
+    if stato == 'ritardo':
+        rows = [r for r in rows if r['id'] in in_ritardo]
     tot = sum(r['total_cents'] or 0 for r in rows)
     con.close()
     return render_template('invoices.html', rows=rows, year=year, q=q, stato=stato,
-                           invio=invio, tot=tot)
+                           invio=invio, tot=tot, ferme=ferme)
 
 
 @app.route('/fattura/<int:inv_id>')

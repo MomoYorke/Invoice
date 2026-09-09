@@ -15,6 +15,7 @@
     <option value="">{{ _('Tutti gli stati') }}</option>
     <option value="emessa" {{ 'selected' if stato == 'emessa' }}>{{ _('Da incassare') }}</option>
     <option value="pagata" {{ 'selected' if stato == 'pagata' }}>{{ _('Pagate') }}</option>
+    <option value="ritardo" {{ 'selected' if stato == 'ritardo' }}>{{ _('In ritardo') }}</option>
   </select>
   <input type="text" name="q" value="{{ q }}" placeholder="{{ _('Cerca cliente o numero…') }}">
   <button class="btn small secondary">{{ _('Cerca') }}</button>
@@ -25,7 +26,7 @@
 <table>
   <tr><th>{{ _('Nr.') }}</th><th>{{ _('Cliente') }}</th><th>{{ _('Data') }}</th>
       <th class="num">{{ _('Importo') }}</th><th>{{ _('Stato') }}</th><th>{{ _('Inviata') }}</th>
-      <th>{{ _('Origine') }}</th><th></th></tr>
+      <th></th></tr>
   {% for r in rows %}
   <tr>
     <td><a href="{{ url_for('fattura', inv_id=r.id) }}"><strong>#{{ r.number or '—' }}</strong></a></td>
@@ -37,13 +38,16 @@
         <button class="badge {{ r.status }}" style="border:none;cursor:pointer"
                 title="{{ _('Clicca per cambiare stato') }}">{{ _(r.status) }}</button>
       </form>
+      {% if ferme.get(r.id) %}
+      <div class="in-ritardo">{{ _('ferma da un giorno') if ferme[r.id] == 1
+          else _('ferma da {n} giorni').format(n=ferme[r.id]) }}</div>
+      {% endif %}
     </td>
     <td class="muted" style="font-size:12px;white-space:nowrap">
       {% if r.sent_at %}{{ icona('email', 'ic-mini') }} {{ r.sent_at[:10] | dateit }}{% if r.sent_at|length > 10 %}
         <span style="opacity:.75">{{ r.sent_at[11:16] }}</span>{% endif %}
       {% else %}—{% endif %}
     </td>
-    <td><span class="badge {{ r.source }}">{{ 'app' if r.source == 'app' else _('storico') }}</span></td>
     <td class="right">
       {% if r.pdf_path %}<a href="{{ url_for('fattura_file', inv_id=r.id, kind='pdf') }}" target="_blank">PDF</a>{% endif %}
     </td>

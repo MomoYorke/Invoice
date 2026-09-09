@@ -104,6 +104,27 @@ def incassi_mancanti(con, ultimo_estratto):
     return {'in_ritardo': ritardo, 'da_verificare': attesa, 'limite': limite}
 
 
+def ferme_da(righe, in_ritardo, oggi=None):
+    """Da quanti giorni aspetta ognuna delle fatture in ritardo. {id: giorni}.
+
+    Solo quelle in ritardo, e il ritardo lo decide «incassi_mancanti»: qui non
+    si aggiunge nessuna regola nuova, si conta e basta. Una data illeggibile
+    non entra nel conto invece di far saltare l'elenco — la pagina delle
+    fatture deve aprirsi anche il giorno che un dato e' storto.
+    """
+    oggi = oggi or datetime.date.today()
+    fuori = {}
+    for r in righe or ():
+        rid = r['id'] if 'id' in r.keys() else r.get('id') if hasattr(r, 'get') else None
+        if rid is None or rid not in in_ritardo:
+            continue
+        try:
+            fuori[rid] = (oggi - datetime.date.fromisoformat(r['date'])).days
+        except (TypeError, ValueError):
+            continue
+    return fuori
+
+
 # ------------------------------------------------------------------- salute
 def salute(con, settings, cartella_backup=None, lingua=None):
     """Lo stato delle reti di sicurezza. Ogni voce dice anche se e' tranquilla."""
@@ -333,7 +354,11 @@ def da_fare(con, settings, registro=None, cartella_backup=None):
                           .format(tardi=tardi, giorni=GIORNI_PAZIENZA) if tardi
                           else L.t('nessuna in ritardo, sono tutte recenti', lg)),
             'urgenza': RITARDO if tardi else ATTESA,
-            'link': ('fatture', {'stato': 'emessa', 'anno': ''}),
+            # se ce n'e' qualcuna in ritardo il riquadro porta dritto a
+            # quelle: chi clicca su «ferme da oltre 45 giorni» vuole vedere
+            # quelle li', non tutte le fatture aperte.
+            'link': ('fatture', {'stato': 'ritardo' if tardi else 'emessa',
+                                 'anno': ''}),
         })
 
     # gli abbonamenti scaduti: fatture che tornano uguali ogni mese e che

@@ -1213,6 +1213,23 @@ def _test_da_fare(r):
     _check(r, 'Da fare', 'e senza dire dove sono le copie non si allarma nessuno',
            voce(C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()},
                           None, None), 'backup'), None)
+
+    # --- da quanto aspetta una fattura ------------------------------------
+    # Il numero che finisce in rosso nell'elenco delle fatture. Chi decide se
+    # una e' in ritardo resta «incassi_mancanti»; qui si conta soltanto, e si
+    # conta sui giorni veri.
+    finte = [{'id': 1, 'date': (oggi - datetime.timedelta(days=73)).isoformat()},
+             {'id': 2, 'date': (oggi - datetime.timedelta(days=1)).isoformat()},
+             {'id': 3, 'date': 'non-una-data'},
+             {'id': 4, 'date': None}]
+    _check(r, 'Da fare', 'conta i giorni solo per quelle in ritardo',
+           C.ferme_da(finte, {1}, oggi), {1: 73})
+    _check(r, 'Da fare', 'una fattura non in ritardo non compare',
+           C.ferme_da(finte, set(), oggi), {})
+    _check(r, 'Da fare', 'di ieri e\' un giorno, non zero',
+           C.ferme_da(finte, {2}, oggi), {2: 1})
+    _check(r, 'Da fare', 'una data storta non fa saltare l\'elenco delle fatture',
+           _senza_scoppiare(C.ferme_da, finte, {1, 3, 4}, oggi), {1: 73})
     for f_ in (zip_vecchio, zip_fresco):
         os.remove(f_)
     os.rmdir(cartella)
