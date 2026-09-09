@@ -1902,10 +1902,35 @@ def _cartella_backup():
         return backup.DEST_DEFAULT
 
 
+# Le pagine dove «Salva» puo' riportarti. Un elenco chiuso e non un indirizzo
+# preso dal modulo: un campo nascosto arriva da fuori, e un indirizzo che
+# arriva da fuori non deve poter decidere dove mandare chi ha appena premuto
+# un bottone di quest'app.
+RITORNI = {'benvenuto', 'impostazioni', 'dashboard'}
+
+
+@app.route('/i-tuoi-dati', methods=['GET'])
+def primi_dati():
+    """L'essenziale, e basta: le righe che finiscono in cima alla fattura.
+
+    Esiste perche' il primo passo mandava dritti in Impostazioni: 61 campi,
+    sei schermate, cinque bottoni Salva. Chi apre l'app il primo giorno non ha
+    ancora nessun motivo per sapere cosa sia un marcatore della banca — e
+    doveva trovare da solo, in mezzo a quelli, i sette che servono davvero.
+    Qui i sette ci sono tutti e non c'e' nient'altro. Il resto resta dov'era,
+    per il giorno in cui servira'.
+    """
+    con = get_con()
+    settings = db.get_settings(con)
+    con.close()
+    return render_template('first_setup.html', settings=settings)
+
+
 @app.route('/impostazioni', methods=['GET', 'POST'])
 def impostazioni():
     con = get_con()
     if request.method == 'POST':
+        torna = (request.form.get('torna') or '').strip()
         # una casella non spuntata non compare nel modulo: va spenta a mano
         if 'email_oggetto_coaching' in request.form:   # siamo nel riquadro della posta
             db.set_setting(con, 'email_copia_a_me',
@@ -1944,6 +1969,16 @@ def impostazioni():
             else:
                 valore = valore.strip()
             db.set_setting(con, k, valore)
+        # Chi arriva dai primi passi torna ai primi passi: rispedirlo in
+        # Impostazioni vorrebbe dire fargli cercare da solo la strada indietro,
+        # che e' proprio la cosa da cui era stato tolto.
+        if torna in RITORNI:
+            manca = ben.da_fare(ben.passi(con, db.get_settings(con)))
+            avvisa('Salvato.' if manca else
+                   'Salvato: adesso l’app ha tutto quello che le serve per fare una fattura.',
+                   'ok')
+            con.close()
+            return redirect(url_for(torna))
         avvisa('Impostazioni salvate.', 'ok')
         con.close()
         return redirect(url_for('impostazioni'))

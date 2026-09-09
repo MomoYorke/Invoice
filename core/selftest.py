@@ -1030,8 +1030,13 @@ TESTO_CHE_PUO_RESTARE = frozenset((
     '8000 Zürich',                   # un indirizzo svizzero d'esempio
     'https://calendar.google.com/calendar/ical/.../basic.ics',
     'vs',                            # si scrive cosi' in tutte e tre
+    'CHE-123.456.789',               # la forma di un numero d'impresa svizzero
+    'CH00 0000 0000 0000 0000 0',    # la forma di un IBAN svizzero
 ))
-PAROLE_CHE_PUO_RESTARE = frozenset(('CHF', 'KB', 'MB', 'PDF', 'ok'))
+# «IBAN» non e' italiano ne' inglese ne' tedesco: e' la stessa parola nelle tre
+# lingue, e sulla fattura vera esce cosi' anche in tedesco. Tradurla vorrebbe
+# dire far dire all'anteprima una cosa che il documento non dice.
+PAROLE_CHE_PUO_RESTARE = frozenset(('CHF', 'IBAN', 'KB', 'MB', 'PDF', 'ok'))
 
 _ATTRIBUTI_LETTI = re.compile(r'\b(?:placeholder|title|alt)\s*=\s*"([^"]*)"')
 _FINESTRELLE = re.compile(r"\b(?:confirm|alert)\(\s*'([^']*)'")
@@ -1432,6 +1437,34 @@ def _test_primi_passi(r):
            B.manca_l_essenziale(vuoto), True)
     _check(r, 'Primi passi', 'ogni passo sa dove mandarti',
            [p['chiave'] for p in vuoto if not p['dove']], [])
+
+    # --- dove ti manda il primo passo ------------------------------------
+    # Mandava in Impostazioni: 61 campi, sei schermate, cinque bottoni Salva,
+    # e tocca a te trovare i sette che servono. E' il motivo per cui installare
+    # quest'app a qualcun altro e' stato difficile. Adesso c'e' una pagina che
+    # chiede quei sette e nient'altro, e i due passi obbligatori portano li'.
+    dove = {p['chiave']: p['dove'] for p in vuoto}
+    _check(r, 'Primi passi', 'i due passi obbligatori portano alla pagina corta',
+           (dove.get('attivita'), dove.get('iban')), ('primi_dati', 'primi_dati'))
+    _check(r, 'Primi passi', 'e il logo arriva sul suo riquadro, non in cima a tutto',
+           [p.get('ancora') for p in vuoto if p['chiave'] == 'logo'], ['logo'])
+
+    # La pagina corta deve chiedere TUTTO quello che finisce sulla fattura e
+    # sul bollettino QR. Se un domani si aggiunge una riga alla testata e ci si
+    # dimentica di questa pagina, chi installa l'app si trova una fattura
+    # incompleta e nessuno glielo dice: e' il guasto che questa prova esiste
+    # per impedire.
+    from . import docgen as _dg
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'templates', 'first_setup.html'),
+                 encoding='utf-8') as f:
+        modulo = f.read()
+    chiesti = set(re.findall(r'name="([a-z_0-9]+)"', modulo))
+    servono = set(_dg.RIGHE_MITTENTE.values()) | {'business_iban'}
+    _check(r, 'Primi passi', 'la pagina corta chiede tutto quello che va sulla fattura',
+           sorted(servono - chiesti), [])
+    _check(r, 'Primi passi', 'e non chiede nient\'altro che i dati e il tuo nome',
+           sorted(chiesti - servono - {'torna', 'owner_first_name', 'owner_last_name'}), [])
 
     # i dati dell'attivita' senza IBAN non bastano: la fattura uscirebbe senza
     # il conto su cui incassare

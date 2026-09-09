@@ -95,7 +95,7 @@
 </form>
 
 <div class="panel mt" style="max-width:640px">
-  <h2 style="margin-top:0">{{ _('Logo') }}</h2>
+  <h2 id="logo" style="margin-top:0;scroll-margin-top:20px">{{ _('Logo') }}</h2>
   <p class="sub">{{ _("Va sulle fatture — in PDF e in Word — e qui nell'app, in alto a sinistra. Meglio un PNG con lo sfondo trasparente. Se è di un'altra forma non viene stirato: lo centriamo nello spazio che c'è.") }}</p>
   <div class="logo-riquadro">
     <img src="{{ url_for('logo') }}?v={{ logo_versione }}" alt="{{ _('Il tuo logo') }}">

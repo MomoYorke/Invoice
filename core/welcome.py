@@ -32,19 +32,21 @@ def passi(con, settings):
          'titolo': 'Chi emette le fatture',
          'fatto': valorizzato('business_name', 'business_addr1', 'business_addr2'),
          'perche': 'Nome, indirizzo e numero IVA/IDI vanno in cima a ogni fattura.',
-         'dove': 'impostazioni', 'bottone': 'Scrivi i tuoi dati'},
+         'dove': 'primi_dati', 'bottone': 'Scrivi i tuoi dati'},
         {'chiave': 'iban', 'obbligatorio': True,
          'titolo': 'Dove ti pagano',
          'fatto': valorizzato('business_iban'),
          'perche': "Senza IBAN la fattura esce senza il conto su cui incassare: "
                    'è la cosa che si dimentica più facilmente e che costa di più.',
-         'dove': 'impostazioni', 'bottone': "Scrivi l'IBAN"},
+         'dove': 'primi_dati', 'bottone': "Scrivi l'IBAN"},
         {'chiave': 'logo', 'obbligatorio': False,
          'titolo': 'Il tuo logo',
          'fatto': branding.personalizzato(),
          'perche': "Va sulle fatture e qui in alto a sinistra. Finché manca, sulla "
                    'fattura quello spazio resta vuoto.',
-         'dove': 'impostazioni', 'bottone': 'Carica il logo'},
+         # il logo sta in Impostazioni e li' resta, ma si arriva sul riquadro
+         # giusto invece che in cima a sei schermate
+         'dove': 'impostazioni', 'ancora': 'logo', 'bottone': 'Carica il logo'},
         {'chiave': 'clienti', 'obbligatorio': False,
          'titolo': 'I tuoi clienti',
          'fatto': clienti > 0,

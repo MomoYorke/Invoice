@@ -24,9 +24,9 @@
     <div class="passo-azione">
       {% if not p.fatto %}
         <a class="btn small {{ '' if p.obbligatorio else 'secondary' }}"
-           href="{{ url_for(p.dove) }}">{{ _(p.bottone) }}</a>
+           href="{{ url_for(p.dove, _anchor=p.ancora) if p.ancora else url_for(p.dove) }}">{{ _(p.bottone) }}</a>
       {% else %}
-        <a class="muted" style="font-size:13px" href="{{ url_for(p.dove) }}">{{ _('rivedi') }}</a>
+        <a class="muted" style="font-size:13px" href="{{ url_for(p.dove, _anchor=p.ancora) if p.ancora else url_for(p.dove) }}">{{ _('rivedi') }}</a>
       {% endif %}
     </div>
   </div>

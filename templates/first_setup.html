@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('I tuoi dati') }}{% endblock %}
+{% block content %}
+<h1>{{ _('I tuoi dati') }}</h1>
+<p class="sub">{{ _('Sono le righe stampate in cima a ogni fattura. Si scrivono una volta sola: da qui in avanti l’app le mette da sé. Il resto — posta, banca, calendario — si aggiunge quando serve, in Impostazioni.') }}</p>
+
+<div class="avvio">
+  <form method="post" action="{{ url_for('impostazioni') }}" class="panel">
+    <input type="hidden" name="torna" value="benvenuto">
+
+    <label>{{ _('Nome attività') }}</label>
+    <input type="text" name="business_name" id="a-nome" value="{{ settings.business_name }}"
+           placeholder="{{ _('Mario Rossi Personal Training') }}" autofocus>
+    <span class="muted">{{ _('Il nome con cui fatturi. Va sulla prima riga e sul bollettino QR.') }}</span>
+
+    <label>{{ _('UID / IDI') }}</label>
+    <input type="text" name="business_uid" id="a-uid" value="{{ settings.business_uid }}"
+           placeholder="CHE-123.456.789">
+    <span class="muted">{{ _('Il numero d’impresa svizzero, se ce l’hai. Se non ce l’hai, lascia vuoto: la riga sparisce.') }}</span>
+
+    <label>{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
+    <input type="text" name="business_addr1" id="a-ind1" value="{{ settings.business_addr1 }}"
+           placeholder="{{ _('Via Roma 1') }}">
+    <label>{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
+    <input type="text" name="business_addr2" id="a-ind2" value="{{ settings.business_addr2 }}"
+           placeholder="8000 Zürich">
+    <span class="muted">{{ _('Via e numero da una parte, CAP e città dall’altra: il bollettino QR li vuole separati e non li sa indovinare.') }}</span>
+
+    <label>{{ _('IBAN') }}</label>
+    <input type="text" name="business_iban" id="a-iban" value="{{ settings.business_iban }}"
+           placeholder="CH00 0000 0000 0000 0000 0">
+    <span class="muted">{{ _('Il conto su cui vuoi essere pagato. È la cosa che si dimentica più facilmente e che costa di più.') }}</span>
+
+    <label>{{ _('Telefono') }}</label>
+    <input type="text" name="business_phone" id="a-tel" value="{{ settings.business_phone }}">
+    <label>{{ _('Sito') }}</label>
+    <input type="text" name="business_web" id="a-web" value="{{ settings.business_web }}">
+
+    <div style="border-top:1px solid var(--line);margin:16px 0 12px;padding-top:14px">
+      <label>{{ _('Il tuo nome') }}</label>
+      <input type="text" name="owner_first_name" value="{{ settings.owner_first_name }}">
+      <label>{{ _('Il tuo cognome') }}</label>
+      <input type="text" name="owner_last_name" value="{{ settings.owner_last_name }}">
+      <span class="muted">{{ _('Non vanno sulla fattura: servono solo perché l’app sappia come chiamarti.') }}</span>
+    </div>
+
+    <button class="btn" type="submit">{{ _('Salva e vai avanti') }}</button>
+  </form>
+
+  {# Perche' si sta scrivendo tutto questo si capisce vedendolo finire dove
+     andra' a finire. Un modulo che non mostra il suo effetto si compila come
+     un questionario; questo si compila come una fattura. #}
+  <div class="panel anteprima-carta">
+    <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('In cima alla fattura') }}</p>
+    <div class="carta">
+      <div class="carta-logo">{{ _('logo') }}</div>
+      <div id="v-nome" class="carta-nome">{{ settings.business_name or _('Nome attività') }}</div>
+      <div id="v-uid" class="carta-riga">{{ settings.business_uid }}</div>
+      <div class="carta-vuoto"></div>
+      <div id="v-ind1" class="carta-riga">{{ settings.business_addr1 }}</div>
+      <div id="v-ind2" class="carta-riga">{{ settings.business_addr2 }}</div>
+      <div id="v-tel" class="carta-riga">{{ settings.business_phone }}</div>
+      <div id="v-web" class="carta-riga">{{ settings.business_web }}</div>
+      <div id="v-iban" class="carta-riga carta-iban">{% if settings.business_iban %}IBAN: {{ settings.business_iban }}{% endif %}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const coppie = [['a-nome', 'v-nome'], ['a-uid', 'v-uid'], ['a-ind1', 'v-ind1'],
+                    ['a-ind2', 'v-ind2'], ['a-tel', 'v-tel'], ['a-web', 'v-web']];
+    const vuoto = {{ _('Nome attività') | tojson }};
+    function aggiorna() {
+      for (const [da, a] of coppie) {
+        const campo = document.getElementById(da), vista = document.getElementById(a);
+        if (!campo || !vista) continue;
+        vista.textContent = campo.value || (da === 'a-nome' ? vuoto : '');
+      }
+      const iban = document.getElementById('a-iban'), vi = document.getElementById('v-iban');
+      if (iban && vi) vi.textContent = iban.value ? 'IBAN: ' + iban.value : '';
+    }
+    document.querySelectorAll('.avvio input').forEach(c => c.addEventListener('input', aggiorna));
+    aggiorna();
+  })();
+</script>
+{% endblock %}
