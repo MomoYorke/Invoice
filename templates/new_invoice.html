@@ -30,7 +30,7 @@
   {% endif %}
   <div class="form-grid">
     <div>
-      <label>{{ _('Cliente') }}</label>
+      <label for="client-select">{{ _('Cliente') }}</label>
       <select name="client_id" id="client-select">
         <option value="">{{ _('— scegli cliente —') }}</option>
         {% for c in clients %}
@@ -42,17 +42,17 @@
         <input type="checkbox" id="new-client-toggle" name="nuovo_cliente" value="1" style="width:auto"> {{ _('Nuovo cliente') }}
       </label>
       <div id="new-client-fields" style="display:none">
-        <label>{{ _('Nome e cognome') }}</label>
-        <input type="text" name="nc_nome" placeholder="{{ _('Mario Rossi') }}">
-        <label>{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
-        <input type="text" name="nc_indirizzo1" placeholder="{{ _('Via Roma 1') }}">
-        <label>{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
-        <input type="text" name="nc_indirizzo2" placeholder="8000 Zürich">
+        <label for="c-nc_nome">{{ _('Nome e cognome') }}</label>
+        <input id="c-nc_nome" type="text" name="nc_nome" placeholder="{{ _('Mario Rossi') }}">
+        <label for="c-nc_indirizzo1">{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
+        <input id="c-nc_indirizzo1" type="text" name="nc_indirizzo1" placeholder="{{ _('Via Roma 1') }}">
+        <label for="c-nc_indirizzo2">{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
+        <input id="c-nc_indirizzo2" type="text" name="nc_indirizzo2" placeholder="8000 Zürich">
       </div>
     </div>
     <div>
-      <label>{{ _('Data fattura') }}</label>
-      <input type="date" name="data" value="{{ today }}">
+      <label for="c-data">{{ _('Data fattura') }}</label>
+      <input id="c-data" type="date" name="data" value="{{ today }}">
       {# Il numero lo sa l'app e sta nel titolo: farlo scrivere a mano ogni
          volta e' un campo in piu' per un dato che non cambia mai. Cambiarlo
          resta possibile — serve a chi arriva da un altro programma e vuole

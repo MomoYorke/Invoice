@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <label>{{ _('Oggetto') }}</label>
+  <label for="oggetto">{{ _('Oggetto') }}</label>
   <input type="text" name="subject" id="oggetto" value="{{ msg.subject }}">
   <p class="muted" id="nota-mese" style="font-size:12px;margin:4px 0 0"
      {{ '' if msg.usa_mese else 'hidden' }}>
@@ -75,8 +75,8 @@
     })();
   </script>
 
-  <label>{{ _('Testo — quello che il cliente leggerà, riscrivilo pure') }}</label>
-  <textarea name="body" rows="18" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{ msg.body }}</textarea>
+  <label for="c-body">{{ _('Testo — quello che il cliente leggerà, riscrivilo pure') }}</label>
+  <textarea id="c-body" name="body" rows="18" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{ msg.body }}</textarea>
 
   {% if settings.email_copia_a_me == '1' %}
   <p class="muted" style="font-size:12px;margin:6px 0 0">

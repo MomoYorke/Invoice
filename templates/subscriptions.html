@@ -92,28 +92,28 @@
 <div class="panel mt" style="max-width:640px">
   <h2 style="margin-top:0">{{ _('Aggiungi un abbonamento') }}</h2>
   <form method="post" action="{{ url_for('abbonamenti_nuovo') }}">
-    <label>{{ _('Cliente') }}</label>
-    <select name="client_id">
+    <label for="c-client_id">{{ _('Cliente') }}</label>
+    <select id="c-client_id" name="client_id">
       <option value="">{{ _('— scegli cliente —') }}</option>
       {% for c in clienti %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
     </select>
-    <label>{{ _('Riga della fattura') }}</label>
-    <input type="text" name="descrizione" placeholder="{{ _('Personal training – {mese} {anno}') }}"
+    <label for="c-descrizione">{{ _('Riga della fattura') }}</label>
+    <input id="c-descrizione" type="text" name="descrizione" placeholder="{{ _('Personal training – {mese} {anno}') }}"
            value="{{ _('Personal training – {mese} {anno}') }}">
     <span class="muted" style="font-size:12px">{{ _('Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano il periodo coperto, che parte dal giorno in cui fatturi.') }}</span>
     <div class="form-grid mt">
       <div>
-        <label>{{ _('Importo') }}</label>
-        <input type="text" name="importo" placeholder="110.-">
+        <label for="c-importo">{{ _('Importo') }}</label>
+        <input id="c-importo" type="text" name="importo" placeholder="110.-">
       </div>
       <div>
-        <label>{{ _('Giorno del mese') }}</label>
-        <input type="number" name="giorno" value="1" min="1" max="31">
+        <label for="c-giorno">{{ _('Giorno del mese') }}</label>
+        <input id="c-giorno" type="number" name="giorno" value="1" min="1" max="31">
         <span class="muted" style="font-size:12px">{{ _('Prima di quel giorno non te lo chiedo. Il 31 sui mesi corti diventa l’ultimo giorno che c’è.') }}</span>
       </div>
     </div>
-    <label>{{ _('Primo mese da fatturare') }}</label>
-    <input type="month" name="dal" value="{{ mese_corrente }}">
+    <label for="c-dal">{{ _('Primo mese da fatturare') }}</label>
+    <input id="c-dal" type="month" name="dal" value="{{ mese_corrente }}">
     <span class="muted" style="font-size:12px">{{ _('Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.') }}</span>
     <button class="btn mt">{{ _('Salva abbonamento') }}</button>
   </form>

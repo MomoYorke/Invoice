@@ -16,8 +16,8 @@
 
 <form method="get" class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
   <div>
-    <label>{{ _('Cliente') }}</label>
-    <select name="cliente" onchange="this.form.submit()">
+    <label for="c-cliente">{{ _('Cliente') }}</label>
+    <select id="c-cliente" name="cliente" onchange="this.form.submit()">
       <option value="">{{ _('tutti') }}</option>
       {% for c in clienti %}
       <option value="{{ c }}" {{ 'selected' if c == cliente }}>{{ c }}</option>
@@ -25,8 +25,8 @@
     </select>
   </div>
   <div>
-    <label>{{ _('Anno') }}</label>
-    <select name="anno" onchange="this.form.submit()">
+    <label for="c-anno">{{ _('Anno') }}</label>
+    <select id="c-anno" name="anno" onchange="this.form.submit()">
       <option value="">{{ _('tutti') }}</option>
       {% for y in anni %}
       <option value="{{ y }}" {{ 'selected' if y == anno }}>{{ y }}</option>

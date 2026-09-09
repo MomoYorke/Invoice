@@ -141,6 +141,12 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .badge.app { background: #cffafe; color: #155e75; }
 /* ---------- form ---------- */
 label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; }
+/* Un titolo che introduce un gruppo di campi, non un campo solo. Si vede come
+   un'etichetta perche' e' quello che sembra; non e' un <label> perche' non ha
+   un campo da nominare, e un'etichetta che non nomina niente e' la cosa che
+   manda a vuoto chi legge la pagina con la voce invece che con gli occhi. */
+.etichetta { display: block; font-size: 12.5px; font-weight: 600;
+  color: var(--muted); margin: 12px 0 4px; }
 input[type=text], input[type=date], input[type=number], select, textarea {
   width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px;
   font-size: 14.5px; background: #fff; color: var(--ink); font-family: inherit;

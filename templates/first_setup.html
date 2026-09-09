@@ -8,39 +8,39 @@
   <form method="post" action="{{ url_for('impostazioni') }}" class="panel">
     <input type="hidden" name="torna" value="benvenuto">
 
-    <label>{{ _('Nome attività') }}</label>
+    <label for="a-nome">{{ _('Nome attività') }}</label>
     <input type="text" name="business_name" id="a-nome" value="{{ settings.business_name }}"
            placeholder="{{ _('Mario Rossi Personal Training') }}" autofocus>
     <span class="muted">{{ _('Il nome con cui fatturi. Va sulla prima riga e sul bollettino QR.') }}</span>
 
-    <label>{{ _('UID / IDI') }}</label>
+    <label for="a-uid">{{ _('UID / IDI') }}</label>
     <input type="text" name="business_uid" id="a-uid" value="{{ settings.business_uid }}"
            placeholder="CHE-123.456.789">
     <span class="muted">{{ _('Il numero d’impresa svizzero, se ce l’hai. Se non ce l’hai, lascia vuoto: la riga sparisce.') }}</span>
 
-    <label>{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
+    <label for="a-ind1">{{ _('Indirizzo — riga 1 (via e numero)') }}</label>
     <input type="text" name="business_addr1" id="a-ind1" value="{{ settings.business_addr1 }}"
            placeholder="{{ _('Via Roma 1') }}">
-    <label>{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
+    <label for="a-ind2">{{ _('Indirizzo — riga 2 (CAP e città)') }}</label>
     <input type="text" name="business_addr2" id="a-ind2" value="{{ settings.business_addr2 }}"
            placeholder="8000 Zürich">
     <span class="muted">{{ _('Via e numero da una parte, CAP e città dall’altra: il bollettino QR li vuole separati e non li sa indovinare.') }}</span>
 
-    <label>{{ _('IBAN') }}</label>
+    <label for="a-iban">{{ _('IBAN') }}</label>
     <input type="text" name="business_iban" id="a-iban" value="{{ settings.business_iban }}"
            placeholder="CH00 0000 0000 0000 0000 0">
     <span class="muted">{{ _('Il conto su cui vuoi essere pagato. È la cosa che si dimentica più facilmente e che costa di più.') }}</span>
 
-    <label>{{ _('Telefono') }}</label>
+    <label for="a-tel">{{ _('Telefono') }}</label>
     <input type="text" name="business_phone" id="a-tel" value="{{ settings.business_phone }}">
-    <label>{{ _('Sito') }}</label>
+    <label for="a-web">{{ _('Sito') }}</label>
     <input type="text" name="business_web" id="a-web" value="{{ settings.business_web }}">
 
     <div style="border-top:1px solid var(--line);margin:16px 0 12px;padding-top:14px">
-      <label>{{ _('Il tuo nome') }}</label>
-      <input type="text" name="owner_first_name" value="{{ settings.owner_first_name }}">
-      <label>{{ _('Il tuo cognome') }}</label>
-      <input type="text" name="owner_last_name" value="{{ settings.owner_last_name }}">
+      <label for="c-owner_first_name">{{ _('Il tuo nome') }}</label>
+      <input id="c-owner_first_name" type="text" name="owner_first_name" value="{{ settings.owner_first_name }}">
+      <label for="c-owner_last_name">{{ _('Il tuo cognome') }}</label>
+      <input id="c-owner_last_name" type="text" name="owner_last_name" value="{{ settings.owner_last_name }}">
       <span class="muted">{{ _('Non vanno sulla fattura: servono solo perché l’app sappia come chiamarti.') }}</span>
     </div>
 

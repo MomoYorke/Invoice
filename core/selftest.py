@@ -113,6 +113,7 @@ def run_all():
     _test_primi_passi(r)
     _test_icone(r)
     _test_menu(r)
+    _test_etichette(r)
     _test_finestra_stretta(r)
     _test_calendario(r)
     _test_storico_al_buio(r)
@@ -1663,6 +1664,49 @@ def _test_menu(r):
            {'cestino', 'verifica'} <= {v[0] for v in M.voci()}, True)
     _check(r, 'Menu', 'la barra tranquilla ha dodici voci, tre meno di prima',
            len(in_barra(0)), 12)
+
+
+def _etichette_scollegate():
+    """[(pagina, quante)] per le etichette che non nominano nessun campo.
+
+    Un <label> vale qualcosa solo se e' legato al suo campo: o lo avvolge, o
+    ha un «for» che punta al suo id. Senza, a schermo si vede lo stesso — ed
+    e' per questo che nessuno se ne accorge — ma cliccarlo non porta il cursore
+    nel campo, e chi legge la pagina con la voce invece che con gli occhi si
+    trova davanti a caselle senza nome.
+    """
+    import glob
+    etichetta = re.compile(r'<label(?![^>]*\bfor=)([^>]*)>((?:(?!</label>).)*)</label>', re.S)
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fuori = []
+    for percorso in sorted(glob.glob(os.path.join(base, 'templates', '*.html'))):
+        with io.open(percorso, encoding='utf-8') as f:
+            testo = f.read()
+        quante = sum(1 for m in etichetta.finditer(testo)
+                     if not re.search(r'<(input|select|textarea)', m.group(2)))
+        if quante:
+            fuori.append((os.path.basename(percorso), quante))
+    return fuori
+
+
+def _test_etichette(r):
+    """Le etichette dei moduli devono nominare davvero il loro campo."""
+    scollegate = dict(_etichette_scollegate())
+
+    # Le due pagine da cui si passa per forza: quella che si apre il primo
+    # giorno e quella che si torna ad aprire per anni. Qui zero vuol dire zero.
+    for pagina in ('first_setup.html', 'settings.html', 'new_invoice.html',
+                   'subscriptions.html', 'sessions.html'):
+        _check(r, 'Etichette', 'in %s ogni etichetta nomina il suo campo' % pagina,
+               scollegate.get(pagina, 0), 0)
+
+    # Le altre pagine hanno ancora 36 etichette scollegate: quasi tutte stanno
+    # dentro un ciclo, dove un id fisso si ripeterebbe per ogni riga e due
+    # campi con lo stesso id sono peggio di nessun id. Vanno sistemate una per
+    # una. Questo numero puo' solo SCENDERE: se sale, qualcuno ha scritto una
+    # pagina nuova col difetto vecchio, ed e' il momento di accorgersene.
+    _check(r, 'Etichette', 'le etichette ancora scollegate non aumentano',
+           sum(scollegate.values()) <= 36, True)
 
 
 def _test_finestra_stretta(r):
