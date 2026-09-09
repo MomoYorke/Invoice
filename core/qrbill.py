@@ -14,9 +14,11 @@ IL RIFERIMENTO. Ce ne sono tre tipi, e non si sceglie: lo decide l'IBAN.
     QUALUNQUE IBAN.
   - NON: nessun riferimento. Il pagamento arriva, ma non si sa di quale fattura
     e' — che e' esattamente il problema che la QR-fattura serve a togliere.
-L'IBAN in uso qui e' CH58 0079 1123 0008 8901 2: istituto 80800, quindi non e'
-un QR-IBAN. Si usa SCOR. Se un giorno la banca dara' un QR-IBAN, cambia solo la
-riga che sceglie il tipo: tutto il resto e' gia' pronto.
+Quest'app stampa sempre SCOR: va su qualunque IBAN, senza chiedere niente alla
+banca. Resta fuori un caso, ed e' bene saperlo: chi ha un QR-IBAN per lo
+standard DEVE usare QRR, e QRR qui non si compone. Il QR-IBAN l'app lo sa
+riconoscere (e_qr_iban, qui sotto) ma non lo chiede a nessuno: finche' e' cosi',
+un utente con QR-IBAN stamperebbe bollettini che la sua banca rifiuta.
 
 L'INDIRIZZO. Fino al 21.11.2025 si poteva scrivere l'indirizzo «combinato» (due
 righe libere, tipo K). Da allora e' ammesso solo quello STRUTTURATO (tipo S),
@@ -119,9 +121,9 @@ def indirizzo_strutturato(riga1, riga2, paese='CH'):
     «Kilchberg, Zurich» senza CAP. Un indirizzo indovinato finisce stampato su
     un documento di pagamento, e li' non ci si puo' permettere di indovinare.
 
-    Il CAP sta prima della localita' quasi sempre, ma non sempre: qui dentro
-    l'indirizzo di casa e' scritto «Musterstadt, 8000». Si prova nei due
-    versi, e la cifra a quattro posti dice da che parte sta.
+    Il CAP sta prima della localita' quasi sempre, ma non sempre: c'e' chi lo
+    scrive dopo, «Musterstadt, 8000». Si prova nei due versi, e la cifra a
+    quattro posti dice da che parte sta.
     """
     riga1 = ' '.join((riga1 or '').split())
     riga2 = ' '.join((riga2 or '').split())

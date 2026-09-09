@@ -2517,6 +2517,7 @@ def _test_banca(r):
     _test_spegnimento(r)
     _test_trasloco(r)
     _test_backup_illeggibile(r)
+    _test_niente_dati_veri(r)
     import os
     import sqlite3
     import tempfile
@@ -3870,7 +3871,7 @@ def _test_camt_vero(r):
     - il nome di chi paga non e' «Dbtr/Nm» ma «Dbtr/Pty/Nm». Fra il camt.053
       .001.04 e il .001.08 la banca ha infilato di mezzo un «Pty», e il codice
       cercava un figlio DIRETTO.
-    - «AddtlNtryInf», la riga che scrive la banca («Accredito Erika van
+    - «AddtlNtryInf», la riga che scrive la banca («Accredito Erika von
       Arx»), e' figlia della VOCE, non del dettaglio: si cercava dentro
       TxDtls, dove non e' mai stata.
 
@@ -4465,3 +4466,139 @@ def _test_nomi_accentati(r):
     # si sdoppia sulla busta.
     _check(r, 'Nomi con accenti', "anche l'indirizzo esce in una forma sola",
            _senza_scoppiare(I.pettinato, '8050 Zu\u0308rich'), '8050 Z\u00fcrich')
+
+
+# ---------------------------------------------------------------------------
+# L'ANAGRAFE DEI PERSONAGGI DELLE PROVE
+#
+# Il codice di quest'app sta su un repository pubblico, e la storia di git non
+# dimentica niente. Un nome vero copiato qui dentro esce dal Mac e non rientra
+# piu'. E succede sempre per lo stesso motivo, che e' pure un buon motivo: il
+# caso da provare veniva da un cliente vero, e il modo piu' rapido di provarlo
+# era incollarlo com'era.
+#
+# Non e' una sbadataggine da poco. Nome, indirizzo e conto dei clienti sono
+# dati di terzi: pubblicarli e' un problema legale (LPD in Svizzera, GDPR
+# nell'UE), non un refuso. E il proprio indirizzo di casa, messo li' come
+# esempio, finisce sotto gli occhi di chiunque scarichi l'app.
+#
+# Percio' l'anagrafe sta scritta qui, per esteso. Il controllo legge i
+# sorgenti, tira fuori i nomi e gli indirizzi dai punti dove stanno i dati, e
+# pretende che siano tutti in queste liste. Per aggiungere un personaggio
+# bisogna scriverlo qui: un gesto piccolo, che pero' obbliga a guardarlo.
+GENTE_FINTA = {
+    'Anna', 'Anna Rossi', 'Bruno Keller', 'Caio', 'Céline Favre', 'Elena',
+    'Erika Von Arx', 'Giulia', 'Ignoto', 'Ivan', 'Ivan + Elena', 'Ivana',
+    'Jonas', 'Luca', 'Marco', 'Nina', 'Nina + Pierre', 'Petra Müller',
+    'Pierre', 'Tizia', 'Vera Buergi',
+    'client', 'Kunde',            # non persone: «cliente» tradotto
+}
+CONTI_FINTI = {
+    'CH5800791123000889012',      # IBAN normale d'esempio
+    'CH4431999123000889012',      # QR-IBAN d'esempio (istituto 31999)
+    'CH5630000123000889012',      # QR-IBAN al bordo di sotto (istituto 30000)
+    'CH9300762011623852957',      # l'IBAN svizzero d'esempio piu' citato
+    'CH5604835012345678009',      # quello di Anna Rossi, sulle fatture finte
+    'CH0000000000000000000',      # volutamente falso: serve a farsi rifiutare
+}
+CASE_FINTE = {
+    'Bahnhofstrasse 1', 'Bahnhofstrasse 4', 'Musterstrasse 1', 'Musterstrasse 45',
+    'Musterweg 3', 'Musterweg 8a', 'Musterweg 9', 'Musterweg 227',
+}
+LUOGHI_FINTI = {
+    '6300 Zug', '6900 Lugano', '8000 Cittanova', '8000 Musterstadt',
+    '8000 Zürich', '8001 Zürich', '8802 Kilchberg',
+}
+
+# ANAGRAFE:INIZIO - quello che sta fra questo segno e ANAGRAFE:FINE non
+# viene setacciato: sono gli schemi stessi, e uno schema somiglia sempre a
+# cio' che cerca. Senza questi due segni la guardia pesca se stessa.
+# I punti del codice dove ci sta un nome di persona: i campi del camt, i
+# dizionari delle prove, le righe infilate nel database finto.
+_DOVE_STANNO_I_NOMI = [
+    r'<Nm>([^<]+)</Nm>',
+    r"'nome': '([^']+)'",
+    r"'cliente': '([^']+)'",
+    r"debitore_nome='([^']+)'",
+    r"creditore_nome='([^']+)'",
+    r"client_name[^)]*VALUES\([^)]*?'([A-ZÀ-Þ][^']*)'",
+    r"INSERT INTO clients\([^)]*\)\s*.?\s*.?\s*VALUES\(\d+,\s*'([^']+)'",
+]
+_UN_IBAN = r'\bCH\d{2}[\d ]{15,25}\b'
+_UNA_VIA = r'\b([A-ZÄÖÜ][\wäöüéèà-]{3,}(?:strasse|weg|gasse|platz))\s+(\d+[a-z]?)\b'
+_UN_LUOGO = r'(?:CH-)?\b(\d{4})\s+([A-ZÄÖÜÉ][\wäöüéèàç-]{2,})'
+# Moltissime vie svizzere non finiscono in -strasse, -weg o -platz: sono un
+# nome e basta, e restano vie. Fuori da un indirizzo «parola + numero» e' troppo
+# comune per dire qualcosa (basta «Fattura 87»); ATTACCATA A UN CAP, no.
+_UNA_VIA_COL_CAP = (r'\b([A-ZÄÖÜÉ][\wäöüéèàç-]{2,}\s+\d+\s*[a-z]?)'
+                    r'[,\s]+(?:CH-)?\d{4}\s+[A-ZÄÖÜÉ]')
+# ANAGRAFE:FINE
+
+
+def _tutto_il_codice():
+    """Il testo di ogni file che finisce nel pacchetto, nome per nome."""
+    import glob
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fuori = {}
+    for schema in ('*.py', os.path.join('core', '*.py'),
+                   os.path.join('templates', '*.html')):
+        for perc in sorted(glob.glob(os.path.join(base, schema))):
+            with io.open(perc, encoding='utf-8') as f:
+                fuori[os.path.relpath(perc, base)] = f.read()
+    return fuori
+
+
+def _test_niente_dati_veri(r):
+    """Nel codice che si pubblica non abita nessuno di vero.
+
+    Trovato il 09.09.2026 guardando il pacchetto con gli occhi di chi lo compra:
+    dentro il repository pubblico c'erano l'IBAN di chi ha scritto l'app, il suo
+    indirizzo di casa — messo pure come esempio nel testo che l'app mostra
+    all'utente, in tre lingue — e nome e indirizzo di casa di una cliente, piu'
+    i nomi di altri cinque. Nessuno li aveva messi li' apposta: erano i casi
+    veri da cui il codice era nato.
+
+    Il controllo non sa cosa sia «vero»: sa cosa e' DICHIARATO. Tutto quello
+    che somiglia a una persona, a un conto o a un indirizzo dev'essere in una
+    delle liste qui sopra. Chi incolla un dato vero non lo trova dichiarato, e
+    la prova diventa rossa prima che il dato esca dal Mac.
+
+    Quello che questo controllo NON vede: un nome di battesimo lasciato cadere
+    dentro un commento in prosa. Li' non c'e' una forma da riconoscere, e
+    inventarsene una vorrebbe dire riempire di rosso le prove di chi compra.
+    """
+    import re
+    codice = _tutto_il_codice()
+
+    nomi, conti, vie, luoghi = set(), set(), set(), set()
+    for testo in codice.values():
+        if '# ANAGRAFE:INIZIO' in testo:
+            testo = (testo[:testo.index('# ANAGRAFE:INIZIO')]
+                     + testo[testo.index('# ANAGRAFE:FINE'):])
+        for schema in _DOVE_STANNO_I_NOMI:
+            nomi.update(m.group(1).strip() for m in re.finditer(schema, testo))
+        for m in re.finditer(_UN_IBAN, testo):
+            senza_spazi = m.group(0).replace(' ', '')
+            if len(senza_spazi) == 21:
+                conti.add(senza_spazi)
+        vie.update('%s %s' % m.groups() for m in re.finditer(_UNA_VIA, testo))
+        vie.update(' '.join(m.group(1).split())
+                   for m in re.finditer(_UNA_VIA_COL_CAP, testo))
+        luoghi.update('%s %s' % m.groups() for m in re.finditer(_UN_LUOGO, testo))
+
+    _check(r, 'Dati veri', "nel codice non c'e' nessuno fuori anagrafe",
+           sorted(nomi - GENTE_FINTA), [])
+    _check(r, 'Dati veri', "nessun conto oltre quelli d'esempio",
+           sorted(conti - CONTI_FINTI), [])
+    _check(r, 'Dati veri', 'nessuna via che non sia inventata',
+           sorted(vie - CASE_FINTE), [])
+    _check(r, 'Dati veri', "nessun CAP con localita' fuori elenco",
+           sorted(luoghi - LUOGHI_FINTI), [])
+    # un setaccio che non pesca niente sarebbe verde per sbaglio: qui si
+    # controlla che stia davvero guardando dentro qualcosa
+    _check(r, 'Dati veri', 'e il setaccio guarda davvero (%d nomi, %d conti, %d indirizzi)'
+           % (len(nomi), len(conti), len(vie) + len(luoghi)),
+           (len(codice) >= 50, len(nomi) >= 20, len(conti) >= 5,
+            len(vie) >= 6, len(luoghi) >= 5),
+           (True, True, True, True, True))
+
