@@ -1139,7 +1139,7 @@ def _db_fatture_finto(righe):
         'CREATE TABLE invoices(id INTEGER PRIMARY KEY, number INTEGER, client_name TEXT,'
         ' date TEXT, total_cents INTEGER, status TEXT, paid_at TEXT, deleted_at TEXT,'
         ' year INTEGER, sent_at TEXT, source TEXT, client_id INTEGER,'
-        ' ricorrente_id INTEGER, periodo TEXT DEFAULT "");'
+        ' ricorrente_id INTEGER, periodo TEXT DEFAULT "", invio_saltato TEXT);'
         'CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT);'
         # senza queste due il «Da fare» inciampava sugli abbonamenti e tirava
         # avanti in silenzio: sei prove passavano con quel pezzo mai eseguito
@@ -1152,10 +1152,12 @@ def _db_fatture_finto(righe):
         ' quando TEXT, PRIMARY KEY (ricorrente_id, periodo));')
     for i, r in enumerate(righe, 1):
         con.execute('INSERT INTO invoices(id, number, client_name, date, total_cents, status,'
-                    ' paid_at, deleted_at, year, sent_at, source) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                    ' paid_at, deleted_at, year, sent_at, source, invio_saltato)'
+                    ' VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                     (i, i, r.get('cliente', 'X'), r['data'], r.get('cents', 10000),
                      r.get('stato', 'emessa'), r.get('paid_at'), r.get('deleted_at'),
-                     int(r['data'][:4]), r.get('sent_at'), r.get('source', 'app')))
+                     int(r['data'][:4]), r.get('sent_at'), r.get('source', 'app'),
+                     r.get('invio_saltato')))
     return con
 
 
@@ -1855,6 +1857,48 @@ def _test_registro_email(r):
     _check(r, 'Email inviate', 'copia nascosta spenta: non si scrive niente', i3['ccn'], '')
 
     _test_cruscotto(r)
+    _test_invio_saltato(r)
+
+
+def _test_invio_saltato(r):
+    """«Questa non va spedita»: una fattura che esiste ma non parte.
+
+    Non tutte le fatture sono fatte per essere mandate. Una emessa perche' il
+    cliente aveva pagato di piu' serve alla contabilita', non a lui. Senza un
+    modo di dirlo, l'app ricorda per sempre di spedire una cosa che hai deciso
+    di non spedire — e un promemoria che si sbaglia insegna a non guardare i
+    promemoria, il che rovina anche quelli giusti.
+    """
+    from . import overview as C
+    import datetime
+    oggi = datetime.date.today()
+    ieri = (oggi - datetime.timedelta(days=1)).isoformat()
+
+    def da_mandare(righe):
+        return C.stato_fatture(_db_fatture_finto(righe), oggi.year)['da_mandare']
+
+    _check(r, 'Non va spedita', 'una fattura fatta qui e mai spedita e\' da fare',
+           da_mandare([{'data': ieri}]), 1)
+    _check(r, 'Non va spedita', 'segnata «non va spedita», smette di esserlo',
+           da_mandare([{'data': ieri, 'invio_saltato': '2026-09-09 10:00'}]), 0)
+    _check(r, 'Non va spedita', 'e il ripensamento la rimette fra le cose da fare',
+           da_mandare([{'data': ieri, 'invio_saltato': None}]), 1)
+    _check(r, 'Non va spedita', 'una colonna vuota vale come non decisa',
+           da_mandare([{'data': ieri, 'invio_saltato': ''}]), 1)
+    _check(r, 'Non va spedita', 'una gia\' spedita non torna da fare per questo',
+           da_mandare([{'data': ieri, 'sent_at': ieri,
+                        'invio_saltato': '2026-09-09 10:00'}]), 0)
+    _check(r, 'Non va spedita', 'e una importata non e\' mai stata da fare',
+           da_mandare([{'data': ieri, 'source': 'import'}]), 0)
+
+    # Il conto della Dashboard e il riquadro «Fatte e non ancora spedite» sono
+    # la stessa cosa: se il primo scende a zero, il secondo deve sparire.
+    voci = C.da_fare(_db_fatture_finto(
+        [{'data': ieri, 'stato': 'pagata', 'paid_at': ieri,
+          'invio_saltato': '2026-09-09 10:00'}]),
+        {'banca_ultimo_estratto': oggi.isoformat()}, None)
+    _check(r, 'Non va spedita', 'e il riquadro della Dashboard sparisce con lei',
+           [v['chiave'] for v in voci if v['chiave'] == 'spedire'], [])
 
 
 def _test_cruscotto(r):

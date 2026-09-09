@@ -394,6 +394,16 @@ def _migrate(con):
         # trovare la fattura da cui sono partiti. Vuoto = fattura uscita senza
         # bollettino, e allora nessun pagamento potra' mai citarlo.
         con.execute('ALTER TABLE invoices ADD COLUMN qr_ref TEXT DEFAULT ""')
+    if 'invio_saltato' not in cols:
+        # «questa non va spedita», e quando l'hai deciso. Non tutte le fatture
+        # sono fatte per essere mandate: una emessa perche' il cliente aveva
+        # pagato di piu' esiste per la contabilita', e al cliente non serve.
+        # Senza questa colonna l'app continuerebbe a ricordarti di spedire una
+        # cosa che hai deciso di non spedire — e un promemoria che si sbaglia
+        # e' peggio di nessun promemoria: insegna a non guardare i promemoria.
+        # E' una data e non un si'/no, come «sent_at» e «paid_at»: cosi' si sa
+        # anche QUANDO l'hai deciso, e si torna indietro svuotandola.
+        con.execute('ALTER TABLE invoices ADD COLUMN invio_saltato TEXT')
     if 'paid_at' not in cols:
         # quando i soldi sono arrivati davvero in banca. Diverso da status:
         # 'pagata' e' una spunta messa a mano, questa e' una data che viene

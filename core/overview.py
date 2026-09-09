@@ -70,7 +70,10 @@ def stato_fatture(con, anno):
         'inviate': conta(' AND sent_at IS NOT NULL'),
         # solo quelle fatte con l'app: le storiche sono documenti Word vecchi,
         # non si spediscono da qui e contarle come "da mandare" sarebbe falso
-        'da_mandare': conta(" AND sent_at IS NULL AND source='app'"),
+        # ...e nemmeno quelle che hai deciso di non spedire: il conto delle
+        # cose da fare deve poter arrivare a zero, se no smetti di leggerlo
+        'da_mandare': conta(" AND sent_at IS NULL AND source='app'"
+                            ' AND (invio_saltato IS NULL OR invio_saltato = "")'),
     }
 
 

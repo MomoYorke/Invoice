@@ -41,7 +41,11 @@
     {% elif has_src %}
       <a class="btn small secondary" href="{{ url_for('fattura_file', inv_id=inv.id, kind='src') }}" target="_blank">{{ _('Apri file originale (storico)') }}</a>
     {% endif %}
+    {% if not inv.sent_at and inv.source == 'app' and not inv.invio_saltato %}
     <a class="btn small" href="{{ url_for('fattura_email', inv_id=inv.id) }}">{{ icona('email', 'ic-mini') }}{{ _('Manda per email') }}</a>
+    {% else %}
+    <a class="btn small secondary" href="{{ url_for('fattura_email', inv_id=inv.id) }}">{{ icona('email', 'ic-mini') }}{{ _('Manda per email') }}</a>
+    {% endif %}
     <form method="post" action="{{ url_for('toggle_stato', inv_id=inv.id) }}" style="display:inline">
       <button class="btn small {{ 'secondary' if inv.status == 'pagata' }}">
         {% if inv.status == 'pagata' %}{{ _('Segna DA INCASSARE') }}
@@ -58,6 +62,17 @@
   {% if inv.sent_at %}
   <p class="muted" style="font-size:12px;margin-top:14px">
     {{ icona('email', 'ic-mini') }} {{ _('Inviata per email il {data}').format(data=inv.sent_at[:10] | dateit) }}{% if inv.sent_at|length > 10 %}{{ _(' alle {ora}').format(ora=inv.sent_at[11:16]) }}{% endif %}.</p>
+  {# Non tutte le fatture sono fatte per essere mandate. Una emessa perche' il
+     cliente aveva pagato di piu' serve alla contabilita', non a lui. #}
+  {% elif inv.source == 'app' %}
+  <p class="muted" style="font-size:12px;margin-top:14px">
+    {% if inv.invio_saltato %}{{ _('Segnata come da non spedire il {data}.').format(data=inv.invio_saltato[:10] | dateit) }}
+    {%- else %}{{ _('Non ancora spedita.') }}{% endif %}
+    <form method="post" action="{{ url_for('fattura_invio_saltato', inv_id=inv.id) }}" style="display:inline">
+      <button class="link-inline">{{ _('Rimettila fra quelle da spedire') if inv.invio_saltato
+                                      else _('Questa non va spedita') }}</button>
+    </form>
+  </p>
   {% endif %}
   <p class="muted" style="font-size:12px;margin-top:14px">
     {{ _('Origine:') }} {{ _('creata con questa app') if inv.source == 'app'

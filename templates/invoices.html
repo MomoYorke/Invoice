@@ -49,6 +49,7 @@
        fatture nate qui dentro, la cosa che invece c'e' da fare. #}
     <td class="muted" style="font-size:12px;white-space:nowrap">
       {% if r.sent_at %}<span title="{{ r.sent_at[:10] | dateit }}{% if r.sent_at|length > 10 %} · {{ r.sent_at[11:16] }}{% endif %}">{{ r.sent_at[:10] | dateit }}</span>
+      {%- elif r.invio_saltato %}<span title="{{ _('Segnata come da non spedire il {data}.').format(data=r.invio_saltato[:10] | dateit) }}">{{ _('non va spedita') }}</span>
       {%- elif r.source == 'app' %}<a class="da-spedire" href="{{ url_for('fattura_email', inv_id=r.id) }}">{{ _('da spedire') }}</a>
       {%- else %}—{% endif %}
     </td>

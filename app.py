@@ -609,7 +609,8 @@ def fatture():
     if invio == 'inviate':
         sql += ' AND sent_at IS NOT NULL'
     elif invio == 'da-mandare':
-        sql += " AND sent_at IS NULL AND source='app'"
+        sql += (" AND sent_at IS NULL AND source='app'"
+                ' AND (invio_saltato IS NULL OR invio_saltato = "")')
     sql += ' ORDER BY COALESCE(number, 0) DESC, date DESC'
     rows = con.execute(sql, args).fetchall()
 
@@ -643,6 +644,33 @@ def fattura(inv_id):
     con.close()
     has_src = bool(inv['source_file']) and os.path.exists(os.path.join(src_root, inv['source_file']))
     return render_template('invoice.html', inv=inv, items=items, has_src=has_src)
+
+
+@app.route('/fattura/<int:inv_id>/invio-saltato', methods=['POST'])
+def fattura_invio_saltato(inv_id):
+    """«Questa non va spedita», e il ripensamento.
+
+    Non cambia niente della fattura: cambia solo se l'app deve continuare a
+    ricordartela. Reversibile, come «Questo mese no» degli abbonamenti — una
+    decisione che non si puo' disfare non e' una decisione, e' una trappola.
+    """
+    con = get_con()
+    inv = con.execute('SELECT number, invio_saltato FROM invoices WHERE id=?',
+                      (inv_id,)).fetchone()
+    if not inv:
+        con.close()
+        abort(404)
+    saltata = bool((inv['invio_saltato'] or '').strip())
+    con.execute('UPDATE invoices SET invio_saltato=? WHERE id=?',
+                (None if saltata else db.now_iso(), inv_id))
+    con.commit()
+    con.close()
+    if saltata:
+        avvisa('Torna fra quelle da spedire.', 'ok')
+    else:
+        avvisa('Non te la ricordo più: la #{n} resta qui, ma non è più fra le cose '
+               'da fare. Puoi ripensarci quando vuoi.', 'ok', n=inv['number'])
+    return redirect(request.referrer or url_for('fattura', inv_id=inv_id))
 
 
 @app.route('/fattura/<int:inv_id>/stato', methods=['POST'])
