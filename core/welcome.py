@@ -39,6 +39,15 @@ def passi(con, settings):
          'perche': "Senza IBAN la fattura esce senza il conto su cui incassare: "
                    'è la cosa che si dimentica più facilmente e che costa di più.',
          'dove': 'primi_dati', 'bottone': "Scrivi l'IBAN"},
+        {'chiave': 'qr', 'obbligatorio': False,
+         'titolo': 'Il bollettino QR',
+         'fatto': (settings.get('qr_fattura') or '') == '1',
+         'perche': 'Il foglio svizzero col codice QR, in coda alla fattura: chi paga '
+                   'lo inquadra e non digita più niente. È anche quello che fa '
+                   'riconoscere da soli i versamenti nella pagina Banca. La prima '
+                   "fattura che esce, inquadrala con l'app della tua banca prima di "
+                   'mandarla.',
+         'dove': 'impostazioni', 'ancora': 'qr', 'bottone': 'Accendi il bollettino QR'},
         {'chiave': 'logo', 'obbligatorio': False,
          'titolo': 'Il tuo logo',
          'fatto': branding.personalizzato(),

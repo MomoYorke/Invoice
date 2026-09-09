@@ -824,6 +824,11 @@ def _test_lingua(r):
     _check(r, 'Lingua', 'ogni frase chiesta dal codice sta nei dizionari',
            _frasi_codice_senza_traduzione(L), [])
 
+    # ...e le frasi dei primi passi, che non sono ne' l'una ne' l'altra cosa:
+    # stanno in welcome.py come dati e le traduce la pagina che le mostra.
+    _check(r, 'Lingua', 'ogni frase dei primi passi sta nei dizionari',
+           _frasi_dei_primi_passi_senza_traduzione(L), [])
+
     # Certi moduli non sanno che lingua e' scelta e restituiscono la frase
     # come chiave, da tradurre a chi la mostra. Quelle chiavi non compaiono
     # dentro una chiamata, quindi il controllo qui sopra non le vede: si
@@ -960,6 +965,42 @@ def _frasi_codice_senza_traduzione(L):
                         and arg.value not in ('en', 'de', 'it'):
                     fuori.append((os.path.basename(p), arg.value))
                 break
+    return sorted(set(fuori))
+
+
+def _frasi_dei_primi_passi_senza_traduzione(L):
+    """[(passo, campo, lingua)] delle frasi dei primi passi mai tradotte.
+
+    Le due guardie qui sopra hanno un punto cieco in comune. Le frasi dei
+    primi passi non stanno in una pagina — stanno in welcome.py come dati —
+    e non passano da avvisa() ne' da t(): a tradurle e' la pagina, con
+    {{ _(p.titolo) }}, a tempo di esecuzione. Cosi' una frase nuova esce in
+    italiano dentro un'app in tedesco, sulla prima pagina che un utente nuovo
+    vede, e nessun collaudo dice niente.
+
+    E' successo davvero, aggiungendo il passo del bollettino QR: tre frasi
+    nuove, sei traduzioni mancanti, e i controlli tutti verdi.
+    """
+    import sqlite3
+    from . import welcome as B
+    from .db import DEFAULT_SETTINGS
+
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(
+        'CREATE TABLE clients(id INTEGER PRIMARY KEY, archived INTEGER DEFAULT 0);'
+        'CREATE TABLE invoices(id INTEGER PRIMARY KEY, deleted_at TEXT);'
+        'CREATE TABLE crediti_clienti(chiave TEXT PRIMARY KEY);')
+    try:
+        passi = B.passi(con, dict(DEFAULT_SETTINGS))
+    finally:
+        con.close()
+    fuori = []
+    for passo in passi:
+        for campo in ('titolo', 'perche', 'bottone'):
+            frase = passo.get(campo)
+            if frase and any(frase not in L.TESTI[cod] for cod in ('en', 'de')):
+                fuori.append((passo['chiave'], campo))
     return sorted(set(fuori))
 
 
@@ -1482,6 +1523,20 @@ def _test_primi_passi(r):
            B.manca_l_essenziale(passi), False)
     _check(r, 'Primi passi', 'ma resta ancora qualcosa da fare',
            len(B.da_fare(passi)) > 0, True)
+
+    # Le due righe qui sopra dicono che in quel momento le due domande danno
+    # risposte OPPOSTE: «puo' gia' fare una fattura?» si', «ha finito tutti i
+    # passi?» no. Quindi chi saluta l'utente dopo il salvataggio deve fare la
+    # prima, non la seconda — se no il messaggio che dice «sei pronto» non
+    # compare mai, perche' fra i passi ce n'e' uno che si chiama «La prima
+    # fattura» e prima di farla non puo' essere fatto.
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        sorgente = f.read()
+    saluto = re.search(r'if torna in RITORNI:(.{0,400}?)avvisa\(', sorgente, re.S)
+    _check(r, 'Primi passi', 'dopo il salvataggio si chiede se puoi fatturare, non se hai finito',
+           ('manca_l_essenziale' in saluto.group(1),
+            'da_fare' in saluto.group(1)), (True, False))
 
     # le cose non essenziali si spuntano da sole quando succedono
     con.execute('INSERT INTO clients(id, archived) VALUES(1, 0)')

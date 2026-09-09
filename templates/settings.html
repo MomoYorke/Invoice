@@ -278,7 +278,7 @@
 </div>
 
 <div class="panel mt" style="max-width:760px">
-  <h2 style="margin-top:0">{{ _('QR-fattura') }}</h2>
+  <h2 id="qr" style="margin-top:0;scroll-margin-top:20px">{{ _('QR-fattura') }}</h2>
   <p class="sub">{{ _('Il bollettino svizzero con il codice QR, su un foglio in coda alla fattura. Chi paga lo inquadra con l’app della sua banca e non digita più niente: né importo, né IBAN, né causale. Sul codice va un riferimento tuo, e quando il versamento torna indietro l’app riconosce la fattura senza doverla indovinare.') }}</p>
   <p class="muted" style="font-size:12.5px">{{ _('Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.') }}</p>
   {% if qr_mio %}

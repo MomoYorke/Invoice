@@ -1973,7 +1973,11 @@ def impostazioni():
         # Impostazioni vorrebbe dire fargli cercare da solo la strada indietro,
         # che e' proprio la cosa da cui era stato tolto.
         if torna in RITORNI:
-            manca = ben.da_fare(ben.passi(con, db.get_settings(con)))
+            # La domanda e' «puo' gia' fare una fattura?», non «ha finito
+            # tutti e otto i passi?». Fra gli otto ce n'e' uno che si chiama
+            # «La prima fattura»: contandolo, il messaggio che dice «sei
+            # pronto» non poteva comparire proprio quando serve.
+            manca = ben.manca_l_essenziale(ben.passi(con, db.get_settings(con)))
             avvisa('Salvato.' if manca else
                    'Salvato: adesso l’app ha tutto quello che le serve per fare una fattura.',
                    'ok')

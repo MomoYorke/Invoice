@@ -49,6 +49,12 @@ def mancanti(lingua):
 
 TESTI = {
     'en': {
+        'Il bollettino QR':
+            'The QR payment slip',
+        'Accendi il bollettino QR':
+            'Turn on the QR slip',
+        "Il foglio svizzero col codice QR, in coda alla fattura: chi paga lo inquadra e non digita più niente. È anche quello che fa riconoscere da soli i versamenti nella pagina Banca. La prima fattura che esce, inquadrala con l'app della tua banca prima di mandarla.":
+            'The Swiss slip with the QR code, on a page at the end of the invoice: whoever pays scans it and types nothing at all. It is also what lets payments recognise themselves on the Bank page. Scan the first invoice that comes out with your own bank app before you send it.',
         'Nessuna sessione con questi filtri. Prova a togliere il cliente o l’anno.':
             'No session matches these filters. Try removing the client or the year.',
         'Ancora nessuna seduta. L’agenda si riempie da sola leggendo il tuo calendario: l’indirizzo iCal si mette in Impostazioni.':
@@ -1321,6 +1327,12 @@ TESTI = {
 
     },
     'de': {
+        'Il bollettino QR':
+            'Der QR-Einzahlungsschein',
+        'Accendi il bollettino QR':
+            'QR-Einzahlungsschein einschalten',
+        "Il foglio svizzero col codice QR, in coda alla fattura: chi paga lo inquadra e non digita più niente. È anche quello che fa riconoscere da soli i versamenti nella pagina Banca. La prima fattura che esce, inquadrala con l'app della tua banca prima di mandarla.":
+            'Der Schweizer Einzahlungsschein mit dem QR-Code, auf einem Blatt am Ende der Rechnung: wer zahlt, scannt ihn und tippt gar nichts mehr. Er ist auch das, was die Zahlungen auf der Seite Bank von selbst erkennen lässt. Scanne die erste Rechnung mit der App deiner Bank, bevor du sie verschickst.',
         'Nessuna sessione con questi filtri. Prova a togliere il cliente o l’anno.':
             'Keine Sitzung mit diesen Filtern. Nimm den Kunden oder das Jahr weg.',
         'Ancora nessuna seduta. L’agenda si riempie da sola leggendo il tuo calendario: l’indirizzo iCal si mette in Impostazioni.':
