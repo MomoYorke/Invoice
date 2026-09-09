@@ -22,6 +22,22 @@
 <h1>{{ _('Impostazioni') }}</h1>
 <p class="sub">{{ _('Questi dati finiscono sulle fatture e negli esporti. Cambiali solo se cambia qualcosa davvero.') }}</p>
 
+{# Le tre pagine che non stanno piu' in barra. Non e' un ripostiglio: e' il
+   posto dove uno le cerca — e la verifica dei calcoli, in un programma che ti
+   scarichi, e' la prova che i conti tornano: va trovata, non nascosta. #}
+<div class="panel stato-app" style="max-width:640px">
+  <h2 style="margin-top:0">{{ _('Stato dell’app') }}</h2>
+  <p class="muted" style="font-size:12.5px;margin:0 0 10px">{{ _('Da guardare quando ti va, non ogni giorno: se qualcosa non torna te lo dice la barra da sola.') }}</p>
+  <div class="stato-app-righe">
+    <a href="{{ url_for('controlli') }}">{{ icona('controlli', 'ic-mini') }} {{ _('Controlli') }}
+      <span class="muted">{{ _('numerazione e dati delle fatture, reti di sicurezza, backup') }}</span></a>
+    <a href="{{ url_for('verifica') }}">{{ icona('verifica', 'ic-mini') }} {{ _('Verifica calcoli') }}
+      <span class="muted">{{ _('l’app rifà i suoi conti da zero e ti mostra il risultato') }}</span></a>
+    <a href="{{ url_for('cestino') }}">{{ icona('cestino', 'ic-mini') }} {{ _('Cestino') }}
+      <span class="muted">{{ _('le fatture buttate, che si possono ancora recuperare') }}</span></a>
+  </div>
+</div>
+
 <form method="post" class="panel" style="max-width:640px">
   <div class="form-grid">
     <div>

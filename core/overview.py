@@ -302,7 +302,7 @@ def attivita(con, reg, quante=12, lingua=None):
 RITARDO, ATTESA, CALMO = 'ritardo', 'attesa', 'calmo'
 
 
-def da_fare(con, settings, registro=None):
+def da_fare(con, settings, registro=None, cartella_backup=None):
     """Le cose in sospeso, dalla piu' urgente alla meno.
 
     Non ci mettiamo i versamenti da confermare: per contarli bisognerebbe
@@ -387,6 +387,21 @@ def da_fare(con, settings, registro=None):
             'link': ('crediti', {}),
         })
 
+    # La copia fuori dal Mac. Sta qui, e non solo nella pagina dei Controlli,
+    # perche' e' l'unica cosa dell'app che chieda davvero attenzione — e i
+    # Controlli si aprono quando uno ci pensa, cioe' mai. Una rete di sicurezza
+    # che nessuno guarda non e' una rete: e' un'opinione sulla propria fortuna.
+    scaduta = _backup_vecchio(con, cartella_backup, lg)
+    if scaduta:
+        voci.append({
+            'chiave': 'backup', 'icona': 'controlli',
+            'titolo': L.t('Copia fuori dal Mac', lg),
+            'quante': None, 'unita': '', 'importo': None,
+            'dettaglio': scaduta,
+            'urgenza': ATTESA,
+            'link': ('controlli', {}),
+        })
+
     vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'), lg)
     if vecchio:
         voci.append({
@@ -399,6 +414,35 @@ def da_fare(con, settings, registro=None):
         })
 
     return voci
+
+
+def _backup_vecchio(con, cartella_backup, lg=None):
+    """Da quanto non esce una copia dal Mac. '' se e' recente o se non serve.
+
+    Su un'app appena installata non c'e' niente da salvare, e dire «mai fatta»
+    a chi non ha ancora emesso una fattura e' spaventare per niente.
+    """
+    # Senza una cartella detta esplicitamente non si va a cercare da nessuna
+    # parte: la scorciatoia «se non me la dai la indovino» qui vorrebbe dire
+    # frugare in una cartella predefinita che magari non c'entra niente, e
+    # dare un allarme su copie che non sono quelle di chi sta guardando.
+    if not cartella_backup:
+        return ''
+    try:
+        vuota = not con.execute(
+            'SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL').fetchone()[0]
+        if vuota:
+            return ''
+        ultimo = backup.ultimo_esterno(cartella_backup)
+    except Exception:                                      # pragma: no cover
+        return ''          # una cartella che non si legge non spegne la pagina
+    if ultimo is None:
+        return L.t('Nessuna copia fuori dal Mac: se il disco si rompe, le fatture '
+                   'se ne vanno con lui.', lg)
+    giorni = (datetime.datetime.now() - ultimo['when']).days
+    if giorni < GIORNI_BACKUP_VECCHIO:
+        return ''
+    return L.t("l'ultima è di {giorni} giorni fa", lg).format(giorni=giorni)
 
 
 def _crediti_finiti(registro):

@@ -165,6 +165,25 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-2); 
 .remove-row { background: none; border: none; color: #cbd5e1; font-size: 18px; cursor: pointer; }
 .remove-row:hover { color: var(--danger); }
 .total-preview { text-align: right; font-size: 20px; font-weight: 700; padding: 14px 4px; }
+/* Il numero della fattura: c'e', ma non occupa una riga del modulo. Chi non
+   lo cerca non lo vede; chi lo cerca lo apre e trova il campo di sempre. */
+.numero-a-mano > summary { cursor: pointer; color: var(--muted); font-size: 13px;
+  padding: 6px 0; list-style: none; }
+.numero-a-mano > summary::-webkit-details-marker { display: none; }
+.numero-a-mano > summary::before { content: '\203A'; display: inline-block;
+  margin-right: 6px; transition: transform .15s; }
+.numero-a-mano[open] > summary::before { transform: rotate(90deg); }
+.numero-a-mano > summary:hover { color: var(--ink); }
+
+/* Le pagine di manutenzione dentro Impostazioni: una riga per una, col
+   perche' accanto al nome — chi non sa cosa sia «Verifica calcoli» lo legge
+   li' invece di doverci entrare per scoprirlo. */
+.stato-app-righe a { display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 8px; padding: 9px 0; border-top: 1px solid var(--line);
+  text-decoration: none; color: var(--ink); font-weight: 600; font-size: 14px; }
+.stato-app-righe a:first-child { border-top: 0; }
+.stato-app-righe a:hover { color: var(--accent); }
+.stato-app-righe a .muted { font-weight: 400; font-size: 12.5px; }
 .suggestion { background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin: 8px 0; display: none; }
 /* ---------- charts ---------- */
 .chart-note { font-size: 12px; color: var(--muted); margin-top: 6px; }

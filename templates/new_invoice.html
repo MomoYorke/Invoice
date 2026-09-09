@@ -2,7 +2,6 @@
 {% block title %}{{ _('Nuova fattura') }}{% endblock %}
 {% block content %}
 <h1>{{ _('Nuova fattura') }} <span class="muted">#{{ next_number }}</span></h1>
-<p class="sub">{{ _("Numero assegnato automaticamente. Il totale lo calcola l'app: zero errori.") }}</p>
 
 <script>
   /* le frasi che scrive il browser: qui hanno gia' la lingua giusta */
@@ -54,8 +53,18 @@
     <div>
       <label>{{ _('Data fattura') }}</label>
       <input type="date" name="data" value="{{ today }}">
-      <label>{{ _('Numero (auto: {n})').format(n=next_number) }}</label>
-      <input type="number" name="numero" value="{{ next_number }}">
+      {# Il numero lo sa l'app e sta nel titolo: farlo scrivere a mano ogni
+         volta e' un campo in piu' per un dato che non cambia mai. Cambiarlo
+         resta possibile — serve a chi arriva da un altro programma e vuole
+         continuare la sua numerazione — ma non e' piu' una domanda fatta a
+         tutti, tutte le volte. #}
+      <details class="numero-a-mano">
+        <summary>{{ _('Numero fattura: {n}').format(n=next_number) }}</summary>
+        <input type="number" name="numero" value="{{ next_number }}"
+               aria-label="{{ _('Numero fattura: {n}').format(n=next_number) }}">
+        <p class="muted" style="font-size:12.5px;margin-top:4px">
+          {{ _('Cambialo solo se stai continuando la numerazione di un altro programma.') }}</p>
+      </details>
       {% if cestinata %}
       <p class="muted" style="font-size:12.5px;margin-top:4px">
         {{ icona('ricicla', 'ic-mini') }}
@@ -79,7 +88,7 @@
   <div id="items"></div>
   <button type="button" class="btn secondary small" id="add-row">{{ _('+ Aggiungi riga') }}</button>
 
-  <div class="total-preview">{{ _('Totale') }}: <span id="total-preview">0.00 CHF</span></div>
+  <div class="total-preview" id="total-box" hidden>{{ _('Totale') }}: <span id="total-preview">0.00 CHF</span></div>
   <p class="muted" style="font-size:12.5px">{{ _('Puoi scrivere i prezzi come preferisci:') }}
      <code>110.-</code>, <code>1'800.00</code>, <code>150,00 CHF</code>.
      {{ _('Se lasci vuoto il totale riga, lo calcolo io (quantità × prezzo).') }}</p>

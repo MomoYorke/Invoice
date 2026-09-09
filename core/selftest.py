@@ -1184,6 +1184,39 @@ def _test_da_fare(r):
     vuoto = C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()}, None)
     _check(r, 'Da fare', 'tutto a posto: nessuna voce', vuoto, [])
 
+    # --- la copia fuori dal Mac ------------------------------------------
+    # E' l'unica rete di sicurezza che, se cede, non lascia niente da salvare.
+    # Prima stava solo nella pagina dei Controlli — che dalla barra e' uscita,
+    # quindi da qui in avanti deve farsi vedere dove uno guarda ogni giorno.
+    import tempfile, time
+    cartella = tempfile.mkdtemp()
+    _check(r, 'Da fare', 'senza nessuna copia in giro, lo dice',
+           bool(voce(C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()},
+                               None, cartella), 'backup')), True)
+
+    zip_vecchio = os.path.join(cartella, 'fatture-app-20260101-000000.zip')
+    with io.open(zip_vecchio, 'wb') as f:
+        f.write(b'PK')
+    quando = time.time() - 9 * 86400
+    os.utime(zip_vecchio, (quando, quando))
+    v = voce(C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()},
+                       None, cartella), 'backup')
+    _check(r, 'Da fare', 'una copia di nove giorni fa e\' vecchia, e si dice di quanto',
+           (bool(v), '9' in (v or {}).get('dettaglio', '')), (True, True))
+
+    zip_fresco = os.path.join(cartella, 'fatture-app-20260909-000000.zip')
+    with io.open(zip_fresco, 'wb') as f:
+        f.write(b'PK')
+    _check(r, 'Da fare', 'una copia di oggi non disturba nessuno',
+           voce(C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()},
+                          None, cartella), 'backup'), None)
+    _check(r, 'Da fare', 'e senza dire dove sono le copie non si allarma nessuno',
+           voce(C.da_fare(con, {'banca_ultimo_estratto': oggi.isoformat()},
+                          None, None), 'backup'), None)
+    for f_ in (zip_vecchio, zip_fresco):
+        os.remove(f_)
+    os.rmdir(cartella)
+
     # --- il numero e' quello delle fatture aperte, non quello della banca ---
     con = _db_fatture_finto([
         {'data': ieri, 'stato': 'emessa', 'cents': 100000, 'sent_at': ieri},
@@ -1458,7 +1491,9 @@ def _test_icone(r):
     _check(r, 'Icone', 'ci sono disegni da usare', len(usati) > 15, True)
 
     # niente disegni tenuti da parte «per dopo»
-    citati = {n for n in I.nomi() if ("'%s'" % n) in tutto or n in str(menu.GRUPPI)}
+    # «voci()» e non «GRUPPI»: le pagine di servizio sono uscite dalla barra ma
+    # esistono ancora, e le loro icone si vedono da Impostazioni.
+    citati = {n for n in I.nomi() if ("'%s'" % n) in tutto or n in str(menu.voci())}
     _check(r, 'Icone', 'nessun disegno rimasto inutilizzato',
            sorted(set(I.nomi()) - citati), [])
 
@@ -1547,6 +1582,35 @@ def _test_menu(r):
            M.GRUPPI[0][0] is None and M.GRUPPI[0][1][0][0] == 'dashboard', True)
     _check(r, 'Menu', 'i primi passi stanno fuori dai gruppi fissi',
            M.PRIMI_PASSI[0], 'benvenuto')
+
+    # --- la barra dice solo quello che serve oggi -------------------------
+    # Un posto fisso in barra si legge tutte le volte. Le pagine di
+    # manutenzione ci stavano dentro per farsi aprire tre volte l'anno, e
+    # «Controlli» ci stava anche quando non aveva niente da dire — che e' il
+    # modo migliore perche' nessuno lo guardi il giorno che ne ha.
+    def in_barra(n=0):
+        return [v[0] for _titolo, elenco in M.gruppi(n) for v in elenco]
+
+    _check(r, 'Menu', 'a conti in ordine la barra non nomina i controlli',
+           'controlli' in in_barra(0), False)
+    _check(r, 'Menu', 'con un\'anomalia i controlli tornano in barra',
+           'controlli' in in_barra(1), True)
+    _check(r, 'Menu', 'e portano scritto quante ne hanno trovate',
+           [v[1] for _t, elenco in M.gruppi(3) for v in elenco if v[0] == 'controlli'],
+           ['Controlli (3)'])
+    _check(r, 'Menu', 'compaiono in fondo, nel gruppo dell\'app',
+           [v[0] for t, elenco in M.gruppi(2) if t == "L'app" for v in elenco],
+           ['controlli', 'impostazioni'])
+    _check(r, 'Menu', 'la verifica dei calcoli non sta in barra',
+           'verifica' in in_barra(9), False)
+    _check(r, 'Menu', 'e nemmeno il cestino',
+           'cestino' in in_barra(9), False)
+    _check(r, 'Menu', 'ma restano pagine vere, con nome e icona',
+           sorted(v[0] for v in M.FUORI_MENU), ['cestino', 'controlli', 'verifica'])
+    _check(r, 'Menu', 'e i controlli le conoscono lo stesso',
+           {'cestino', 'verifica'} <= {v[0] for v in M.voci()}, True)
+    _check(r, 'Menu', 'la barra tranquilla ha dodici voci, tre meno di prima',
+           len(in_barra(0)), 12)
 
 
 def _test_finestra_stretta(r):

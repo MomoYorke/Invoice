@@ -5,6 +5,7 @@
 
   const itemsBox = document.getElementById('items');
   const totalEl = document.getElementById('total-preview');
+  const totalBox = document.getElementById('total-box');
   const clientSel = document.getElementById('client-select');
   const addrBox = document.getElementById('client-addr');
   const sugBox = document.getElementById('running-suggestion');
@@ -92,6 +93,9 @@
       if (t !== null) sum += t;
     });
     totalEl.textContent = fmtChf(sum);
+    // Il totale si mostra quando c'e' un totale. A modulo vuoto era il numero
+    // piu' grande della pagina, e diceva zero.
+    if (totalBox) totalBox.hidden = (sum === 0);
   }
 
   document.getElementById('add-row').onclick = () => addRow();

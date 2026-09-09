@@ -63,6 +63,11 @@ TESTI = {
         'Controlli': 'Checks',
         'Cestino': 'Trash',
         'Impostazioni': 'Settings',
+        'Stato dell’app': 'App status',
+        'Da guardare quando ti va, non ogni giorno: se qualcosa non torna te lo dice la barra da sola.': 'Look at it when you feel like it, not every day: if something is off, the sidebar tells you by itself.',
+        'numerazione e dati delle fatture, reti di sicurezza, backup': 'invoice numbering and data, safety nets, backups',
+        'l’app rifà i suoi conti da zero e ti mostra il risultato': 'the app redoes its own arithmetic from scratch and shows you the result',
+        'le fatture buttate, che si possono ancora recuperare': 'the invoices you threw away, which can still be brought back',
         'Primi passi': 'First steps',
         'Fatturare': 'Invoicing',
         'Chi segui': 'Your clients',
@@ -254,6 +259,9 @@ TESTI = {
         'Cestino. Riusandolo non lasci buchi nella numerazione.':
             'Number {n} is free again: the invoice for {cliente} with that number is in '
             'the Trash. Reusing it leaves no gap in the sequence.',
+        'Numero fattura: {n}': 'Invoice number: {n}',
+        'Cambialo solo se stai continuando la numerazione di un altro programma.':
+            'Change it only if you are continuing the numbering of another program.',
         'Servizio': 'Service',
         'Righe fattura': 'Invoice lines',
         'Totale riga': 'Line total',
@@ -1109,6 +1117,9 @@ TESTI = {
 
         # --- le reti di sicurezza e il tempo passato ---
         'Copia fuori dal Mac': 'Copy off the Mac',
+        'Nessuna copia fuori dal Mac: se il disco si rompe, le fatture se ne vanno con lui.':
+            'No copy off the Mac: if the disk fails, the invoices go with it.',
+        "l'ultima è di {giorni} giorni fa": 'the last one is {giorni} days old',
         'non ancora': 'not yet',
         'Se ne fa una da sola appena emetti la prima fattura.':
             'One is made by itself as soon as you issue your first invoice.',
@@ -1281,6 +1292,11 @@ TESTI = {
         'Controlli': 'Prüfungen',
         'Cestino': 'Papierkorb',
         'Impostazioni': 'Einstellungen',
+        'Stato dell’app': 'Zustand der App',
+        'Da guardare quando ti va, non ogni giorno: se qualcosa non torna te lo dice la barra da sola.': 'Schau hin, wenn du magst, nicht jeden Tag: Wenn etwas nicht stimmt, sagt es dir die Leiste von selbst.',
+        'numerazione e dati delle fatture, reti di sicurezza, backup': 'Rechnungsnummern und -daten, Sicherheitsnetze, Backups',
+        'l’app rifà i suoi conti da zero e ti mostra il risultato': 'die App rechnet alles von Grund auf neu und zeigt dir das Ergebnis',
+        'le fatture buttate, che si possono ancora recuperare': 'die weggeworfenen Rechnungen, die sich noch zurückholen lassen',
         'Primi passi': 'Erste Schritte',
         'Fatturare': 'Rechnungen stellen',
         'Chi segui': 'Deine Kunden',
@@ -1476,6 +1492,9 @@ TESTI = {
         'Cestino. Riusandolo non lasci buchi nella numerazione.':
             'Die Nummer {n} ist wieder frei: die Rechnung von {cliente} mit dieser Nummer '
             'liegt im Papierkorb. Wenn du sie wiederverwendest, bleibt keine Lücke.',
+        'Numero fattura: {n}': 'Rechnungsnummer: {n}',
+        'Cambialo solo se stai continuando la numerazione di un altro programma.':
+            'Ändere sie nur, wenn du die Nummerierung eines anderen Programms fortsetzt.',
         'Servizio': 'Dienstleistung',
         'Righe fattura': 'Rechnungszeilen',
         'Totale riga': 'Zeilentotal',
@@ -2340,6 +2359,9 @@ TESTI = {
 
         # --- le reti di sicurezza e il tempo passato ---
         'Copia fuori dal Mac': 'Kopie ausserhalb des Macs',
+        'Nessuna copia fuori dal Mac: se il disco si rompe, le fatture se ne vanno con lui.':
+            'Keine Kopie ausserhalb des Macs: Geht die Festplatte kaputt, gehen die Rechnungen mit.',
+        "l'ultima è di {giorni} giorni fa": 'die letzte ist {giorni} Tage alt',
         'non ancora': 'noch nicht',
         'Se ne fa una da sola appena emetti la prima fattura.':
             'Eine entsteht von selbst, sobald du die erste Rechnung stellst.',

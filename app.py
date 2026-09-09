@@ -162,6 +162,14 @@ def inject_globals():
         restano = len(ben.da_fare(ben.passi(con, impostazioni)))
     except Exception:                                   # pragma: no cover
         restano = 0
+    # «Controlli» compare in barra solo se ha qualcosa da dire. Il conto si fa
+    # sul database e basta — niente file, niente rete — perche' questa riga
+    # gira a ogni pagina che si apre. Se dovesse inciampare, il menu resta
+    # quello di sempre: una barra non deve poter spegnere l'app.
+    try:
+        da_sistemare = len(stats.health(con))
+    except Exception:                                   # pragma: no cover
+        da_sistemare = 0
     con.close()
     riga1, riga2 = branding.due_righe(nome)
     # «_» traduce nella lingua dell'app. Le pagine scrivono _('Fatture') e
@@ -173,7 +181,8 @@ def inject_globals():
             'logo_versione': branding.versione(),
             '_': lambda frase: lng.t(frase, codice),
             'lingua': codice, 'lingue': lng.LINGUE,
-            'menu_gruppi': menu.GRUPPI, 'primi_passi_restano': restano,
+            'menu_gruppi': menu.gruppi(da_sistemare),
+            'primi_passi_restano': restano,
             'calendario_nome': impostazioni.get('calendario_nome') or 'il calendario delle sessioni',
             'calendario_storico_nome': (impostazioni.get('calendario_storico_nome')
                                         or 'il calendario storico')}
@@ -218,7 +227,7 @@ def dashboard():
     except Exception as e:                      # il registro non deve poter
         err_logger.error('Registro non letto: %s', e)       # spegnere la Dashboard
         registro = None
-    cose = overview.da_fare(con, settings, registro)
+    cose = overview.da_fare(con, settings, registro, _cartella_backup())
     try:
         novita = overview.attivita(con, registro if registro is not None else {},
                                     lingua=settings.get('lingua'))
