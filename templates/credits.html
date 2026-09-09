@@ -92,9 +92,9 @@
               style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
           <input type="hidden" name="pacchetto" value="{{ r.pacchetto }}">
           <div>
-            <label style="margin-top:0">{{ _('Numero della fattura che copre {pacchetto}').format(pacchetto=r.pacchetto) }}
+            <label style="margin-top:0" for="lk-numero-{{ loop.index }}">{{ _('Numero della fattura che copre {pacchetto}').format(pacchetto=r.pacchetto) }}
               {% if r.importo_atteso %}<span class="muted">({{ _('intestata a {chi}').format(chi=r.fattura_a) }}, <span class="money">{{ r.importo_atteso }}</span>)</span>{% endif %}</label>
-            <input type="number" name="numero" placeholder="{{ _('es. 84') }}" style="width:140px" required>
+            <input type="number" name="numero" id="lk-numero-{{ loop.index }}" placeholder="{{ _('es. 84') }}" style="width:140px" required>
           </div>
           <button class="btn small">{{ _('Collega e chiudi pacchetto') }}</button>
           <a class="btn small secondary" href="{{ url_for('nuova') }}">{{ _('Prima creo la fattura →') }}</a>

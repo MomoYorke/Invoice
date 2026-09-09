@@ -1689,24 +1689,118 @@ def _etichette_scollegate():
     return fuori
 
 
+def _id_ripetuti():
+    """{pagina: [id scritti due volte]}. Due campi con lo stesso id sono peggio
+    di nessun id: il clic sull'etichetta porta sempre sul primo dei due, e il
+    secondo campo resta muto per chi legge la pagina con la voce.
+
+    Si guardano solo gli id scritti per intero. Quelli che finiscono con un
+    {{ ... }} cambiano a ogni giro del ciclo o a ogni chiamata del macro,
+    quindi vederli due volte nel sorgente non vuol dire niente: a quelli
+    pensa la regola qui sotto.
+    """
+    fissi = lambda testo: [i for i in re.findall(r'\bid="([^"]*)"', testo)
+                           if '{{' not in i]
+    modelli = _sorgenti('templates', '.html')
+    di_base = fissi(modelli.get('base.html', ''))
+    fuori = {}
+    for nome, testo in modelli.items():
+        suoi = fissi(testo)
+        if nome != 'base.html' and "extends 'base.html'" in testo:
+            suoi = suoi + di_base       # la pagina eredita anche gli id di base
+        doppi = sorted(k for k in set(suoi) if suoi.count(k) > 1)
+        if doppi:
+            fuori[nome] = doppi
+    return fuori
+
+
+def _id_fissi_nei_cicli():
+    """{pagina: [id scritti dentro un ciclo senza farli variare]}.
+
+    E' il modo piu' facile di crearsi un id doppio senza accorgersene: uno lo
+    scrive una volta sola, ma la pagina lo stampa per ogni cliente in elenco.
+    """
+    fuori = {}
+    for nome, testo in _sorgenti('templates', '.html').items():
+        prof, dentro = 0, []
+        for m in re.finditer(r'\{%-?\s*(for|endfor)\b|\bid="([^"]*)"', testo):
+            if m.group(1) == 'for':
+                prof += 1
+            elif m.group(1) == 'endfor':
+                prof -= 1
+            elif prof > 0 and '{{' not in (m.group(2) or ''):
+                dentro.append(m.group(2))
+        if dentro:
+            fuori[nome] = dentro
+    return fuori
+
+
+def _campi_senza_nome():
+    """{pagina: [campi che non hanno nessun nome addosso]}.
+
+    Il setaccio delle etichette guarda le etichette, e quindi non vede il caso
+    opposto e piu' grave: un campo su cui nessuno ha mai scritto un'etichetta.
+    E' successo davvero, nella barra dei filtri di «Fatture»: tre caselle —
+    anno, stato, cerca — che a occhio si capiscono benissimo, e che chi legge
+    la pagina con la voce sentiva annunciare come «menu a tendina», punto.
+
+    Un nome vale, in qualunque delle quattro forme: l'etichetta col «for»,
+    l'etichetta che avvolge il campo, aria-label, title.
+    """
+    campo = re.compile(r'<(input|select|textarea)\b([^>]*)>', re.S)
+
+    def valore(tag, nome):
+        m = re.search(r'\b%s="([^"]*)"' % nome, tag)
+        return m.group(1) if m else None
+
+    fuori = {}
+    for pagina, testo in _sorgenti('templates', '.html').items():
+        nominati = set(re.findall(r'<label[^>]*\bfor="([^"]*)"', testo))
+        senza = []
+        for m in campo.finditer(testo):
+            tag = m.group(0)
+            if valore(tag, 'type') in ('hidden', 'submit', 'button'):
+                continue        # non sono campi da riempire
+            suo_id = valore(tag, 'id')
+            ha_nome = ((suo_id and suo_id in nominati)
+                       or valore(tag, 'aria-label') or valore(tag, 'title'))
+            if not ha_nome:      # ...o e' l'etichetta stessa a contenerlo
+                prima = testo[:m.start()]
+                ha_nome = prima.rfind('<label') > prima.rfind('</label>')
+            if not ha_nome:
+                senza.append(re.sub(r'\s+', ' ', tag)[:90])
+        if senza:
+            fuori[pagina] = senza
+    return fuori
+
+
 def _test_etichette(r):
     """Le etichette dei moduli devono nominare davvero il loro campo."""
-    scollegate = dict(_etichette_scollegate())
+    # Non piu' «quasi tutte» e non piu' solo nelle pagine principali: in tutta
+    # l'app ogni etichetta nomina il suo campo. Le ultime sono state le piu'
+    # noiose, perche' stavano dentro un ciclo e li' l'id deve cambiare riga
+    # per riga; le due che restavano non nominavano un campo ma un gruppo di
+    # caselle, e per quelle il tag giusto e' <legend> dentro un <fieldset>.
+    _check(r, 'Etichette', 'nessuna etichetta scollegata, in nessuna pagina',
+           _etichette_scollegate(), [])
 
-    # Le due pagine da cui si passa per forza: quella che si apre il primo
-    # giorno e quella che si torna ad aprire per anni. Qui zero vuol dire zero.
-    for pagina in ('first_setup.html', 'settings.html', 'new_invoice.html',
-                   'subscriptions.html', 'sessions.html'):
-        _check(r, 'Etichette', 'in %s ogni etichetta nomina il suo campo' % pagina,
-               scollegate.get(pagina, 0), 0)
+    # ...cosa che sarebbe vera anche se il setaccio si fosse rotto e non
+    # trovasse piu' niente. Le etichette ci sono, e sono tante.
+    _check(r, 'Etichette', 'il setaccio le etichette continua a vederle',
+           sum(t.count('<label') for t in
+               _sorgenti('templates', '.html').values()) > 80, True)
 
-    # Le altre pagine hanno ancora 36 etichette scollegate: quasi tutte stanno
-    # dentro un ciclo, dove un id fisso si ripeterebbe per ogni riga e due
-    # campi con lo stesso id sono peggio di nessun id. Vanno sistemate una per
-    # una. Questo numero puo' solo SCENDERE: se sale, qualcuno ha scritto una
-    # pagina nuova col difetto vecchio, ed e' il momento di accorgersene.
-    _check(r, 'Etichette', 'le etichette ancora scollegate non aumentano',
-           sum(scollegate.values()) <= 36, True)
+    # Legare l'etichetta al campo con un id apre un guaio nuovo, e queste due
+    # regole lo chiudono prima che nasca.
+    _check(r, 'Etichette', 'nessun id ripetuto nella stessa pagina',
+           _id_ripetuti(), {})
+    _check(r, 'Etichette', 'nessun id che dentro un ciclo resta sempre uguale',
+           _id_fissi_nei_cicli(), {})
+
+    # E il caso opposto, quello che il setaccio delle etichette non poteva
+    # vedere: un campo su cui nessuno ha mai scritto un'etichetta.
+    _check(r, 'Etichette', 'nessun campo senza un nome addosso',
+           _campi_senza_nome(), {})
 
 
 def _test_finestra_stretta(r):

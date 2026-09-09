@@ -32,21 +32,21 @@
           <summary>{{ _('modifica') }}</summary>
           <form method="post" action="{{ url_for('crediti_cliente_salva') }}">
             <input type="hidden" name="chiave" value="{{ r.chiave }}">
-            <label>{{ _('Nome') }}</label><input type="text" name="nome" value="{{ r.nome }}" required>
-            <label>{{ _('Sessioni per pacchetto') }}</label>
-            <input type="number" name="crediti" value="{{ r.crediti }}" min="0" max="200">
-            <label>{{ _('Sigla del pacchetto') }}</label>
-            <input type="text" name="prefisso" value="{{ r.prefisso }}" maxlength="6">
+            <label for="cc-nome-{{ loop.index }}">{{ _('Nome') }}</label><input type="text" name="nome" id="cc-nome-{{ loop.index }}" value="{{ r.nome }}" required>
+            <label for="cc-crediti-{{ loop.index }}">{{ _('Sessioni per pacchetto') }}</label>
+            <input type="number" name="crediti" id="cc-crediti-{{ loop.index }}" value="{{ r.crediti }}" min="0" max="200">
+            <label for="cc-prefisso-{{ loop.index }}">{{ _('Sigla del pacchetto') }}</label>
+            <input type="text" name="prefisso" id="cc-prefisso-{{ loop.index }}" value="{{ r.prefisso }}" maxlength="6">
             <span class="muted" style="font-size:11.5px">{{ _('I pacchetti si chiamano {sigla}-01, {sigla}-02 e così via.').format(sigla=r.prefisso or 'XXX') }}</span>
-            <label>{{ _('Prezzo del pacchetto') }}</label>
-            <input type="text" name="prezzi" value="{{ r.prezzi_leggibili }}"
+            <label for="cc-prezzi-{{ loop.index }}">{{ _('Prezzo del pacchetto') }}</label>
+            <input type="text" name="prezzi" id="cc-prezzi-{{ loop.index }}" value="{{ r.prezzi_leggibili }}"
                    placeholder="1'800">
             <span class="muted" style="font-size:11.5px">{{ _("Quando emetti una fattura di questo importo, l'app capisce da sola che ha comprato un pacchetto e gli ridà i crediti. Più prezzi separati da virgola, se ne hai più di uno.") }}</span>
-            <label>{{ _('Intesta la fattura a') }}</label>
-            <input type="text" name="fattura_a" value="{{ r.fattura_a }}"
+            <label for="cc-fattura_a-{{ loop.index }}">{{ _('Intesta la fattura a') }}</label>
+            <input type="text" name="fattura_a" id="cc-fattura_a-{{ loop.index }}" value="{{ r.fattura_a }}"
                    placeholder="{{ _('lascia vuoto: la fattura va a {nome}').format(nome=r.nome) }}">
-            <label>{{ _('È il supplemento di') }}</label>
-            <input type="text" name="compagno" value="{{ r.compagno }}"
+            <label for="cc-compagno-{{ loop.index }}">{{ _('È il supplemento di') }}</label>
+            <input type="text" name="compagno" id="cc-compagno-{{ loop.index }}" value="{{ r.compagno }}"
                    placeholder="{{ _('lascia vuoto quasi sempre') }}">
             <span class="muted" style="font-size:11.5px">{{ _("Solo per chi fa le sedute in coppia e paga un pacchetto ridotto in aggiunta a quello dell'altro. Scrivi qui la parola-calendario dell'altro. Nei giorni in cui l'altro non c'è, la sessione è piena e scala dal pacchetto dell'altro.") }}</span>
             <label style="font-weight:400"><input type="checkbox" name="archiviato" value="1"
@@ -69,16 +69,16 @@
 <div class="panel" style="max-width:560px">
   <h2 style="margin-top:0">{{ _('Aggiungi un cliente a crediti') }}</h2>
   <form method="post" action="{{ url_for('crediti_cliente_salva') }}">
-    <label>{{ _('Nome') }}</label><input type="text" name="nome" required placeholder="Anna">
-    <label>{{ _('Parola da cercare nei titoli del calendario') }}</label>
-    <input type="text" name="chiave" placeholder="{{ _('lascia vuoto: usa il nome') }}">
+    <label for="nuovo-nome">{{ _('Nome') }}</label><input type="text" name="nome" id="nuovo-nome" required placeholder="Anna">
+    <label for="nuovo-chiave">{{ _('Parola da cercare nei titoli del calendario') }}</label>
+    <input type="text" name="chiave" id="nuovo-chiave" placeholder="{{ _('lascia vuoto: usa il nome') }}">
     <span class="muted" style="font-size:11.5px">{{ _('Un evento che si chiama «Anna», «anna pt» o «Anna - cancelled» conta come una sua sessione. Scegli una parola che non compaia per caso in altri appuntamenti.') }}</span>
-    <label>{{ _('Sessioni per pacchetto') }}</label>
-    <input type="number" name="crediti" value="10" min="1" max="200">
-    <label>{{ _('Sigla del pacchetto') }}</label>
-    <input type="text" name="prefisso" maxlength="6" placeholder="{{ _('lascia vuoto: le prime tre lettere') }}">
-    <label>{{ _('Prezzo del pacchetto') }}</label>
-    <input type="text" name="prezzi" placeholder="1'800">
+    <label for="nuovo-crediti">{{ _('Sessioni per pacchetto') }}</label>
+    <input type="number" name="crediti" id="nuovo-crediti" value="10" min="1" max="200">
+    <label for="nuovo-prefisso">{{ _('Sigla del pacchetto') }}</label>
+    <input type="text" name="prefisso" id="nuovo-prefisso" maxlength="6" placeholder="{{ _('lascia vuoto: le prime tre lettere') }}">
+    <label for="nuovo-prezzi">{{ _('Prezzo del pacchetto') }}</label>
+    <input type="text" name="prezzi" id="nuovo-prezzi" placeholder="1'800">
     <button class="btn mt">{{ _('Aggiungi') }}</button>
   </form>
 </div>

@@ -7,17 +7,18 @@
   — {{ _('totale') }} <strong class="money">{{ tot | chf }}</strong></p>
 
 <form class="toolbar" method="get">
-  <select name="anno" onchange="this.form.submit()">
+  <select name="anno" aria-label="{{ _('Anno') }}" onchange="this.form.submit()">
     <option value="">{{ _('Tutti gli anni') }}</option>
     {% for y in all_years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
   </select>
-  <select name="stato" onchange="this.form.submit()">
+  <select name="stato" aria-label="{{ _('Stato') }}" onchange="this.form.submit()">
     <option value="">{{ _('Tutti gli stati') }}</option>
     <option value="emessa" {{ 'selected' if stato == 'emessa' }}>{{ _('Da incassare') }}</option>
     <option value="pagata" {{ 'selected' if stato == 'pagata' }}>{{ _('Pagate') }}</option>
     <option value="ritardo" {{ 'selected' if stato == 'ritardo' }}>{{ _('In ritardo') }}</option>
   </select>
-  <input type="text" name="q" value="{{ q }}" placeholder="{{ _('Cerca cliente o numero…') }}">
+  <input type="text" name="q" value="{{ q }}" aria-label="{{ _('Cerca cliente o numero…') }}"
+         placeholder="{{ _('Cerca cliente o numero…') }}">
   <button class="btn small secondary">{{ _('Cerca') }}</button>
   <a class="btn small" href="{{ url_for('nuova') }}">{{ _('+ Nuova') }}</a>
 </form>

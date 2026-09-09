@@ -147,6 +147,14 @@ label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted)
    manda a vuoto chi legge la pagina con la voce invece che con gli occhi. */
 .etichetta { display: block; font-size: 12.5px; font-weight: 600;
   color: var(--muted); margin: 12px 0 4px; }
+/* Un gruppo di caselle che si scelgono insieme: quale modello di mail,
+   quali fatture allegare. Il titolo del gruppo e' un <legend>, cosi' chi
+   arriva sulla prima casella con la tastiera sente anche di che gruppo fa
+   parte, non solo il nome della casella. Il riquadro del <fieldset> lo
+   togliamo: a schermo il gruppo si vede gia'. Il min-width serve perche'
+   un fieldset, da solo, si rifiuta di stringersi sotto il suo contenuto. */
+fieldset.gruppo { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.gruppo > legend { padding: 0; }
 input[type=text], input[type=date], input[type=number], select, textarea {
   width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px;
   font-size: 14.5px; background: #fff; color: var(--ink); font-family: inherit;

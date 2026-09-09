@@ -25,12 +25,12 @@
 <form method="post" class="panel" style="max-width:760px">
   <div class="form-grid">
     <div>
-      <label>{{ _('A') }}</label>
-      <input type="text" value="{{ msg.to or '—' }}" disabled>
+      <label for="c-destinatario">{{ _('A') }}</label>
+      <input type="text" id="c-destinatario" value="{{ msg.to or '—' }}" disabled>
     </div>
     <div>
-      <label>{{ _('Da') }}</label>
-      <input type="text" value="{{ settings.email_from }}" disabled>
+      <label for="c-mittente">{{ _('Da') }}</label>
+      <input type="text" id="c-mittente" value="{{ settings.email_from }}" disabled>
     </div>
   </div>
 
@@ -43,7 +43,8 @@
        segnaposto='<code>[%s]</code>' % segnaposto_mese) | safe }}{% endif %}</p>
 
   <div class="mt" style="background:var(--soft,#f8fafc);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
-    <label style="margin-bottom:6px">{{ _('Modello') }}</label>
+    <fieldset class="gruppo">
+    <legend class="etichetta" style="margin-bottom:6px">{{ _('Modello') }}</legend>
     {% for chiave, nome in modelli %}
     <label style="font-weight:400;display:inline-block;margin-right:16px">
       <input type="radio" name="modello" value="{{ chiave }}" style="width:auto"
@@ -52,6 +53,7 @@
              {{ 'checked' if msg.modello == chiave }}> {{ _(nome) }}
     </label>
     {% endfor %}
+    </fieldset>
     <button class="btn small secondary" name="azione" value="rigenera" type="submit">
       {{ _('Riscrivi con questo modello') }}
     </button>
@@ -89,7 +91,8 @@
 
   {% if altre %}
   <div class="mt" style="border-top:1px solid var(--line);padding-top:12px">
-    <label style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente?') }}</label>
+    <fieldset class="gruppo">
+    <legend class="etichetta" style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente?') }}</legend>
     {% for a in altre %}
     <label style="display:block;font-weight:400">
       <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
@@ -98,6 +101,7 @@
       <span class="muted">({{ a.date | dateit }})</span>
     </label>
     {% endfor %}
+    </fieldset>
     <button class="btn small secondary mt" name="azione" value="rigenera" type="submit">
       {{ _('Aggiorna allegati e riscrivi il testo') }}
     </button>

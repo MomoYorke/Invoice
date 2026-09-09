@@ -43,19 +43,19 @@
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
           {% if i.missing_amount %}
           <div style="flex:1;min-width:150px">
-            <label style="margin-top:0">{{ _('Importo della fattura') }}</label>
-            <input type="text" name="importo" placeholder="{{ _('es. 110.- oppure 1’800.00') }}" autocomplete="off">
+            <label style="margin-top:0" for="corr-importo-{{ loop.index }}">{{ _('Importo della fattura') }}</label>
+            <input type="text" name="importo" id="corr-importo-{{ loop.index }}" placeholder="{{ _('es. 110.- oppure 1’800.00') }}" autocomplete="off">
           </div>
           {% endif %}
           {% if i.missing_date %}
           <div style="flex:1;min-width:150px">
-            <label style="margin-top:0">{{ _('Data della fattura') }}</label>
-            <input type="date" name="data">
+            <label style="margin-top:0" for="corr-data-{{ loop.index }}">{{ _('Data della fattura') }}</label>
+            <input type="date" name="data" id="corr-data-{{ loop.index }}">
           </div>
           {% endif %}
           <div style="flex:2;min-width:180px">
-            <label style="margin-top:0">{{ _('Nota (facoltativa)') }}</label>
-            <input type="text" name="nota" placeholder="{{ _('es. importo preso dal PDF cartaceo') }}">
+            <label style="margin-top:0" for="corr-nota-{{ loop.index }}">{{ _('Nota (facoltativa)') }}</label>
+            <input type="text" name="nota" id="corr-nota-{{ loop.index }}" placeholder="{{ _('es. importo preso dal PDF cartaceo') }}">
           </div>
           <button class="btn small">{{ _('Salva correzione') }}</button>
         </div>
@@ -72,8 +72,8 @@
         <input type="hidden" name="kind" value="{{ i.kind }}">
         <input type="hidden" name="msg" value="{{ i.msg }}">
         <div style="flex:1;min-width:220px">
-          <label style="margin-top:0">{{ _('Perché va bene così? (facoltativo)') }}</label>
-          <input type="text" name="nota" placeholder="{{ _('es. fattura mai emessa / numero saltato per errore nel 2025') }}">
+          <label style="margin-top:0" for="ack-nota-{{ loop.index }}">{{ _('Perché va bene così? (facoltativo)') }}</label>
+          <input type="text" name="nota" id="ack-nota-{{ loop.index }}" placeholder="{{ _('es. fattura mai emessa / numero saltato per errore nel 2025') }}">
         </div>
         <button class="btn small secondary">{{ _('Archivia anomalia') }}</button>
       </form>

@@ -9,7 +9,8 @@
   </button>
 </div>
 <p class="sub">{{ _("Come sta andando l'attività.") }}
-  <select onchange="location='?anno='+this.value" style="width:auto;margin-left:8px">
+  <select aria-label="{{ _('Anno') }}" onchange="location='?anno='+this.value"
+          style="width:auto;margin-left:8px">
     {% for y in all_years %}<option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}
   </select>
 </p>
