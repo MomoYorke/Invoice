@@ -2,8 +2,12 @@
 {% block title %}{{ _('Commercialista') }}{% endblock %}
 {% block content %}
 <h1>{{ _('Pacchetto per la commercialista') }}</h1>
-<p class="sub">{{ _("Tutto quello che serve a {nome} ({citta}), pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.").format(
-     nome=settings.accountant_name, citta=settings.accountant_city) }}</p>
+{# finche' non hai scritto chi e' la tua commercialista, la frase non deve
+   mostrare le sue parentesi vuote: «serve a  ()» sembra un pezzo rotto #}
+{%- set chi = settings.accountant_name -%}
+{%- if chi and settings.accountant_city %}{% set chi = chi ~ ' (' ~ settings.accountant_city ~ ')' %}{% endif -%}
+<p class="sub">{% if chi %}{{ _("Tutto quello che serve a {chi}, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.").format(chi=chi) }}
+  {%- else %}{{ _("Tutto quello che serve alla tua commercialista, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.") }}{% endif %}</p>
 
 <div class="panel" style="max-width:680px">
   <table>
@@ -22,9 +26,19 @@
         </form>
       </td>
     </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted" style="padding:18px 12px">
+      {{ _('Ancora nessun anno da consegnare. Appena emetti la prima fattura, l’anno compare qui col suo pacchetto pronto da generare.') }}
+    </td></tr>
     {% endfor %}
   </table>
-  <p class="muted" style="font-size:12.5px;margin-top:10px">{{ _('Nota: per 2022–2023 il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.') }}</p>
+  {%- set anni_storici = yearly.items() | selectattr('1.legacy') | map(attribute='0') | list %}
+  {% if anni_storici %}
+  {# solo per chi ha importato uno storico: a chi comincia da zero questa nota
+     parla di anni che non ha mai avuto #}
+  <p class="muted" style="font-size:12.5px;margin-top:10px">{{ _('Nota: per {anni} il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.').format(
+       anni=anni_storici | sort | join('–')) }}</p>
+  {% endif %}
 </div>
 
 {% if pkgs %}

@@ -61,6 +61,10 @@
         </details>
       </td>
     </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted" style="padding:18px 12px">
+      {{ _('Ancora nessun cliente. Aggiungilo qui sotto — oppure non fare niente: il cliente nuovo si può scrivere anche mentre fai la fattura, e finisce qui da solo.') }}
+    </td></tr>
     {% endfor %}
   </table>
 </div>

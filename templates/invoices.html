@@ -58,6 +58,11 @@
       {% if r.pdf_path %}<a href="{{ url_for('fattura_file', inv_id=r.id, kind='pdf') }}" target="_blank">PDF</a>{% endif %}
     </td>
   </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted" style="padding:18px 12px">
+    {% if all_years %}{{ _('Nessuna fattura con questi filtri. Prova a togliere l’anno o lo stato.') }}
+    {% else %}{{ _('Ancora nessuna fattura. Falla con «+ Nuova» qui sopra: appena c’è, compare in questo elenco con il suo stato — da incassare, pagata, in ritardo.') }}{% endif %}
+  </td></tr>
   {% endfor %}
 </table>
 </div>

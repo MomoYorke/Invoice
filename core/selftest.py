@@ -125,6 +125,7 @@ def run_all():
     _test_lavoro(r)
     _test_nomi_accentati(r)
     _test_una_cartella_sola(r)
+    _test_pagine_vuote(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -1773,6 +1774,87 @@ def _campi_senza_nome():
         if senza:
             fuori[pagina] = senza
     return fuori
+
+
+def _parole_del_vuoto(pezzo):
+    """Il testo che una pagina dice quando non ha niente da elencare.
+
+    Delle frasi tradotte tiene il contenuto e butta l'involucro: _('...')
+    e' quello che l'utente legge, i tag e i {% %} no.
+    """
+    frasi = re.findall(r"""_\(\s*(['"])(.+?)\1""", pezzo, re.S)
+    return ' '.join(f[1] for f in frasi).strip()
+
+
+def _cicli_di_tabella_scoperti():
+    """{pagina: [cicli che, se non hanno niente da stampare, non dicono nulla]}.
+
+    Una tabella con le intestazioni e nessuna riga sotto non e' «vuota»: e'
+    muta. Chi ha appena installato l'app non sa se e' rotta, se sta ancora
+    caricando o se ha sbagliato qualcosa lui. Il primo giorno succedeva in
+    «Fatture» e in «Clienti», che sono due delle prime pagine che si aprono.
+
+    Un ciclo e' a posto in due modi, e valgono uguale: un {% else %} che dice
+    cosa non c'e' ancora, oppure un {% if %} intorno che fa sparire tutta la
+    sezione — se non c'e' niente da mostrare, non mostrare niente e' una
+    risposta onesta.
+    """
+    etichetta = re.compile(r'\{%-?\s*(for|else|endfor|if|elif|endif)\b.*?-?%\}', re.S)
+    fuori = {}
+    for pagina, testo in _sorgenti('templates', '.html').items():
+        pila_if, pila_for, scoperti = [], [], []
+        for m in etichetta.finditer(testo):
+            tipo, a, b = m.group(1), m.start(), m.end()
+            if tipo == 'if':
+                pila_if.append(a)
+            elif tipo == 'endif':
+                if pila_if:
+                    pila_if.pop()
+            elif tipo == 'for':
+                pila_for.append({'a': a, 'corpo': b, 'else': False,
+                                 'in_if': len(pila_if)})
+            elif tipo == 'else':
+                # l'else di un if non e' l'else del for: contano solo quelli
+                # allo stesso livello di annidamento
+                if pila_for and pila_for[-1]['in_if'] == len(pila_if):
+                    pila_for[-1]['else'] = b
+            elif tipo == 'endfor':
+                if not pila_for:
+                    continue
+                blocco = pila_for.pop()
+                if '<tr' not in testo[blocco['corpo']:a] or blocco['in_if']:
+                    continue
+                # un {% else %} che non dice niente lascia la pagina muta
+                # uguale: quello che conta e' la frase, non il ramo
+                detto = _parole_del_vuoto(testo[blocco['else']:a]) if blocco['else'] else ''
+                if len(detto) < 40:
+                    scoperti.append(testo[blocco['a']:blocco['corpo']].strip()
+                                    + (' (else muto)' if blocco['else'] else ''))
+        if scoperti:
+            fuori[pagina] = scoperti
+    return fuori
+
+
+# Le pagine che si aprono col menu il primo giorno, quando dentro non c'e'
+# ancora niente. Qui la tabella E' la pagina: nasconderla lascerebbe il vuoto
+# assoluto, quindi ci vuole per forza una frase che dica cosa succedera'.
+PAGINE_DEL_PRIMO_GIORNO = ('invoices.html', 'clients.html', 'accountant.html',
+                           'sessions.html', 'email_sent.html',
+                           'credits_clients.html', 'subscriptions.html')
+
+
+def _test_pagine_vuote(r):
+    """Il primo giorno nessuna di queste pagine deve restare muta."""
+    scoperti = _cicli_di_tabella_scoperti()
+    for pagina in PAGINE_DEL_PRIMO_GIORNO:
+        _check(r, 'Primo giorno', 'in %s il vuoto e\' spiegato, non subito' % pagina,
+               scoperti.get(pagina, []), [])
+
+    # Le altre otto sono tabelle che vuote non ci vanno mai — le righe della
+    # verifica, quelle di una fattura, le voci della salute. Il numero puo'
+    # solo scendere: se sale, e' comparsa una tabella nuova che tace.
+    _check(r, 'Primo giorno', 'i cicli scoperti non aumentano',
+           sum(len(v) for v in scoperti.values()) <= 8, True)
 
 
 def _test_etichette(r):

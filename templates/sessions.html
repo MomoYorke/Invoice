@@ -64,7 +64,10 @@
   <tr><td></td><td colspan="6" class="muted" style="font-size:12px;padding-top:0">↳ {{ s.nota }}</td></tr>
   {% endif %}
   {% else %}
-  <tr><td colspan="7" class="muted">{{ _('Nessuna sessione con questi filtri.') }}</td></tr>
+  <tr><td colspan="7" class="muted" style="padding:18px 12px">
+    {% if anni %}{{ _('Nessuna sessione con questi filtri. Prova a togliere il cliente o l’anno.') }}
+    {% else %}{{ _('Ancora nessuna seduta. L’agenda si riempie da sola leggendo il tuo calendario: l’indirizzo iCal si mette in Impostazioni.') }}{% endif %}
+  </td></tr>
   {% endfor %}
 </table>
 </div>

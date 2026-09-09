@@ -49,6 +49,24 @@ def mancanti(lingua):
 
 TESTI = {
     'en': {
+        'Nessuna sessione con questi filtri. Prova a togliere il cliente o l’anno.':
+            'No session matches these filters. Try removing the client or the year.',
+        'Ancora nessuna seduta. L’agenda si riempie da sola leggendo il tuo calendario: l’indirizzo iCal si mette in Impostazioni.':
+            'No sessions yet. The agenda fills itself by reading your calendar: the iCal address goes in Settings.',
+        'Ancora nessun anno da consegnare. Appena emetti la prima fattura, l’anno compare qui col suo pacchetto pronto da generare.':
+            'No year to hand over yet. As soon as you issue your first invoice, the year appears here with its package ready to build.',
+        'Nota: per {anni} il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.':
+            'Note: for {anni} the package contains the data available in the invoices; the official totals for those years come from the Excel summaries of the archive.',
+        "Tutto quello che serve a {chi}, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Everything {chi} needs, ready in one click: Excel with the invoice register, PDF summary and a copy of every invoice of the year, in a single zip.',
+        "Tutto quello che serve alla tua commercialista, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Everything your accountant needs, ready in one click: Excel with the invoice register, PDF summary and a copy of every invoice of the year, in a single zip.',
+        'Ancora nessun cliente. Aggiungilo qui sotto — oppure non fare niente: il cliente nuovo si può scrivere anche mentre fai la fattura, e finisce qui da solo.':
+            'No clients yet. Add one below — or do nothing: you can write a new client while making the invoice too, and it lands here by itself.',
+        'Ancora nessuna fattura. Falla con «+ Nuova» qui sopra: appena c’è, compare in questo elenco con il suo stato — da incassare, pagata, in ritardo.':
+            'No invoices yet. Make one with «+ New» above: as soon as it exists, it appears in this list with its status — to collect, paid, overdue.',
+        'Nessuna fattura con questi filtri. Prova a togliere l’anno o lo stato.':
+            'No invoice matches these filters. Try removing the year or the status.',
         # --- menu ---
         'Dashboard': 'Dashboard',
         'Performance': 'Performance',
@@ -1303,6 +1321,24 @@ TESTI = {
 
     },
     'de': {
+        'Nessuna sessione con questi filtri. Prova a togliere il cliente o l’anno.':
+            'Keine Sitzung mit diesen Filtern. Nimm den Kunden oder das Jahr weg.',
+        'Ancora nessuna seduta. L’agenda si riempie da sola leggendo il tuo calendario: l’indirizzo iCal si mette in Impostazioni.':
+            'Noch keine Sitzungen. Die Agenda füllt sich von selbst aus deinem Kalender: die iCal-Adresse kommt in die Einstellungen.',
+        'Ancora nessun anno da consegnare. Appena emetti la prima fattura, l’anno compare qui col suo pacchetto pronto da generare.':
+            'Noch kein Jahr zum Abgeben. Sobald du die erste Rechnung stellst, erscheint das Jahr hier mit seinem fertigen Paket.',
+        'Nota: per {anni} il pacchetto contiene i dati disponibili nelle fatture; i totali ufficiali di quegli anni vengono dai riepiloghi Excel dello storico.':
+            'Hinweis: für {anni} enthält das Paket die in den Rechnungen verfügbaren Daten; die offiziellen Jahrestotale stammen aus den Excel-Zusammenfassungen des Archivs.',
+        "Tutto quello che serve a {chi}, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Alles, was {chi} braucht, in einem Klick bereit: Excel mit dem Rechnungsregister, PDF-Zusammenfassung und eine Kopie aller Rechnungen des Jahres, in einem einzigen Zip.',
+        "Tutto quello che serve alla tua commercialista, pronto in un click: Excel col registro fatture, riepilogo PDF e copia di tutte le fatture dell'anno, in un unico zip.":
+            'Alles, was dein Treuhänder braucht, in einem Klick bereit: Excel mit dem Rechnungsregister, PDF-Zusammenfassung und eine Kopie aller Rechnungen des Jahres, in einem einzigen Zip.',
+        'Ancora nessun cliente. Aggiungilo qui sotto — oppure non fare niente: il cliente nuovo si può scrivere anche mentre fai la fattura, e finisce qui da solo.':
+            'Noch keine Kunden. Füge unten einen hinzu — oder lass es: einen neuen Kunden kannst du auch beim Erstellen der Rechnung erfassen, und er landet von selbst hier.',
+        'Ancora nessuna fattura. Falla con «+ Nuova» qui sopra: appena c’è, compare in questo elenco con il suo stato — da incassare, pagata, in ritardo.':
+            'Noch keine Rechnungen. Erstelle eine mit «+ Neu» oben: sobald sie da ist, erscheint sie in dieser Liste mit ihrem Status — offene Zahlungen, bezahlt, überfällig.',
+        'Nessuna fattura con questi filtri. Prova a togliere l’anno o lo stato.':
+            'Keine Rechnung mit diesen Filtern. Nimm das Jahr oder den Status weg.',
         # --- Menü ---
         'Dashboard': 'Übersicht',
         'Performance': 'Auswertung',
