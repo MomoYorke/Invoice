@@ -139,10 +139,17 @@ def salute(con, settings, cartella_backup=None, lingua=None):
         testo = L.t(frase, lingua)
         return testo.format(**valori) if valori else testo
 
-    def aggiungi(nome, valore, dettaglio, stato):
+    def aggiungi(nome, valore, dettaglio, stato, azione=None):
+        """Una riga. «azione» e' il bottone che la sistema, quando esiste.
+
+        Una riga rossa che dice cosa non va e non dice come si rimedia e' un
+        vicolo cieco: chi la legge deve indovinare che il rimedio sta in
+        Impostazioni, quattro schermate piu' giu'. Chi ha scritto l'app lo sa
+        e non se ne accorge mai; chi la apre il primo giorno si blocca li'.
+        """
         nonlocal peggio
         voci.append({'nome': nome, 'valore': valore, 'dettaglio': dettaglio,
-                     'stato': stato})
+                     'stato': stato, 'azione': azione})
         if (stato == ROSSO) or (stato == GIALLO and peggio == VERDE):
             peggio = stato
 
@@ -150,20 +157,25 @@ def salute(con, settings, cartella_backup=None, lingua=None):
     # «mai fatta» in rosso spaventa e non serve a niente
     vuota = not con.execute(
         'SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL').fetchone()[0]
+    # il bottone e' lo stesso di Impostazioni: fa la copia e torna qui
+    copia_ora = {'endpoint': 'backup_ora', 'etichetta': t('Fai una copia adesso')}
     ultimo = backup.ultimo_esterno(cartella_backup)
     if ultimo is None and vuota:
         aggiungi(t('Copia fuori dal Mac'), t('non ancora'),
                  t('Se ne fa una da sola appena emetti la prima fattura.'), GIALLO)
     elif ultimo is None:
         aggiungi(t('Copia fuori dal Mac'), t('mai fatta'),
-                 t('Nessuno zip nella cartella di destinazione.'), ROSSO)
+                 t('Nessuno zip nella cartella di destinazione.'), ROSSO,
+                 copia_ora)
     else:
         _, eta = _eta(ultimo['when'], lingua)
         giorni = (datetime.datetime.now() - ultimo['when']).days
+        vecchia = giorni >= GIORNI_BACKUP_VECCHIO
         aggiungi(t('Copia fuori dal Mac'), eta,
                  t('{nome} · {kb} KB · verificata alla creazione',
                    nome=ultimo['name'], kb=ultimo['size'] // 1024),
-                 VERDE if giorni < GIORNI_BACKUP_VECCHIO else GIALLO)
+                 GIALLO if vecchia else VERDE,
+                 copia_ora if vecchia else None)
 
     quante = len(backup.elenco_esterni(cartella_backup))
     aggiungi(t('Copie conservate'), f'{quante}',

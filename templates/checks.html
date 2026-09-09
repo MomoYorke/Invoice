@@ -148,7 +148,15 @@
       <td style="width:20px">{{ pallino('verde', _('a posto')) if v.stato == 'ok'
       else (pallino('giallo', _('da tenere d’occhio')) if v.stato == 'attenzione'
       else pallino('rosso', _('da sistemare'))) }}</td>
-      <td>{{ v.nome }}<br><span class="muted" style="font-size:11.5px">{{ v.dettaglio }}</span></td>
+      <td>{{ v.nome }}<br><span class="muted" style="font-size:11.5px">{{ v.dettaglio }}</span>
+        {% if v.azione %}
+        {# il rimedio accanto al problema: chi legge la riga non deve andarlo
+           a cercare in Impostazioni, quattro schermate piu' giu' #}
+        <form method="post" action="{{ url_for(v.azione.endpoint) }}" style="margin-top:6px">
+          <input type="hidden" name="torna" value="controlli">
+          <button class="btn small">{{ v.azione.etichetta }}</button>
+        </form>
+        {% endif %}</td>
       <td class="num" style="white-space:nowrap">{{ v.valore }}</td>
     </tr>
     {% endfor %}

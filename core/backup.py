@@ -378,7 +378,14 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
     """Copia lo storico solo se e' cambiato dall'ultima volta."""
     dest_dir = dest_dir or DEST_DEFAULT
     esito = {'ok': False, 'path': None, 'errore': '', 'saltato': False,
-             'file': 0, 'nota': ''}
+             'file': 0, 'nota': '', 'niente': False}
+    # Chi comincia da zero non ha nessuno storico da mettere al sicuro: e'
+    # il caso normale del primo giorno, non un guasto. Dirgli «cartella
+    # storico non trovata:» — col nome vuoto dopo i due punti — lo spaventa
+    # per una cosa che non gli manca.
+    if not (sorgente or '').strip():
+        esito.update(ok=True, saltato=True, niente=True)
+        return esito
     if not os.path.isdir(sorgente):
         esito['errore'] = f'cartella storico non trovata: {sorgente}'
         return esito

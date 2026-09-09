@@ -1906,7 +1906,7 @@ def _cartella_backup():
 # preso dal modulo: un campo nascosto arriva da fuori, e un indirizzo che
 # arriva da fuori non deve poter decidere dove mandare chi ha appena premuto
 # un bottone di quest'app.
-RITORNI = {'benvenuto', 'impostazioni', 'dashboard'}
+RITORNI = {'benvenuto', 'impostazioni', 'dashboard', 'controlli'}
 
 
 @app.route('/i-tuoi-dati', methods=['GET'])
@@ -1984,7 +1984,7 @@ def impostazioni():
         return redirect(url_for('impostazioni'))
     settings = db.get_settings(con)
     con.close()
-    dest = settings.get('backup_dir') or backup.DEST_DEFAULT
+    dest = _cartella_backup()
     qr_mio, qr_motivo = qrbill.da_impostazioni(settings)
     return render_template('settings.html', settings=settings,
                            cartella_estratti=os.path.basename(db.DIR_ESTRATTI),
@@ -2029,7 +2029,9 @@ def backup_ora():
     sorgente = db.get_settings(con)['source_folder']
     con.close()
     st = backup.archivia_storico(sorgente, dest)
-    if st['ok'] and st['saltato']:
+    if st.get('niente'):
+        pass                       # nessuno storico da copiare: niente da dire
+    elif st['ok'] and st['saltato']:
         avvisa("Storico ({quanti} documenti): invariato dall'ultima copia, non ne "
                'serviva una nuova.', 'ok', quanti=st['file'])
     elif st['ok']:
@@ -2039,7 +2041,9 @@ def backup_ora():
         avvisa('Copia dello storico NON riuscita: {guaio}', 'error', guaio=st['errore'])
     if st.get('nota'):
         avvisa('Storico: {nota}', 'warn', nota=st['nota'])
-    return redirect(url_for('impostazioni'))
+    # si torna da dove si e' premuto: il bottone sta anche nei Controlli
+    torna = request.form.get('torna', '')
+    return redirect(url_for(torna if torna in RITORNI else 'impostazioni'))
 
 
 # ---------------------------------------------------------------- API
@@ -2186,7 +2190,7 @@ if __name__ == '__main__':
     con = db.init()
     backup.make_backup('avvio')
     # copia completa fuori dal Mac, una volta al giorno
-    _dest = db.get_settings(con).get('backup_dir') or backup.DEST_DEFAULT
+    _dest = _cartella_backup()
     if not backup.destinazione_leggibile(_dest):
         # succede su macOS quando l'app parte dal suo pacchetto e la cartella
         # sta su iCloud Drive: il sistema nega l'elenco a un'app non firmata
@@ -2199,7 +2203,9 @@ if __name__ == '__main__':
                                       else 'NON riuscito — ' + _e['errore']))
         # lo storico (129 documenti) si copia solo se e' cambiato
         _s = backup.archivia_storico(db.get_settings(con)['source_folder'], _dest)
-        if _s['saltato']:
+        if _s.get('niente'):
+            pass                   # nessuno storico da copiare
+        elif _s['saltato']:
             print('  Storico: invariato, nessuna copia nuova')
         else:
             print('  Storico: ' + (os.path.basename(_s['path']) if _s['ok']

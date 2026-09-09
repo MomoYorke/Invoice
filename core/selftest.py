@@ -124,6 +124,7 @@ def run_all():
     _test_abbonamenti(r)
     _test_lavoro(r)
     _test_nomi_accentati(r)
+    _test_una_cartella_sola(r)
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
@@ -3311,6 +3312,59 @@ def _test_trasloco(r):
     # una migrazione che nessuno chiama e' un commento lungo
     _check(r, 'Trasloco', 'e viene davvero chiamata all’avvio',
            '    _migra_trasloco(con)' in sorgente, True)
+
+
+def _test_una_cartella_sola(r):
+    """Dove vanno le copie lo deve decidere UNA riga sola.
+
+    La regola vera e' scritta in _cartella_backup(): se c'e' INVOICE_BACKUP
+    vince quello, se no l'impostazione salvata, se no iCloud. Il primo pezzo
+    esiste per una ragione precisa: un'app di prova parte quasi sempre da una
+    copia del database vero, e quella copia si porta dietro l'indirizzo della
+    cartella vera. Senza l'interruttore, la prova scrive in mezzo ai backup
+    buoni.
+
+    E' successo. La regola era scritta in tre punti e due la sbagliavano: la
+    pagina Impostazioni mostrava l'elenco delle copie vere anche a un'app di
+    prova, e — peggio — l'avvio ci scriveva dentro. Una regola copiata tre
+    volte non e' una regola: sono tre regole che per un po' si assomigliano.
+    """
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        sorgente = f.read()
+
+    # il corpo di _cartella_backup(): da li' fino alla riga seguente che
+    # comincia a colonna zero, cioe' fino a quando finisce la funzione
+    inizio = sorgente.index('def _cartella_backup(')
+    resto = sorgente[inizio:]
+    fine = len(resto)
+    for m in re.finditer(r'\n(?=[^\s#])', resto):
+        if m.start() > 0:
+            fine = m.start()
+            break
+    dentro, fuori = resto[:fine], sorgente[:inizio] + resto[fine:]
+
+    for parola in ("'backup_dir'", 'DEST_DEFAULT'):
+        _check(r, 'Copie', 'in app.py «%s» si nomina solo dentro _cartella_backup' % parola,
+               parola in dentro and parola not in fuori, True)
+
+    # ...e chi ha bisogno della cartella la chiede a lei. L'avvio compreso:
+    # e' il momento in cui la copia si fa da sola, senza nessuno che guardi.
+    _check(r, 'Copie', 'anche l’avvio chiede la cartella alla regola',
+           '    _dest = _cartella_backup()' in sorgente, True)
+    _check(r, 'Copie', 'INVOICE_BACKUP passa davanti all’impostazione salvata',
+           dentro.index("db.env('INVOICE_BACKUP'") < dentro.index("'backup_dir'"), True)
+
+    # Nessuno storico da copiare non e' un guasto: e' il primo giorno.
+    import tempfile
+    from . import backup as _bk
+    esito = _bk.archivia_storico('', tempfile.gettempdir())
+    _check(r, 'Copie', 'senza cartella storica non si grida al guasto',
+           (esito['ok'], esito['errore'], esito.get('niente')), (True, '', True))
+    esito2 = _bk.archivia_storico('/cartella/che/non/esiste/davvero',
+                                  tempfile.gettempdir())
+    _check(r, 'Copie', 'ma una cartella scritta male resta un guasto',
+           (esito2['ok'], bool(esito2['errore'])), (False, True))
 
 
 def _test_backup_illeggibile(r):
