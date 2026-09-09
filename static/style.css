@@ -189,6 +189,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-2); 
    sua: e' quello stato che sta durando troppo, non un secondo fatto. */
 .in-ritardo { color: var(--danger); font-size: 11.5px; font-weight: 600;
   margin-top: 3px; white-space: nowrap; }
+
+/* «da spedire»: non e' un allarme come un ritardo — la fattura c'e', manca
+   solo di partire — ma e' l'unica cosa di quella colonna su cui si possa
+   fare qualcosa, quindi si vede piu' del trattino che c'era prima. */
+a.da-spedire { color: var(--accent); font-weight: 600; text-decoration: none; }
+a.da-spedire:hover { text-decoration: underline; }
 .suggestion { background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin: 8px 0; display: none; }
 /* ---------- charts ---------- */
 .chart-note { font-size: 12px; color: var(--muted); margin-top: 6px; }

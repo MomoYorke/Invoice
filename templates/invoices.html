@@ -43,10 +43,14 @@
           else _('ferma da {n} giorni').format(n=ferme[r.id]) }}</div>
       {% endif %}
     </td>
+    {# La colonna piu' larga della tabella diceva l'ora esatta di una mail:
+       un dato che non si guarda mai, largo piu' dell'importo. Resta la data,
+       e l'ora si legge passandoci sopra. Al posto del trattino, per le
+       fatture nate qui dentro, la cosa che invece c'e' da fare. #}
     <td class="muted" style="font-size:12px;white-space:nowrap">
-      {% if r.sent_at %}{{ icona('email', 'ic-mini') }} {{ r.sent_at[:10] | dateit }}{% if r.sent_at|length > 10 %}
-        <span style="opacity:.75">{{ r.sent_at[11:16] }}</span>{% endif %}
-      {% else %}—{% endif %}
+      {% if r.sent_at %}<span title="{{ r.sent_at[:10] | dateit }}{% if r.sent_at|length > 10 %} · {{ r.sent_at[11:16] }}{% endif %}">{{ r.sent_at[:10] | dateit }}</span>
+      {%- elif r.source == 'app' %}<a class="da-spedire" href="{{ url_for('fattura_email', inv_id=r.id) }}">{{ _('da spedire') }}</a>
+      {%- else %}—{% endif %}
     </td>
     <td class="right">
       {% if r.pdf_path %}<a href="{{ url_for('fattura_file', inv_id=r.id, kind='pdf') }}" target="_blank">PDF</a>{% endif %}
