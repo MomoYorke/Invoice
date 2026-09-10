@@ -621,6 +621,30 @@ TESTI = {
         'Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.':
             'The standard is public: you need no permission from your bank or anyone else.',
         'Pronta. Sul bollettino uscirà:': 'Ready. The slip will show:',
+        'Compleanni in arrivo':
+            'Upcoming birthdays',
+        'oggi':
+            'today',
+        'domani':
+            'tomorrow',
+        'tra {n} giorni':
+            'in {n} days',
+        'compie {anni} anni':
+            'turns {anni}',
+        'Compleanno':
+            'Birthday',
+        'gg.mm — l’anno solo se lo sai':
+            'dd.mm — the year only if you know it',
+        'Cliente «{nome}» aggiunto, ma senza compleanno. {motivo}':
+            'Client «{nome}» added, but without a birthday. {motivo}',
+        'Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}':
+            'Client updated, but the birthday stayed as it was. {motivo}',
+        'Il compleanno non si capisce: scrivilo come giorno e mese, per esempio 15.03, e aggiungi l’anno solo se lo sai.':
+            'The birthday is not clear: write day and month, for example 15.03, and add the year only if you know it.',
+        'Quel giorno nel calendario non c’è: controlla giorno e mese.':
+            'That day does not exist in the calendar: check day and month.',
+        'L’anno di nascita non torna: controllalo, oppure lascialo fuori.':
+            'The year of birth does not add up: check it, or leave it out.',
         'Il tuo IBAN è un QR-IBAN, quindi sul bollettino va il riferimento QR di 27 cifre. L’app lo compone da sola.':
             'Your IBAN is a QR-IBAN, so the slip carries the 27-digit QR reference. The app builds it for you.',
         'Sul bollettino va un riferimento RF, quello che vale su ogni IBAN normale. L’app lo compone da sola.':
@@ -1919,6 +1943,30 @@ TESTI = {
             'Der Standard ist öffentlich: du brauchst weder von deiner Bank noch von '
             'sonst jemandem eine Erlaubnis.',
         'Pronta. Sul bollettino uscirà:': 'Bereit. Auf dem Zahlteil steht:',
+        'Compleanni in arrivo':
+            'Anstehende Geburtstage',
+        'oggi':
+            'heute',
+        'domani':
+            'morgen',
+        'tra {n} giorni':
+            'in {n} Tagen',
+        'compie {anni} anni':
+            'wird {anni}',
+        'Compleanno':
+            'Geburtstag',
+        'gg.mm — l’anno solo se lo sai':
+            'TT.MM — das Jahr nur, wenn du es weisst',
+        'Cliente «{nome}» aggiunto, ma senza compleanno. {motivo}':
+            'Kunde «{nome}» hinzugefügt, aber ohne Geburtstag. {motivo}',
+        'Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}':
+            'Kunde aktualisiert, aber der Geburtstag ist geblieben, wie er war. {motivo}',
+        'Il compleanno non si capisce: scrivilo come giorno e mese, per esempio 15.03, e aggiungi l’anno solo se lo sai.':
+            'Der Geburtstag ist nicht klar: Schreib Tag und Monat, zum Beispiel 15.03, und das Jahr nur, wenn du es weisst.',
+        'Quel giorno nel calendario non c’è: controlla giorno e mese.':
+            'Diesen Tag gibt es im Kalender nicht: Prüf Tag und Monat.',
+        'L’anno di nascita non torna: controllalo, oppure lascialo fuori.':
+            'Das Geburtsjahr geht nicht auf: Prüf es oder lass es weg.',
         'Il tuo IBAN è un QR-IBAN, quindi sul bollettino va il riferimento QR di 27 cifre. L’app lo compone da sola.':
             'Deine IBAN ist eine QR-IBAN, deshalb steht auf dem Zahlteil die 27-stellige QR-Referenz. Die App erstellt sie selbst.',
         'Sul bollettino va un riferimento RF, quello che vale su ogni IBAN normale. L’app lo compone da sola.':

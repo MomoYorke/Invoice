@@ -45,6 +45,8 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 INVOICE_DIR = db.DIR_FATTURE
 TRASH_DIR = db.DIR_CESTINO
 
+from core import birthdays   # i compleanni dei clienti, per la Dashboard
+
 app = Flask(__name__)
 app.secret_key = 'em-fatture-locale'
 app.jinja_env.filters['chf'] = fmt_chf
@@ -147,6 +149,7 @@ def fmt_giorno_settimana(iso):
 
 app.jinja_env.filters['dateit'] = fmt_date_it
 app.jinja_env.filters['giorno_settimana'] = fmt_giorno_settimana
+app.jinja_env.filters['compleanno'] = birthdays.da_mostrare
 
 
 @app.context_processor
@@ -239,9 +242,13 @@ def dashboard():
     # il 2024 il «questo mese» non esiste, e fingere che esista sarebbe peggio
     mese = stats.mese_su_mese(con, year, oggi.month) if year == oggi.year else None
     restano = ben.da_fare(passi)
+    # chi compie gli anni da oggi a una settimana: il riquadro compare solo
+    # quando c'e' qualcuno, e sparisce da solo il giorno dopo la festa
+    compleanni = birthdays.in_arrivo(
+        con.execute('SELECT id, name, compleanno, archived FROM clients').fetchall(), oggi)
     con.close()
     return render_template('dashboard.html', k=k, year=year, months=months,
-                           cose=cose, novita=novita, restano=restano,
+                           cose=cose, novita=novita, restano=restano, compleanni=compleanni,
                            elenco_restano=', '.join(
                                lng.in_frase(lng.t(p['titolo'], _lingua_app()), _lingua_app())
                                for p in restano),
@@ -1164,11 +1171,21 @@ def clienti():
 def cliente_salva(cid):
     f = request.form
     con = get_con()
+    # Un compleanno che non si capisce non si salva, ma non si butta il resto
+    # della scheda: si tiene quello di prima e lo si dice. E se il modulo quel
+    # campo non ce l'ha proprio, il compleanno non si tocca.
+    vecchio = con.execute('SELECT compleanno FROM clients WHERE id=?', (cid,)).fetchone()
+    compleanno = (vecchio['compleanno'] or '') if vecchio else ''
+    perche = ''
+    if 'compleanno' in f:
+        letto, perche = birthdays.leggi_compleanno(f.get('compleanno'))
+        if letto is not None:
+            compleanno = letto
     # 'tono' c'era nel modulo ma non qui: il menu «come ti firmi» si poteva
     # cambiare e non veniva mai salvato
     con.execute('UPDATE clients SET name=?, address1=?, address2=?, file_label=?, notes=?, '
                 'email=?, tono=?, lingua=?, paga_come=?, intestatario=?, abbonamento=?, '
-                'archived=? WHERE id=?',
+                'archived=?, compleanno=? WHERE id=?',
                 (f.get('name', '').strip(), f.get('address1', '').strip(),
                  f.get('address2', '').strip(), f.get('file_label', '').strip(),
                  f.get('notes', '').strip(), f.get('email', '').strip(),
@@ -1177,10 +1194,14 @@ def cliente_salva(cid):
                  f.get('paga_come', '').strip(),
                  f.get('intestatario', '').strip(),
                  1 if f.get('abbonamento') else 0,
-                 1 if f.get('archived') else 0, cid))
+                 1 if f.get('archived') else 0, compleanno, cid))
     con.commit()
     con.close()
-    avvisa('Cliente aggiornato.', 'ok')
+    if perche:
+        avvisa('Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}',
+               'error', motivo=lng.t(perche, _lingua_app()))
+    else:
+        avvisa('Cliente aggiornato.', 'ok')
     return redirect(url_for('clienti'))
 
 
@@ -1193,13 +1214,20 @@ def cliente_nuovo():
         return redirect(url_for('clienti'))
     key = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
     con = get_con()
-    con.execute('INSERT OR IGNORE INTO clients(key,name,address1,address2,file_label,email) '
-                'VALUES(?,?,?,?,?,?)',
+    compleanno, perche = birthdays.leggi_compleanno(f.get('compleanno'))
+    con.execute('INSERT OR IGNORE INTO clients(key,name,address1,address2,file_label,email,'
+                'compleanno) VALUES(?,?,?,?,?,?,?)',
                 (key, name, f.get('address1', '').strip(), f.get('address2', '').strip(),
-                 f.get('file_label', '').strip() or name, f.get('email', '').strip()))
+                 f.get('file_label', '').strip() or name, f.get('email', '').strip(),
+                 compleanno or ''))
     con.commit()
     con.close()
-    avvisa('Cliente «{nome}» aggiunto.', 'ok', nome=name)
+    if perche:
+        # il cliente c'e', il compleanno no: un messaggio solo, che dice tutte e due
+        avvisa('Cliente «{nome}» aggiunto, ma senza compleanno. {motivo}', 'error',
+               nome=name, motivo=lng.t(perche, _lingua_app()))
+    else:
+        avvisa('Cliente «{nome}» aggiunto.', 'ok', nome=name)
     return redirect(url_for('clienti'))
 
 

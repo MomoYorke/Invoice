@@ -71,6 +71,19 @@
   </div>
 </div>
 
+{# --- chi compie gli anni questa settimana: c'e' solo quando c'e' qualcuno --- #}
+{% if compleanni %}
+<h2 class="sezione">{{ _('Compleanni in arrivo') }}</h2>
+<div class="panel elenco-compleanni">
+  {% for c in compleanni %}
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:5px 0">
+    <span><strong>{{ c.nome }}</strong>{% if c.anni %} <span class="muted">· {{ _('compie {anni} anni').format(anni=c.anni) }}</span>{% endif %}</span>
+    <span class="{{ 'badge pagata' if c.tra == 0 else '' }}">{% if c.tra == 0 %}{{ _('oggi') }}{% elif c.tra == 1 %}{{ _('domani') }}{% else %}{{ _('tra {n} giorni').format(n=c.tra) }}{% endif %} · {{ c.quando.strftime('%d.%m') }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {# --- le cose che chiedono qualcosa a te --- #}
 <h2 class="sezione">{{ _('Da fare') }}</h2>
 <div class="panel elenco-da-fare">

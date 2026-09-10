@@ -476,6 +476,10 @@ def _migrate(con):
     if 'abbonamento' not in cli:
         # clienti con ordine permanente: nell'email va la frase sullo standing order
         con.execute('ALTER TABLE clients ADD COLUMN abbonamento INTEGER DEFAULT 0')
+    if 'compleanno' not in cli:
+        # «03-15» senza l'anno, «1986-03-15» con: l'anno quasi nessuno lo sa, e
+        # alla Dashboard bastano giorno e mese. Vuoto per chi non l'ha detto.
+        con.execute('ALTER TABLE clients ADD COLUMN compleanno TEXT DEFAULT ""')
     _migra_modelli_email(con)
     _migra_riga_qr(con)
     _migra_oggetti_email(con)

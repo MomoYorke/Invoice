@@ -54,6 +54,9 @@
             <input type="text" name="paga_come" id="cl-paga_come-{{ c.id }}" value="{{ c.paga_come }}"
                    placeholder="{{ _('lascia vuoto se paga col suo nome') }}">
             <span class="muted" style="font-size:11.5px">{{ _("Serve alla pagina Banca quando i soldi arrivano da un'altra persona (marito, moglie, azienda). Più nomi separati da punto e virgola.") }}</span>
+            <label for="cl-compleanno-{{ c.id }}">{{ _('Compleanno') }}</label>
+            <input type="text" name="compleanno" id="cl-compleanno-{{ c.id }}" value="{{ c.compleanno | compleanno }}"
+                   placeholder="{{ _('gg.mm — l’anno solo se lo sai') }}" inputmode="numeric" autocomplete="off">
             <label for="cl-notes-{{ c.id }}">{{ _('Note') }}</label><input type="text" name="notes" id="cl-notes-{{ c.id }}" value="{{ c.notes }}">
             <label><input type="checkbox" name="archived" value="1" {{ 'checked' if c.archived }} style="width:auto"> {{ _('Archiviato') }}</label>
             <button class="btn small mt">{{ _('Salva') }}</button>
@@ -76,6 +79,7 @@
     <label for="nuovo-address1">{{ _('Indirizzo — via e numero') }}</label><input type="text" name="address1" id="nuovo-address1">
     <label for="nuovo-address2">{{ _('Indirizzo — CAP e città') }}</label><input type="text" name="address2" id="nuovo-address2">
     <label for="nuovo-email">{{ _('Email') }}</label><input type="email" name="email" id="nuovo-email" placeholder="{{ _('nome@esempio.ch') }}">
+    <label for="nuovo-compleanno">{{ _('Compleanno') }}</label><input type="text" name="compleanno" id="nuovo-compleanno" placeholder="{{ _('gg.mm — l’anno solo se lo sai') }}" inputmode="numeric" autocomplete="off">
     <button class="btn mt">{{ _('Aggiungi') }}</button>
   </form>
 </div>

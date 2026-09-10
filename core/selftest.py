@@ -122,6 +122,8 @@ def run_all():
     _test_gemelli_fra_file(r)
     _test_qr_fattura(r)
     _test_qr_iban(r)
+    _test_compleanni(r)
+    _test_modelli_si_compilano(r)
     _test_abbonamenti(r)
     _test_lavoro(r)
     _test_nomi_accentati(r)
@@ -1032,6 +1034,14 @@ def _frasi_restituite_senza_traduzione(L):
     from . import qrbill as _qr
     frasi += [getattr(_qr, x) for x in dir(_qr)
               if x.startswith(('SENZA_', 'PREFISSO_'))]
+    # i motivi per cui un compleanno scritto a mano non si capisce: stessa
+    # strada, costanti COMPLEANNO_* raccolte da sole
+    import importlib as _il
+    try:
+        _bd = _il.import_module('.birthdays', __package__)
+        frasi += [getattr(_bd, x) for x in dir(_bd) if x.startswith('COMPLEANNO_')]
+    except ImportError:
+        pass        # manca il modulo: lo dice da sola _test_compleanni, in rosso
     # finisce nel database e la pagina lo traduce quando lo mostra
     from . import db as _db
     frasi.append(_db.MOTIVO_RICOSTRUITO)
@@ -4336,6 +4346,170 @@ def _test_qr_iban(r):
             or re.search(r'riferimento_per\(\s*number\s*\)', testo_s)], [])
     _check(r, 'QR-IBAN', 'e il numero della banca passa dal controllo prima di essere salvato',
            'prefisso_qrr(' in sorgenti['app.py'], True)
+
+
+def _test_compleanni(r):
+    """I compleanni dei clienti, sulla Dashboard una settimana prima.
+
+    Chiesto il 10.09.2026: un riquadro che dica chi compie gli anni, a partire
+    da sette giorni prima. Sembra aritmetica da niente, e ha le sue trappole,
+    tutte vere il giorno che capitano: il capodanno in mezzo (il 28 dicembre il
+    compleanno del 2 gennaio e' fra cinque giorni, non fra un anno meno
+    qualcosa), il 29 febbraio negli anni che non ce l'hanno, e chi l'anno di
+    nascita non lo dice, che e' quasi tutti.
+    """
+    import datetime
+    import importlib
+    import shutil
+    import sqlite3
+    import tempfile
+
+    def B():
+        return importlib.import_module('.birthdays', __package__)
+
+    # --- come si scrive: come lo scrive la gente ---------------------------
+    for scritto, atteso in (('15.03', '03-15'), ('15.3.1986', '1986-03-15'),
+                            (' 5/3 ', '03-05'), ('1986-03-15', '1986-03-15'),
+                            ('29.02', '02-29'), ('', '')):
+        _check(r, 'Compleanni', '«%s» si legge %s' % (scritto.strip(), atteso or 'vuoto'),
+               _senza_scoppiare(lambda: B().leggi_compleanno(scritto)), (atteso, ''))
+    for sbagliato in ('31.02', '15.13', 'domani', '29.02.1985', '15.03.1850', '15.03.2999'):
+        esito = _senza_scoppiare(lambda: B().leggi_compleanno(sbagliato))
+        _check(r, 'Compleanni', '«%s» viene respinto dicendo perché' % sbagliato,
+               isinstance(esito, tuple) and esito[0] is None and bool(esito[1]), True)
+    _check(r, 'Compleanni', 'e sulla scheda si rilegge come lo si era scritto',
+           _senza_scoppiare(lambda: (B().da_mostrare('03-15'), B().da_mostrare('1986-03-15'),
+                                     B().da_mostrare(''))),
+           ('15.03', '15.03.1986', ''))
+
+    # --- chi compare, e quando ---------------------------------------------
+    oggi = datetime.date(2026, 9, 10)
+    clienti = [
+        {'id': 1, 'name': 'Vera Buergi', 'compleanno': '09-10', 'archived': 0},       # oggi
+        {'id': 2, 'name': 'Ivan Steiner', 'compleanno': '1986-09-12', 'archived': 0},  # fra 2
+        {'id': 3, 'name': 'Nina', 'compleanno': '09-17', 'archived': 0},              # fra 7
+        {'id': 4, 'name': 'Elena', 'compleanno': '09-18', 'archived': 0},             # fra 8
+        {'id': 5, 'name': 'Jonas', 'compleanno': '09-09', 'archived': 0},             # ieri
+        {'id': 6, 'name': 'Pierre', 'compleanno': '09-11', 'archived': 1},            # archiviato
+        {'id': 7, 'name': 'Céline Favre', 'compleanno': '', 'archived': 0},           # non si sa
+    ]
+    arrivo = _senza_scoppiare(lambda: B().in_arrivo(clienti, oggi))
+    _check(r, 'Compleanni', 'compaiono da oggi a sette giorni, i più vicini prima',
+           _senza_scoppiare(lambda: [(c['nome'], c['tra']) for c in arrivo]),
+           [('Vera Buergi', 0), ('Ivan Steiner', 2), ('Nina', 7)])
+    _check(r, 'Compleanni', 'chi ha detto l’anno compie i suoi anni, chi no resta senza',
+           _senza_scoppiare(lambda: [c['anni'] for c in arrivo]), [None, 40, None])
+    _check(r, 'Compleanni', 'e il giorno è quello di quest’anno',
+           _senza_scoppiare(lambda: arrivo[1]['quando']), datetime.date(2026, 9, 12))
+    # la trappola che in quest'app ha gia' morso: nelle prove i clienti sono
+    # dizionari, sui dati veri righe di sqlite, che «get» non ce l'hanno
+    finto = sqlite3.connect(':memory:')
+    finto.row_factory = sqlite3.Row
+    finto.execute('CREATE TABLE clients(id INT, name TEXT, compleanno TEXT, archived INT)')
+    finto.execute("INSERT INTO clients VALUES(1, 'Vera Buergi', '09-12', 0)")
+    righe = finto.execute('SELECT * FROM clients').fetchall()
+    _check(r, 'Compleanni', 'le righe vere del database si leggono come i dizionari',
+           _senza_scoppiare(lambda: [c['tra'] for c in B().in_arrivo(righe, oggi)]), [2])
+
+    # --- le trappole del calendario ----------------------------------------
+    _check(r, 'Compleanni', 'a fine dicembre il compleanno di gennaio è fra pochi giorni',
+           _senza_scoppiare(lambda: [(c['quando'], c['tra'], c['anni']) for c in B().in_arrivo(
+               [{'id': 1, 'name': 'Nina', 'compleanno': '1990-01-02', 'archived': 0}],
+               datetime.date(2026, 12, 28))]),
+           [(datetime.date(2027, 1, 2), 5, 37)])
+    _check(r, 'Compleanni', 'il 29 febbraio, negli anni che non ce l’hanno, si festeggia il 28',
+           _senza_scoppiare(lambda: [(c['quando'], c['tra']) for c in B().in_arrivo(
+               [{'id': 1, 'name': 'Nina', 'compleanno': '02-29', 'archived': 0}],
+               datetime.date(2027, 2, 25))]),
+           [(datetime.date(2027, 2, 28), 3)])
+    _check(r, 'Compleanni', 'e negli anni bisestili il 29, com’è giusto',
+           _senza_scoppiare(lambda: [(c['quando'], c['tra']) for c in B().in_arrivo(
+               [{'id': 1, 'name': 'Nina', 'compleanno': '02-29', 'archived': 0}],
+               datetime.date(2028, 2, 25))]),
+           [(datetime.date(2028, 2, 29), 4)])
+
+    # --- il posto nel database ---------------------------------------------
+    from . import db as D
+    vero = D.DB_PATH
+    cartella = tempfile.mkdtemp()
+    try:
+        D.DB_PATH = os.path.join(cartella, 'nuovo.db')
+        con = D.init()
+        colonne = [x[1] for x in con.execute('PRAGMA table_info(clients)')]
+        con.close()
+        _check(r, 'Compleanni', 'un’installazione nuova ha il posto per il compleanno',
+               'compleanno' in colonne, True)
+        # una vecchia, con un cliente dentro e senza la colonna: la colonna
+        # arriva, e il cliente resta dov'era
+        D.DB_PATH = os.path.join(cartella, 'vecchio.db')
+        vecchio = sqlite3.connect(D.DB_PATH)
+        vecchio.executescript(D.SCHEMA)
+        vecchio.execute("INSERT INTO clients(id, name, key) VALUES(1, 'Vera Buergi', 'vb')")
+        vecchio.commit()
+        vecchio.close()
+        con = D.init()
+        dopo = ('compleanno' in [x[1] for x in con.execute('PRAGMA table_info(clients)')],
+                con.execute('SELECT name FROM clients').fetchall()[0][0])
+        con.close()
+        _check(r, 'Compleanni', 'su un database già in uso arriva senza toccare i clienti',
+               dopo, (True, 'Vera Buergi'))
+    finally:
+        D.DB_PATH = vero
+        shutil.rmtree(cartella, ignore_errors=True)
+
+    # --- la Dashboard e la scheda del cliente passano davvero di qui -------
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def leggi(*pezzi):
+        with io.open(os.path.join(base, *pezzi), encoding='utf-8') as f:
+            return f.read()
+    sorgente_app = leggi('app.py')
+    _check(r, 'Compleanni', 'la Dashboard chiede i compleanni in arrivo e li mostra',
+           ('birthdays.in_arrivo(' in sorgente_app, 'compleanni=' in sorgente_app,
+            'compleanni' in leggi('templates', 'dashboard.html')),
+           (True, True, True))
+    _check(r, 'Compleanni', 'e la scheda del cliente lo salva passando dal controllo',
+           ('birthdays.leggi_compleanno(' in sorgente_app,
+            'name="compleanno"' in leggi('templates', 'clients.html')),
+           (True, True))
+
+
+def _test_modelli_si_compilano(r):
+    """Ogni pagina si compila: un tag lasciato aperto non arriva a chi usa l'app.
+
+    Trovato il 10.09.2026. Nel riquadro nuovo dei compleanni mancava un
+    «endif»: la batteria era verde, 780 su 780, e la Dashboard dava errore 500
+    appena aperta. Nessuna prova apriva davvero i modelli: li leggevano tutte
+    come testo, cercando etichette e frasi. Un errore di sintassi in un modello
+    non si vede finche' qualcuno non apre quella pagina — e la Dashboard e' la
+    prima pagina che si apre.
+    """
+    import re
+    import jinja2
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'templates')
+    ambiente = jinja2.Environment(loader=jinja2.FileSystemLoader(base))
+    # I filtri dell'app («chf», «dateit», ...) Jinja li vuole gia' quando compila,
+    # non solo quando disegna: in un ambiente vuoto ogni pagina sembrerebbe rotta.
+    # Si prendono i NOMI da come l'app li registra davvero, cosi' un filtro usato
+    # in una pagina e mai registrato resta quello che e': un errore vero.
+    with io.open(os.path.join(os.path.dirname(base), 'app.py'), encoding='utf-8') as f:
+        sorgente_app = f.read()
+    registrati = re.findall(r"jinja_env\.(?:filters|tests)\[['\"](\w+)['\"]\]", sorgente_app)
+    registrati += re.findall(r"template_(?:filter|test)\(\s*['\"](\w+)['\"]", sorgente_app)
+    for nome in registrati:
+        ambiente.filters[nome] = ambiente.tests[nome] = lambda *a, **k: ''
+    nomi = sorted(n for n in os.listdir(base) if n.endswith('.html'))
+    rotti = []
+    for nome in nomi:
+        try:
+            ambiente.get_template(nome)
+        except jinja2.TemplateSyntaxError as guaio:
+            rotti.append('%s:%s %s' % (nome, guaio.lineno, guaio.message))
+    _check(r, 'Modelli', 'ogni pagina si compila, senza tag lasciati aperti', rotti, [])
+    # una guardia che non trova le pagine sarebbe verde per sbaglio
+    _check(r, 'Modelli', 'e le pagine controllate sono davvero tutte (%d)' % len(nomi),
+           len(nomi) >= 20, True)
 
 
 def _test_abbonamenti(r):
