@@ -46,7 +46,7 @@
 <div class="panel">
   <table>
     <tr><th>{{ _('Cliente') }}</th><th>{{ _('Pacchetto') }}</th><th class="num">{{ _('Usati') }}</th>
-        <th class="num">{{ _('Rimasti') }}</th>{% if sync_attivo %}<th class="num">{{ _('In agenda') }}</th>{% endif %}<th>{{ _('Dal') }}</th><th>{{ _('Ultima sessione') }}</th>
+        <th class="num">{{ _('Rimasti') }}</th><th>{{ _('Dal') }}</th><th>{{ _('Ultima sessione') }}</th>
         <th>{{ _('Stato') }}</th><th></th></tr>
     {% for r in righe %}
     {% set pieno = r.terminati %}
@@ -59,17 +59,11 @@
       <td><a href="{{ url_for('crediti_pacchetto', pid=r.pacchetto) }}">{{ r.pacchetto }}</a></td>
       <td class="num no-blur">{{ r.usati }}/{{ r.crediti }}</td>
       <td class="num no-blur"><strong>{{ r.rimasti }}</strong></td>
-      {% if sync_attivo %}<td class="num no-blur">{{ r.in_agenda if r.in_agenda is not none else '—' }}</td>{% endif %}
       <td class="muted">{{ r.inizio | dateit if r.inizio else '—' }}</td>
       <td class="muted">{{ r.ultima_sessione | dateit if r.ultima_sessione else '—' }}</td>
       <td>
         <span class="badge {{ 'emessa' if r.in_esaurimento else 'pagata' }}"
               style="{{ 'background:#fee2e2;color:#b91c1c' if pieno }}">{{ _(r.stato) }}</span>
-        {% if r.prima_scoperta %}
-          <div style="font-size:12px;color:#b45309;margin-top:3px">{{ _('la seduta del {data} è già oltre i crediti: la fattura va fatta prima').format(data=r.prima_scoperta | dateit) }}</div>
-        {% elif r.tutti_in_agenda %}
-          <div style="font-size:12px;color:#b45309;margin-top:3px">{{ _('crediti già tutti in agenda: prepara la prossima fattura') }}</div>
-        {% endif %}
         {% if r.fattura_numero %}
           {% if r.fattura_stato == 'pagata' %}
             <div style="font-size:12px;color:#065f46;margin-top:3px">
@@ -93,7 +87,7 @@
       </td>
     </tr>
     <tr id="lk-{{ loop.index }}" style="display:none">
-      <td colspan="{{ 9 if sync_attivo else 8 }}" style="background:#f8fafc">
+      <td colspan="8" style="background:#f8fafc">
         <form method="post" action="{{ url_for('crediti_collega') }}"
               style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
           <input type="hidden" name="pacchetto" value="{{ r.pacchetto }}">
@@ -127,7 +121,6 @@
     {% endif %}
     <p class="muted" style="font-size:13.5px">{{ _("Il calendario lo legge l'app da sola, ogni volta che apri questa pagina (al massimo una volta ogni quarto d'ora); con «Aggiorna adesso» lo rileggi subito. Le sessioni già registrate non vengono mai duplicate (ogni evento porta il suo ID Google), e lo storico validato non viene mai riscritto.") }}</p>
     <p class="muted" style="font-size:12.5px">{{ _('Gli appuntamenti futuri non consumano crediti: contano solo le sessioni fino a oggi. Una sessione cancellata consuma comunque il credito.') }}</p>
-    {% if sync_attivo %}<p class="muted" style="font-size:12.5px">{{ _('Quelli già in calendario per i prossimi {giorni} giorni li vedi in «In agenda»: così sai quando serve la prossima fattura prima dell’ultima seduta, non dopo.').format(giorni=giorni_agenda) }}</p>{% endif %}
   </div>
 
   <div class="panel">
