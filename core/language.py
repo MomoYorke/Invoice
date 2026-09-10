@@ -621,6 +621,14 @@ TESTI = {
         'Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.':
             'The standard is public: you need no permission from your bank or anyone else.',
         'Pronta. Sul bollettino uscirà:': 'Ready. The slip will show:',
+        'In agenda':
+            'Booked',
+        'la seduta del {data} è già oltre i crediti: la fattura va fatta prima':
+            'the session on {data} is already beyond the credits: invoice before it',
+        'crediti già tutti in agenda: prepara la prossima fattura':
+            'credits already all booked: get the next invoice ready',
+        'Quelli già in calendario per i prossimi {giorni} giorni li vedi in «In agenda»: così sai quando serve la prossima fattura prima dell’ultima seduta, non dopo.':
+            'The ones already in the calendar for the next {giorni} days show under «Booked»: so you know the next invoice is due before the last session, not after.',
         'Compleanni in arrivo':
             'Upcoming birthdays',
         'oggi':
@@ -1943,6 +1951,14 @@ TESTI = {
             'Der Standard ist öffentlich: du brauchst weder von deiner Bank noch von '
             'sonst jemandem eine Erlaubnis.',
         'Pronta. Sul bollettino uscirà:': 'Bereit. Auf dem Zahlteil steht:',
+        'In agenda':
+            'Eingeplant',
+        'la seduta del {data} è già oltre i crediti: la fattura va fatta prima':
+            'die Sitzung vom {data} geht schon über das Guthaben hinaus: die Rechnung muss vorher raus',
+        'crediti già tutti in agenda: prepara la prossima fattura':
+            'Guthaben schon ganz eingeplant: bereite die nächste Rechnung vor',
+        'Quelli già in calendario per i prossimi {giorni} giorni li vedi in «In agenda»: così sai quando serve la prossima fattura prima dell’ultima seduta, non dopo.':
+            'Termine, die schon im Kalender stehen, siehst du für die nächsten {giorni} Tage unter «Eingeplant»: so weisst du, dass die nächste Rechnung vor der letzten Sitzung fällig ist, nicht danach.',
         'Compleanni in arrivo':
             'Anstehende Geburtstage',
         'oggi':

@@ -275,6 +275,9 @@ DEFAULT_SETTINGS = {
     'calendario_nome': '',
     'calendario_storico_nome': '',
     'calendario_ultimo': '',
+    # le sedute gia' in calendario dopo oggi, lette con l'ultima sincronizzazione:
+    # valgono solo per il giorno in cui sono state lette
+    'calendario_in_agenda': '',
     # banca: l'app collega da sola i versamenti su cui non c'e' nulla da decidere
     'banca_auto': '1',
     'banca_ultimo_estratto': '',   # data del movimento piu' recente letto

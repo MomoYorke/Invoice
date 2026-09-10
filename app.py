@@ -1318,6 +1318,18 @@ def _sincronizza_calendario(forzata=False):
     con = get_con()
     db.set_setting(con, 'calendario_ultimo',
                    datetime.datetime.now().isoformat(timespec='seconds'))
+    # Le sedute gia' in calendario, per sapere quando serve la prossima fattura:
+    # si leggono qui, dove il calendario e' gia' scaricato, e valgono per oggi.
+    # Un guaio qui non tocca i crediti: la pagina dira' soltanto «non si sa».
+    try:
+        oggi = datetime.date.today()
+        futuri = calendar_feed.leggi(testo, oggi + datetime.timedelta(days=1),
+                                     oggi + datetime.timedelta(days=sync_sessions.GIORNI_AGENDA),
+                                     e_testo=True)
+        db.set_setting(con, 'calendario_in_agenda',
+                       sync_sessions.agenda_da_salvare(sync_sessions.in_agenda(reg, futuri), oggi))
+    except Exception as e:
+        err_logger.error('Sedute in agenda non lette: %s', e)
     # come si chiama, l'ha detto lui: cosi' le pagine lo nominano per nome
     # senza che il nome di nessuno stia scritto nel programma
     come_si_chiama = calendar_feed.nome(testo)
@@ -1348,7 +1360,13 @@ def crediti():
     """Vista crediti per cliente (SPEC-crediti.md 6.2)."""
     esito_sync, dettaglio_sync = _sincronizza_calendario()
     reg = sess.carica()
-    righe = sess.vista_crediti(reg)
+    con0 = get_con()
+    impostazioni_cal = db.get_settings(con0)
+    con0.close()
+    import sync_sessions
+    # le sedute gia' in agenda, dall'ultima lettura del calendario di oggi
+    agenda = sync_sessions.agenda_salvata(impostazioni_cal.get('calendario_in_agenda'))
+    righe = sess.vista_crediti(reg, agenda)
     da, a = None, datetime.date.today()
     try:
         import sync_sessions
@@ -1370,15 +1388,13 @@ def crediti():
     for r in righe:
         r['fattura_stato'] = stati.get(r.get('fattura_numero'))
     pacchetti = {p['id']: p for p in reg['pacchetti']}
-    con2 = get_con()
-    impostazioni_cal = db.get_settings(con2)
-    con2.close()
     return render_template('credits.html', righe=righe, pacchetti=pacchetti,
                            recenti=recenti, finestra=(da, a),
                            aggiornato=reg.get('generato'),
                            sync_esito=esito_sync, sync_dettaglio=dettaglio_sync,
                            sync_quando=impostazioni_cal.get('calendario_ultimo'),
-                           sync_attivo=bool((impostazioni_cal.get('calendario_ics') or '').strip()))
+                           sync_attivo=bool((impostazioni_cal.get('calendario_ics') or '').strip()),
+                           giorni_agenda=sync_sessions.GIORNI_AGENDA)
 
 
 @app.route('/crediti/clienti')

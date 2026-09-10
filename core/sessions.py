@@ -348,13 +348,19 @@ def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=N
 
 
 # ------------------------------------------------------------------ vista
-def vista_crediti(reg):
+def vista_crediti(reg, agenda=None):
     """spec 6.2 — per ogni cliente attivo: totali, usati, rimasti, inizio, stato.
 
     "Crediti terminati" vuol dire che il pacchetto e' finito e servono crediti
     nuovi, quindi va emessa la PROSSIMA fattura. NON significa che il pacchetto
     sia rimasto da pagare: i pacchetti si pagano in anticipo (la fattura li apre),
     percio' lo stato non si spegne collegando la fattura che lo aveva pagato.
+
+    «agenda» sono le sedute gia' in calendario dopo oggi ({chiave: [date]}),
+    oppure None se non si sa. Con l'agenda ogni riga dice anche quante sono
+    gia' prenotate e la data della prima che i crediti rimasti non coprono: e'
+    li' che serve la prossima fattura, perche' i pacchetti si pagano prima.
+    Senza, le righe restano quelle di sempre, con None al posto dei numeri.
     """
     righe = []
     for chiave, cfg in clienti().items():
@@ -375,6 +381,8 @@ def vista_crediti(reg):
             rif = max(chiusi, key=lambda q: q['fine']) if chiusi else None
             stato = STATO_TERMINATI
             rimasti = 0
+        date = None if agenda is None else list(agenda.get(chiave, []))
+        coperte = max(rimasti, 0)
         righe.append({
             'cliente': cfg['nome'], 'chiave': chiave,
             'pacchetto': rif['id'] if rif else '—',
@@ -394,9 +402,21 @@ def vista_crediti(reg):
             'fattura_numero': rif.get('fattura_numero') if rif else None,
             'nota': rif.get('nota', '') if rif else '',
             'ultima_sessione': max((s['data'] for s in rif.get('sessioni', [])), default=None) if rif else None,
+            'in_agenda': None if date is None else len(date),
+            'prima_scoperta': date[coperte] if date is not None and len(date) > coperte else None,
+            'tutti_in_agenda': bool(p) and rimasti > 0 and date is not None and len(date) >= rimasti,
         })
-    ordine = {STATO_TERMINATI: 0, STATO_ESAURIMENTO: 1, STATO_CORSO: 2}
-    righe.sort(key=lambda r: (ordine.get(r['stato'], 9), r['cliente']))
+    ordine = {STATO_TERMINATI: 0, STATO_ESAURIMENTO: 2, STATO_CORSO: 3}
+
+    def urgenza(r):
+        # chi ha gia' i crediti tutti prenotati viene subito dopo chi li ha
+        # finiti: tre rimasti e tre in agenda sono, per la fattura, zero
+        u = ordine.get(r['stato'], 9)
+        if u > 0 and (r['tutti_in_agenda'] or r['prima_scoperta']):
+            u = 1
+        # a parita' di urgenza, prima la fattura che va fatta per prima
+        return (u, r['prima_scoperta'] or '9999-12-31', r['cliente'])
+    righe.sort(key=urgenza)
     return righe
 
 

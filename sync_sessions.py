@@ -138,6 +138,86 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
     return rap
 
 
+# Quanti giorni avanti si guarda il calendario per le sedute gia' prenotate. Un
+# pacchetto da dodici sedute settimanali dura tre mesi: oltre, la risposta alla
+# domanda «quando serve la prossima fattura?» non cambia piu'.
+GIORNI_AGENDA = 90
+
+
+def in_agenda(reg, eventi, oggi=None):
+    """Le sedute gia' in calendario DOPO oggi, per cliente: {chiave: [date in ordine]}.
+
+    Le regole sono quelle di sincronizza(), e devono restare quelle: un evento
+    conta qui solo se, il giorno che arriva, diventera' una seduta di quel
+    cliente. Quindi: eliminato su Google no; «no ...», compleanni e le altre
+    esclusioni no; un ex cliente senza pacchetto aperto no; la regola della
+    coppia con chi c'e' quel giorno. Una seduta cancellata nel TITOLO invece
+    conta: quando il giorno passa, consuma il credito (spec 5.3).
+
+    Le sedute di oggi qui non ci sono: oggi conta come svolto, e la
+    sincronizzazione le ha gia' messe nel pacchetto.
+    """
+    oggi = oggi or datetime.date.today()
+    futuri = []
+    for ev in eventi:
+        try:
+            d = datetime.date.fromisoformat(ev.get('data') or '')
+        except ValueError:
+            continue
+        if d > oggi:
+            futuri.append(ev)
+
+    # chi c'e' in ciascun giorno, per la regola della coppia: come in sincronizza()
+    clienti_per_giorno = {}
+    for ev in futuri:
+        k, _cancellata, _motivo = S.classifica(ev.get('titolo', ''))
+        if k:
+            clienti_per_giorno.setdefault(ev['data'], set()).add(k)
+
+    date, visti = {}, set()
+    for ev in sorted(futuri, key=lambda x: (x['data'], x.get('titolo', ''))):
+        if ev.get('stato_google') == 'cancelled':
+            continue
+        if ev.get('id'):
+            if ev['id'] in visti:
+                continue
+            visti.add(ev['id'])
+        chiave, _cancellata, _motivo = S.classifica(ev.get('titolo', ''))
+        if chiave is None:
+            continue
+        if chiave in S.ex_clienti() and S.pacchetto_aperto_di(reg, chiave) is None:
+            continue
+        addebito, _nota = S.attribuisci(chiave, clienti_per_giorno.get(ev['data'], set()))
+        date.setdefault(addebito, []).append(ev['data'])
+    return date
+
+
+def agenda_da_salvare(date, oggi=None):
+    """Il testo da tenere nelle impostazioni: le date, e il giorno in cui si sono lette."""
+    oggi = oggi or datetime.date.today()
+    return json.dumps({'giorno': oggi.isoformat(), 'date': date},
+                      ensure_ascii=False, sort_keys=True)
+
+
+def agenda_salvata(testo, oggi=None):
+    """Le sedute in agenda salvate, se sono state lette oggi. None vuol dire «non si sa».
+
+    Lette ieri non valgono: le sedute di ieri oggi sono svolte e stanno gia' nel
+    pacchetto, e contarle anche come agenda direbbe che i crediti finiscono
+    prima di quanto finiscono davvero. E «non si sa» non e' zero: uno zero in
+    colonna sembrerebbe un fatto.
+    """
+    oggi = oggi or datetime.date.today()
+    try:
+        dati = json.loads(testo or '')
+    except ValueError:
+        return None
+    if not isinstance(dati, dict) or dati.get('giorno') != oggi.isoformat():
+        return None
+    date = dati.get('date')
+    return date if isinstance(date, dict) else None
+
+
 def stampa_vista(reg):
     print('\n  CREDITI PER CLIENTE')
     print('  ' + '-' * 74)
