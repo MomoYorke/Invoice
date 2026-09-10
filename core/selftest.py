@@ -121,6 +121,7 @@ def run_all():
     _test_camt_vero(r)
     _test_gemelli_fra_file(r)
     _test_qr_fattura(r)
+    _test_qr_iban(r)
     _test_abbonamenti(r)
     _test_lavoro(r)
     _test_nomi_accentati(r)
@@ -1029,7 +1030,8 @@ def _frasi_restituite_senza_traduzione(L):
     # frasi che finiscono sotto gli occhi di chi usa l'app, ma passano per una
     # variabile e nessun raccoglitore che guardi i «_()» puo' vederle
     from . import qrbill as _qr
-    frasi += [getattr(_qr, x) for x in dir(_qr) if x.startswith('SENZA_')]
+    frasi += [getattr(_qr, x) for x in dir(_qr)
+              if x.startswith(('SENZA_', 'PREFISSO_'))]
     # finisce nel database e la pagina lo traduce quando lo mostra
     from . import db as _db
     frasi.append(_db.MOTIVO_RICOSTRUITO)
@@ -3775,15 +3777,15 @@ def _test_riferimento_qr(r):
     poggia la QR-fattura.
 
     Le due trappole, tutt'e due vere e tutt'e due trovate guardando un camt.053
-    autentico di Raiffeisen:
+    autentico, scaricato da una banca svizzera:
 
     - «AddtlRmtInf» e' testo libero, scritto da chi paga. Prima finiva nello
       stesso paniere del riferimento vero, e bastava che qualcuno ci copiasse
       dentro un codice perche' l'app dicesse «certo».
     - il confronto teneva solo le CIFRE. Il riferimento QRR e' fatto di 27
-      numeri e sopravviveva, ma il SCOR — quello che useremo, non avendo un
-      QR-IBAN — comincia per «RF» e porta lettere: due riferimenti diversi
-      diventavano lo stesso.
+      numeri e sopravviveva, ma il SCOR — quello che va su ogni IBAN normale —
+      comincia per «RF» e porta lettere: due riferimenti diversi diventavano
+      lo stesso.
     """
     import shutil, tempfile
     from . import bank as B
@@ -4155,6 +4157,185 @@ def _test_qr_fattura(r):
         from . import verify
         _check(r, 'QR-fattura', 'la verifica automatica regge la pagina in più',
                verify._pdf_total_cents(acceso), 120000)
+
+
+def _test_qr_iban(r):
+    """Chi ha un QR-IBAN deve poter mandare un bollettino che la banca accetta.
+
+    Fino al 10.09.2026 l'app stampava sempre un riferimento RF. Su un IBAN
+    normale va benissimo; su un QR-IBAN, quello col numero d'istituto fra
+    30000 e 31999, lo standard vuole il riferimento QR di 27 cifre, e un RF
+    viene rifiutato. La funzione che riconosce il QR-IBAN esisteva gia', ma non
+    la chiamava nessuno: per chi ha scritto l'app non c'era niente da vedere,
+    perche' il suo IBAN e' normale. Per chi la compra con un QR-IBAN ogni
+    bollettino sarebbe stato carta.
+
+    Le prove seguono il riferimento da un capo all'altro: come si calcola,
+    quale tipo sceglie l'IBAN, cosa entra nel codice, come si legge sul
+    foglio, e che il PDF vero lo porti davvero.
+    """
+    import logging
+    import re
+    import tempfile
+    from . import qrbill as Q
+    from . import pdfgen
+    from .db import DEFAULT_SETTINGS
+
+    QR_IBAN = 'CH4431999123000889012'         # istituto 31999: e' un QR-IBAN
+    IBAN = 'CH5800791123000889012'            # istituto 00791: IBAN normale
+    ESEMPIO = '210000000003139471430009017'   # l'esempio delle linee guida SIX
+
+    # --- il riferimento QR, calcolato ---------------------------------------
+    _check(r, 'QR-IBAN', 'la cifra di controllo è quella dell’esempio ufficiale',
+           _senza_scoppiare(lambda: Q.riferimento_qrr(ESEMPIO[:26])), ESEMPIO)
+    _check(r, 'QR-IBAN', 'e l’esempio ufficiale si riconosce valido, spazi o no',
+           _senza_scoppiare(lambda: (Q.qrr_valido(ESEMPIO),
+                                     Q.qrr_valido('21 00000 00003 13947 14300 09017'))),
+           (True, True))
+    _check(r, 'QR-IBAN', 'una cifra sbagliata viene respinta',
+           _senza_scoppiare(lambda: Q.qrr_valido(ESEMPIO[:-1] + '8')), False)
+    corto = _senza_scoppiare(lambda: Q.riferimento_qrr('87'))
+    _check(r, 'QR-IBAN', 'un riferimento QR ha sempre 27 cifre, anche da un numero corto',
+           _senza_scoppiare(lambda: (len(corto), corto.isdigit(), Q.qrr_valido(corto))),
+           (27, True, True))
+
+    # --- il tipo lo decide l'IBAN -------------------------------------------
+    rif_qr = _senza_scoppiare(lambda: Q.riferimento_per(87, QR_IBAN))
+    _check(r, 'QR-IBAN', 'con un QR-IBAN la fattura prende un riferimento QR',
+           _senza_scoppiare(lambda: Q.qrr_valido(rif_qr)), True)
+    _check(r, 'QR-IBAN', 'e il numero della fattura si ritrova in fondo, prima del controllo',
+           str(rif_qr)[:-1].lstrip('0'), '87')
+    # questa e' verde gia' prima: e' la guardia che il cambio non tocchi chi
+    # ha un IBAN normale, cioe' quasi tutti — e chi ha scritto l'app
+    _check(r, 'QR-IBAN', 'con un IBAN normale il riferimento resta l’RF di sempre',
+           _senza_scoppiare(lambda: Q.riferimento_per(87, IBAN)), Q.riferimento_scor(87))
+    con_prefisso = _senza_scoppiare(lambda: Q.riferimento_per(87, QR_IBAN, '123456'))
+    _check(r, 'QR-IBAN', 'il numero dato dalla banca apre il riferimento',
+           _senza_scoppiare(lambda: (con_prefisso[:6], Q.qrr_valido(con_prefisso),
+                                     con_prefisso[:-1].endswith('87'))),
+           ('123456', True, True))
+
+    # --- nel codice QR non entra mai una coppia sbagliata --------------------
+    mio = Q.indirizzo_strutturato('Musterstrasse 45', 'Musterstadt, 8000')
+
+    def _rifiuta(f):
+        try:
+            f()
+        except ValueError:
+            return True
+        except Exception:
+            return False
+        return False
+
+    testo = _senza_scoppiare(lambda: Q.dati_qr(QR_IBAN, 'Anna Rossi Fitness', mio,
+                                               11000, ESEMPIO))
+    _check(r, 'QR-IBAN', 'su un QR-IBAN il codice dichiara QRR e porta le 27 cifre',
+           '\nQRR\n%s\n' % ESEMPIO in str(testo), True)
+    _check(r, 'QR-IBAN', 'un RF su un QR-IBAN non si stampa: la banca lo rifiuterebbe',
+           _rifiuta(lambda: Q.dati_qr(QR_IBAN, 'X', mio, 100, 'RF18539007547034')), True)
+    _check(r, 'QR-IBAN', 'un riferimento QR su un IBAN normale nemmeno',
+           _rifiuta(lambda: Q.dati_qr(IBAN, 'X', mio, 100, ESEMPIO)), True)
+    _check(r, 'QR-IBAN', 'e un QR-IBAN senza riferimento neppure',
+           _rifiuta(lambda: Q.dati_qr(QR_IBAN, 'X', mio, 100, '')), True)
+    _check(r, 'QR-IBAN', 'mentre un RF su un IBAN normale continua a passare',
+           '\nSCOR\nRF18539007547034\n' in str(_senza_scoppiare(
+               lambda: Q.dati_qr(IBAN, 'X', mio, 100, 'RF18539007547034'))), True)
+
+    # --- sul foglio si legge come lo standard lo scrive ---------------------
+    _check(r, 'QR-IBAN', 'il riferimento QR si legge a gruppi di cinque, contati da destra',
+           Q._a_gruppi(ESEMPIO), '21 00000 00003 13947 14300 09017')
+    _check(r, 'QR-IBAN', 'l’RF resta a gruppi di quattro',
+           Q._a_gruppi('RF18539007547034'), 'RF18 5390 0754 7034')
+    _check(r, 'QR-IBAN', 'e l’IBAN pure',
+           Q._a_gruppi(QR_IBAN), 'CH44 3199 9123 0008 8901 2')
+
+    # --- il numero che alcune banche vogliono in testa al riferimento --------
+    _check(r, 'QR-IBAN', 'il numero della banca accetta cifre, anche scritte a gruppi',
+           _senza_scoppiare(lambda: Q.prefisso_qrr(' 12 34 56 ')), ('123456', ''))
+    _check(r, 'QR-IBAN', 'lasciato vuoto non è un errore',
+           _senza_scoppiare(lambda: Q.prefisso_qrr('')), ('', ''))
+    for sbagliato in ('12A456', '1' * 17):
+        esito = _senza_scoppiare(lambda: Q.prefisso_qrr(sbagliato))
+        _check(r, 'QR-IBAN', 'e «%s» viene respinto dicendo perché' % sbagliato[:8],
+               isinstance(esito, tuple) and esito[0] is None and bool(esito[1]), True)
+
+    # --- dalle impostazioni alla fattura ------------------------------------
+    buone = dict(DEFAULT_SETTINGS, business_name='Anna Rossi Fitness',
+                 business_iban=QR_IBAN, business_addr1='Musterstrasse 1',
+                 business_addr2='8000 Musterstadt', qr_fattura='1')
+    _check(r, 'QR-IBAN', 'le impostazioni hanno il posto per il numero della banca',
+           'qr_prefisso' in DEFAULT_SETTINGS, True)
+    della = _senza_scoppiare(
+        lambda: Q.riferimento_della_fattura(7, dict(buone, qr_prefisso='123456')))
+    _check(r, 'QR-IBAN', 'la fattura nuova prende il riferimento dalle impostazioni vere',
+           _senza_scoppiare(lambda: (Q.qrr_valido(della), della[:6])), (True, '123456'))
+    _check(r, 'QR-IBAN', 'e col bollettino spento non ne prende nessuno',
+           _senza_scoppiare(lambda: Q.riferimento_della_fattura(7, dict(buone, qr_fattura='0'))),
+           '')
+
+    from pypdf import PdfReader
+    voci = [{'qty': 10, 'description': '10 Sessions Pack',
+             'unit_cents': 12000, 'total_cents': 120000}]
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf = os.path.join(tmp, 'qr-iban.pdf')
+        rif = _senza_scoppiare(lambda: Q.riferimento_della_fattura(7, buone))
+        pdfgen.build_pdf(pdf, 7, '10-09-26', 'Mario Bianchi',
+                         ['Musterweg 3', '8001 Zürich'], voci, 120000, buone, None, rif)
+        pagine = PdfReader(pdf).pages
+        testo_pdf = '\n'.join(p.extract_text() or '' for p in pagine)
+        # contare le pagine NON basta: se il codice non si compone, oggi resta
+        # lo stesso una mezza pagina con l'intestazione e niente da staccare
+        _check(r, 'QR-IBAN', 'con un QR-IBAN il PDF vero ha il bollettino in coda',
+               (len(pagine), 'Ricevuta' in testo_pdf, 'Sezione pagamento' in testo_pdf),
+               (2, True, True))
+        _check(r, 'QR-IBAN', 'e sul foglio c’è il riferimento QR della fattura, a gruppi',
+               _senza_scoppiare(lambda: Q.qrr_valido(rif) and Q._a_gruppi(rif) in testo_pdf),
+               True)
+        # il PDF sa anche calcolarselo da solo, quando non glielo passano: e
+        # anche li' deve guardare l'IBAN, se no rimette dentro un RF
+        senza = os.path.join(tmp, 'qr-iban-senza-rif.pdf')
+        pdfgen.build_pdf(senza, 7, '10-09-26', 'Mario Bianchi',
+                         ['Musterweg 3', '8001 Zürich'], voci, 120000, buone)
+        testo_senza = '\n'.join(p.extract_text() or '' for p in PdfReader(senza).pages)
+        _check(r, 'QR-IBAN', 'anche quando il PDF il riferimento se lo calcola da solo',
+               _senza_scoppiare(lambda: Q._a_gruppi(Q.riferimento_della_fattura(7, buone))
+                                in testo_senza), True)
+
+        # un riferimento che non va con l'IBAN non si stampa: e non deve
+        # restare nemmeno la pagina cominciata per lui
+        storto = os.path.join(tmp, 'qr-iban-rif-storto.pdf')
+        # il guaio va nel registro degli errori, come deve: qui pero' e' voluto,
+        # e non deve finire nel registro vero di chi usa l'app
+        registro = logging.getLogger('fatture.errori')
+        registro.disabled = True
+        try:
+            pdfgen.build_pdf(storto, 7, '10-09-26', 'Mario Bianchi',
+                             ['Musterweg 3', '8001 Zürich'], voci, 120000, buone,
+                             None, 'RF18539007547034')
+        finally:
+            registro.disabled = False
+        _check(r, 'QR-IBAN', 'un riferimento che non va con l’IBAN non lascia una mezza pagina',
+               len(PdfReader(storto).pages), 1)
+
+    # Il riferimento vive solo se c'e' il bollettino. Oggi si salva anche
+    # quando il foglio non si puo' fare, e la mail dice al cliente di pagare
+    # «soltanto con il codice QR in fondo alla fattura»: un codice che non c'e'.
+    _check(r, 'QR-IBAN', 'senza i dati per il bollettino la fattura non si porta dietro un riferimento',
+           _senza_scoppiare(lambda: Q.riferimento_della_fattura(
+               7, dict(buone, business_addr1='Ireland'))), '')
+
+    # --- e il codice dell'app passa davvero di qui --------------------------
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sorgenti = {}
+    for nome in ('app.py', os.path.join('core', 'pdfgen.py')):
+        with io.open(os.path.join(base, nome), encoding='utf-8') as f:
+            sorgenti[nome] = f.read()
+    _check(r, 'QR-IBAN', 'app e PDF chiedono il riferimento sapendo l’IBAN',
+           [n for n, testo_s in sorted(sorgenti.items())
+            if 'riferimento_della_fattura(' not in testo_s
+            or re.search(r'riferimento_per\(\s*number\s*\)', testo_s)], [])
+    _check(r, 'QR-IBAN', 'e il numero della banca passa dal controllo prima di essere salvato',
+           'prefisso_qrr(' in sorgenti['app.py'], True)
 
 
 def _test_abbonamenti(r):

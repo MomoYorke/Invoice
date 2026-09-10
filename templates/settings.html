@@ -286,6 +286,9 @@
       <code>{{ qr_mio.iban }}</code> · {{ qr_mio.nome }}<br>
       {{ qr_mio.indirizzo.via }} {{ qr_mio.indirizzo.civico }},
       {{ qr_mio.indirizzo.cap }} {{ qr_mio.indirizzo.localita }} ({{ qr_mio.indirizzo.paese }})</p>
+    <p class="muted" style="font-size:12.5px">
+      {% if qr_mio.tipo == 'QRR' %}{{ _('Il tuo IBAN è un QR-IBAN, quindi sul bollettino va il riferimento QR di 27 cifre. L’app lo compone da sola.') }}
+      {% else %}{{ _('Sul bollettino va un riferimento RF, quello che vale su ogni IBAN normale. L’app lo compone da sola.') }}{% endif %}</p>
   {% else %}
     <p class="muted" style="font-size:13px">{{ qr_motivo }}</p>
   {% endif %}
@@ -294,6 +297,12 @@
     <label style="font-weight:400"><input type="checkbox" name="qr_fattura" value="1"
       {{ 'checked' if settings.qr_fattura == '1' }} style="width:auto">
       {{ _('Aggiungi il bollettino QR alle fatture nuove') }}</label>
+    {% if qr_iban_qr %}
+    <label for="qr-prefisso" style="display:block;margin-top:12px">{{ _('Numero della banca per il riferimento QR') }}</label>
+    <input id="qr-prefisso" name="qr_prefisso" value="{{ settings.qr_prefisso or '' }}"
+           inputmode="numeric" autocomplete="off" style="max-width:220px">
+    <p class="muted" style="font-size:12px">{{ _('Alcune banche vogliono che il riferimento QR cominci con un numero loro: a volte si chiama BESR-ID o ID cliente. Se la tua banca te l’ha dato, scrivilo qui. Se non ti ha detto niente, lascia vuoto.') }}</p>
+    {% endif %}
     <p class="muted" style="font-size:12px">{{ _('Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.') }}</p>
     <button class="btn mt">{{ _('Salva') }}</button>
   </form>

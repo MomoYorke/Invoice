@@ -321,6 +321,10 @@ DEFAULT_SETTINGS = {
     # sapeva che ci fosse. Acceso pero' vale SOLO per chi installa da oggi —
     # vedi _migra_qr_gia_installato() qui sotto.
     'qr_fattura': '1',
+    # Il numero che alcune banche vogliono in testa al riferimento QR, per chi
+    # ha un QR-IBAN. Vuoto per quasi tutti: quasi nessuna banca lo chiede, e
+    # sull'IBAN normale non serve mai.
+    'qr_prefisso': '',
 }
 
 # --- i modelli della mail, uno per lingua -----------------------------------

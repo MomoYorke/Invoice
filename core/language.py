@@ -621,6 +621,18 @@ TESTI = {
         'Lo standard è pubblico: non serve chiedere niente alla banca né a nessun altro.':
             'The standard is public: you need no permission from your bank or anyone else.',
         'Pronta. Sul bollettino uscirà:': 'Ready. The slip will show:',
+        'Il tuo IBAN è un QR-IBAN, quindi sul bollettino va il riferimento QR di 27 cifre. L’app lo compone da sola.':
+            'Your IBAN is a QR-IBAN, so the slip carries the 27-digit QR reference. The app builds it for you.',
+        'Sul bollettino va un riferimento RF, quello che vale su ogni IBAN normale. L’app lo compone da sola.':
+            'The slip carries an RF reference, the one that works on any regular IBAN. The app builds it for you.',
+        'Numero della banca per il riferimento QR':
+            'Bank number for the QR reference',
+        'Alcune banche vogliono che il riferimento QR cominci con un numero loro: a volte si chiama BESR-ID o ID cliente. Se la tua banca te l’ha dato, scrivilo qui. Se non ti ha detto niente, lascia vuoto.':
+            'Some banks want the QR reference to start with a number of their own, sometimes called BESR-ID or customer ID. If your bank gave you one, enter it here. If it told you nothing, leave this empty.',
+        'Il numero della banca per il riferimento QR può contenere solo cifre.':
+            'The bank number for the QR reference can only contain digits.',
+        'Il numero della banca per il riferimento QR è troppo lungo: al massimo 16 cifre.':
+            'The bank number for the QR reference is too long: 16 digits at most.',
         'Aggiungi il bollettino QR alle fatture nuove':
             'Add the QR payment slip to new invoices',
         'Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.':
@@ -1907,6 +1919,18 @@ TESTI = {
             'Der Standard ist öffentlich: du brauchst weder von deiner Bank noch von '
             'sonst jemandem eine Erlaubnis.',
         'Pronta. Sul bollettino uscirà:': 'Bereit. Auf dem Zahlteil steht:',
+        'Il tuo IBAN è un QR-IBAN, quindi sul bollettino va il riferimento QR di 27 cifre. L’app lo compone da sola.':
+            'Deine IBAN ist eine QR-IBAN, deshalb steht auf dem Zahlteil die 27-stellige QR-Referenz. Die App erstellt sie selbst.',
+        'Sul bollettino va un riferimento RF, quello che vale su ogni IBAN normale. L’app lo compone da sola.':
+            'Auf dem Zahlteil steht eine RF-Referenz, die bei jeder normalen IBAN gilt. Die App erstellt sie selbst.',
+        'Numero della banca per il riferimento QR':
+            'Nummer der Bank für die QR-Referenz',
+        'Alcune banche vogliono che il riferimento QR cominci con un numero loro: a volte si chiama BESR-ID o ID cliente. Se la tua banca te l’ha dato, scrivilo qui. Se non ti ha detto niente, lascia vuoto.':
+            'Manche Banken wollen, dass die QR-Referenz mit einer eigenen Nummer beginnt, manchmal BESR-ID oder Kunden-ID genannt. Wenn deine Bank dir eine gegeben hat, trag sie hier ein. Wenn sie dir nichts gesagt hat, lass das Feld leer.',
+        'Il numero della banca per il riferimento QR può contenere solo cifre.':
+            'Die Nummer der Bank für die QR-Referenz darf nur Ziffern enthalten.',
+        'Il numero della banca per il riferimento QR è troppo lungo: al massimo 16 cifre.':
+            'Die Nummer der Bank für die QR-Referenz ist zu lang: höchstens 16 Ziffern.',
         'Aggiungi il bollettino QR alle fatture nuove':
             'Den QR-Zahlteil zu neuen Rechnungen hinzufügen',
         'Vale da qui in avanti: le fatture già fatte restano come sono. La prima che esce, inquadrala con l’app della tua banca prima di mandarla — è l’unica prova che conta.':

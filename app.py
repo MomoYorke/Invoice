@@ -488,8 +488,7 @@ def _crea_fattura(con):
     # il riferimento della QR-fattura si decide QUI, una volta, e finisce sia
     # sul foglio che nel database: e' il filo che riportera' il versamento a
     # questa fattura, e i due capi devono essere lo stesso filo
-    qr_ref = (qrbill.riferimento_per(number)
-              if settings.get('qr_fattura') == '1' else '')
+    qr_ref = qrbill.riferimento_della_fattura(number, settings)
     pdfgen.build_pdf(pdf_path, number, date_str, intestatario, addr_lines, items,
                      total, settings, lingua_cliente, qr_ref)
 
@@ -1947,6 +1946,7 @@ def impostazioni():
             if acceso == '1' and _motivo:
                 avvisa('⚠️ QR-fattura accesa, ma non riesco ancora a farla. {motivo}',
                        'error', motivo=_motivo)
+        rifiutato = False
         for k in db.DEFAULT_SETTINGS:
             if k not in request.form:
                 continue
@@ -1962,6 +1962,14 @@ def impostazioni():
                 # password nuova: si riparte da zero, pausa compresa
                 db.set_setting(con, 'smtp_fallimenti', '0')
                 db.set_setting(con, 'smtp_pausa_fino', '')
+            elif k == 'qr_prefisso':
+                # un riferimento sbagliato la banca lo rifiuta: meglio dirlo
+                # adesso che scoprirlo dal primo versamento che non arriva
+                valore, _perche = qrbill.prefisso_qrr(valore)
+                if valore is None:
+                    avvisa(_perche, 'error')
+                    rifiutato = True
+                    continue
             elif k in db.TESTI_INTOCCABILI:
                 # il testo va tenuto com'e': negli a capo in fondo a un saluto
                 # c'e' lo spazio prima della firma, e toglierli lo rovina
@@ -1969,6 +1977,12 @@ def impostazioni():
             else:
                 valore = valore.strip()
             db.set_setting(con, k, valore)
+        # Un campo rifiutato non si copre con un «salvato» in verde subito
+        # sotto: due messaggi opposti in fila, e non si capisce quale vale.
+        # Si torna dov'e' il campo, con l'errore e basta.
+        if rifiutato:
+            con.close()
+            return redirect(url_for('impostazioni', _anchor='qr'))
         # Chi arriva dai primi passi torna ai primi passi: rispedirlo in
         # Impostazioni vorrebbe dire fargli cercare da solo la strada indietro,
         # che e' proprio la cosa da cui era stato tolto.
@@ -1996,6 +2010,7 @@ def impostazioni():
                            ultimo=backup.ultimo_esterno(dest),
                            pausa=_pausa_smtp(settings),
                            qr_mio=qr_mio, qr_motivo=qr_motivo,
+                           qr_iban_qr=qrbill.e_qr_iban(settings.get('business_iban')),
                            logo_suo=branding.personalizzato())
 
 

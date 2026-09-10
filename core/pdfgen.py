@@ -48,10 +48,25 @@ def pagina_qr(c, number, date_str, client_name, addr_lines, total_cents,
     if not mio:
         return False, motivo
 
-    riferimento = qr_ref or qrbill.riferimento_per(number)
+    riferimento = qr_ref or qrbill.riferimento_della_fattura(number, settings)
     # l'indirizzo del cliente si stampa solo se si legge per intero: meglio il
     # campo vuoto, che chi paga riempie in un attimo, di un indirizzo inventato
     suo = qrbill.indirizzo_strutturato(*(list(addr_lines) + ['', ''])[:2])
+    messaggio = L.t_doc('Fattura {n} del {d}', lingua).format(n=number, d=date_str)
+    debitore = client_name if suo else ''
+
+    # Prima si compone il codice, POI si disegna. Al contrario, un codice che non
+    # si poteva fare lasciava in coda alla fattura una mezza pagina con scritto
+    # «da staccare», e niente da staccare. Il guaio si scrive nel registro: una
+    # fattura che esce senza bollettino senza che nessuno lo sappia e' il modo
+    # migliore per accorgersene dal cliente che non paga.
+    try:
+        qrbill.dati_qr(mio['iban'], mio['nome'], mio['indirizzo'], total_cents,
+                       riferimento, messaggio, debitore_nome=debitore, debitore_ind=suo)
+    except ValueError as guaio:
+        logging.getLogger('fatture.errori').error(
+            'QR-fattura #%s non stampata: %s', number, guaio)
+        return False, str(guaio)
 
     c.setFont('Helvetica-Bold', 11)
     c.drawString(ML, PAGE_H - MT - 12, settings.get('business_name', ''))
@@ -61,11 +76,9 @@ def pagina_qr(c, number, date_str, client_name, addr_lines, total_cents,
     c.drawString(ML, PAGE_H - MT - 46,
                  L.t_doc('Da staccare e usare per il pagamento.', lingua))
     qrbill.disegna_su(c, PAGE_W, mio['iban'], mio['nome'], mio['indirizzo'],
-                      total_cents, riferimento,
-                      messaggio=L.t_doc('Fattura {n} del {d}', lingua).format(
-                          n=number, d=date_str),
+                      total_cents, riferimento, messaggio=messaggio,
                       lingua=(lingua or 'it'),
-                      debitore_nome=(client_name if suo else ''), debitore_ind=suo)
+                      debitore_nome=debitore, debitore_ind=suo)
     c.showPage()
     return True, ''
 

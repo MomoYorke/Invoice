@@ -499,8 +499,8 @@ def _normalizza_riferimento(testo):
     fatto di 27 numeri e sopravviveva; ma il Creditor Reference (SCOR)
     comincia per «RF» e puo' contenere lettere, e buttarle via farebbe
     combaciare due riferimenti diversi che si distinguono solo per quelle.
-    Ed e' proprio il tipo che useremo noi: il QRR vuole un QR-IBAN, che il
-    conto Raiffeisen (CH94 8080...) non e'.
+    E l'app li stampa tutti e due: il QRR a chi ha un QR-IBAN, l'RF a tutti
+    gli altri.
     """
     return re.sub(r'[^0-9A-Z]', '', (testo or '').upper())
 
@@ -509,8 +509,8 @@ def _riferimento_uguale(movimento, inv):
     """Il riferimento della QR-fattura, quando c'e', decide da solo.
 
     Si confronta SOLO con un riferimento che l'app ha davvero stampato sulla
-    fattura (colonna qr_ref, che oggi non esiste ancora perche' le QR-fatture
-    non le emettiamo). Dedurlo dal numero — «finisce per 000084, sara' la #84» —
+    fattura (colonna qr_ref, vuota quando il bollettino non c'era). Dedurlo dal
+    numero — «finisce per 000084, sara' la #84» —
     sarebbe pericoloso: il riferimento di un altro creditore puo' finire con le
     stesse cifre e l'app direbbe "certo" su una fattura sbagliata.
     """
