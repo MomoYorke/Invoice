@@ -101,38 +101,83 @@ def run_all():
     _check(r, 'Coerenza interna', 'quantità intere: nessun arrotondamento spurio',
            consistency_ok, True)
 
-    _test_email(r)
-    _test_oggetto(r)
-    _test_intestazione_fattura(r)
-    _test_marchio(r)
-    _test_clienti_crediti(r)
-    _test_servizi(r)
-    _test_servizi_riconosciuti(r)
-    _test_da_fare(r)
-    _test_lingua(r)
-    _test_primi_passi(r)
-    _test_icone(r)
-    _test_menu(r)
-    _test_etichette(r)
-    _test_finestra_stretta(r)
-    _test_calendario(r)
-    _test_storico_al_buio(r)
-    _test_riferimento_qr(r)
-    _test_camt_vero(r)
-    _test_gemelli_fra_file(r)
-    _test_qr_fattura(r)
-    _test_qr_iban(r)
-    _test_compleanni(r)
-    _test_modelli_si_compilano(r)
-    _test_abbonamenti(r)
-    _test_lavoro(r)
-    _test_nomi_accentati(r)
-    _test_una_cartella_sola(r)
-    _test_pagine_vuote(r)
-    _test_qr_di_serie(r)
+    # ogni famiglia per conto suo: se una si schianta, le altre vanno avanti
+    _esegui_famiglie(r, (
+        _test_email, _test_oggetto, _test_intestazione_fattura, _test_marchio,
+        _test_clienti_crediti, _test_servizi, _test_servizi_riconosciuti,
+        _test_da_fare, _test_lingua, _test_primi_passi, _test_icone, _test_menu,
+        _test_etichette, _test_finestra_stretta, _test_calendario,
+        _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
+        _test_gemelli_fra_file, _test_qr_fattura, _test_qr_iban,
+        _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
+        _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
+        _test_pagine_vuote, _test_qr_di_serie, _test_batteria_regge,
+    ))
 
     all_ok = all(x[2] for x in r)
     return all_ok, r
+
+
+# La categoria delle famiglie che si fermano a meta'. Quando va tutto bene non
+# compare mai: per questo la sua traduzione la controlla _test_batteria_regge.
+INTERROTTE = 'Collaudi interrotti'
+
+
+def _esegui_famiglie(r, famiglie):
+    """Fa girare ogni famiglia di collaudi per conto suo.
+
+    Lo stesso principio di _senza_scoppiare, applicato alle famiglie intere:
+    una che si schianta a meta' diventa una riga rossa col motivo, e le altre
+    vanno avanti lo stesso. Prima un guasto solo faceva cadere la pagina.
+    """
+    for famiglia in famiglie:
+        try:
+            famiglia(r)
+        except Exception as guaio:
+            nome = famiglia.__name__.lstrip('_')
+            if nome.startswith('test_'):
+                nome = nome[len('test_'):]
+            r.append((INTERROTTE,
+                      'la famiglia «%s» si è fermata a metà: le prove dopo il '
+                      'guasto non sono state fatte' % nome,
+                      False, '%s: %s' % (type(guaio).__name__, guaio)))
+
+
+def _test_batteria_regge(r):
+    """Una famiglia di collaudi che si schianta non porta via le altre.
+
+    Prima bastava un guasto in una famiglia sola per far cadere tutta la
+    pagina Verifica: «Ops» al posto di 780 risultati, cioe' nessuna notizia
+    proprio sul computer dove servivano. Successo sul primo PC Windows vero.
+    """
+    def prima(rr):
+        rr.append(('Prova', 'prima', True, ''))
+
+    def crolla(rr):
+        rr.append(('Prova', 'fino al guasto', True, ''))
+        raise PermissionError(13, 'file in uso')
+
+    def dopo(rr):
+        rr.append(('Prova', 'dopo il guasto', True, ''))
+
+    finti = []
+    _check(r, 'Batteria dei collaudi', 'una famiglia che si schianta non ferma la batteria',
+           _senza_scoppiare(_esegui_famiglie, finti, (prima, crolla, dopo)), None)
+    _check(r, 'Batteria dei collaudi', 'le famiglie dopo il guasto girano lo stesso',
+           [x[1] for x in finti if x[0] == 'Prova'],
+           ['prima', 'fino al guasto', 'dopo il guasto'])
+    rotte = [x for x in finti if x[0] == INTERROTTE]
+    _check(r, 'Batteria dei collaudi', 'il guasto diventa una riga rossa, una sola',
+           [x[2] for x in rotte], [False])
+    _check(r, 'Batteria dei collaudi', 'la riga rossa dice quale famiglia e perché',
+           bool(rotte) and 'crolla' in rotte[0][1] and 'PermissionError' in rotte[0][3], True)
+    # la categoria dei guasti non compare mai quando va tutto bene, quindi la
+    # guardia sui nomi delle famiglie non la vedrebbe: la traduzione si
+    # controlla qui
+    from . import language as L
+    _check(r, 'Batteria dei collaudi', 'anche questi due nomi hanno la traduzione',
+           [(x, lingua) for x in (INTERROTTE, 'Batteria dei collaudi')
+            for lingua in ('en', 'de') if x not in L.TESTI[lingua]], [])
 
 
 class _Finta(dict):
@@ -488,6 +533,10 @@ def _test_intestazione_fattura(r):
                corpo.count('Anna Rossi Fitness'), 3)
         core = z.read('docProps/core.xml').decode('utf-8', 'replace')
         app = z.read('docProps/app.xml').decode('utf-8', 'replace')
+        # chiuso SUBITO: a fine blocco la cartella temporanea si cancella, e
+        # Windows (il Mac no) rifiuta di cancellare un file ancora aperto. Qui
+        # restava aperto, e sul primo PC vero cadeva l'intera pagina Verifica.
+        z.close()
         for etichetta, trovato in (
                 ('autore', _re.findall(r'<dc:creator>(.*?)</dc:creator>', core)),
                 ('ultimo che ha scritto', _re.findall(r'<cp:lastModifiedBy>(.*?)</cp:lastModifiedBy>', core)),
@@ -4144,8 +4193,10 @@ def _test_qr_fattura(r):
     voci = [{'qty': 10, 'description': '10 Sessions Pack',
              'unit_cents': 12000, 'total_cents': 120000}]
     with tempfile.TemporaryDirectory() as tmp:
-        acceso = os.path.join(tmp, 'con.pdf')
-        spento = os.path.join(tmp, 'senza.pdf')
+        # non «con.pdf»: CON e' un nome riservato di Windows, come NUL e PRN,
+        # e un file che si chiama cosi' li' non si puo' creare
+        acceso = os.path.join(tmp, 'acceso.pdf')
+        spento = os.path.join(tmp, 'spento.pdf')
         pdfgen.build_pdf(acceso, 7, '23-08-26', 'Mario Bianchi',
                          ['Musterweg 3', '8001 Zürich'], voci, 120000, buone)
         pdfgen.build_pdf(spento, 7, '23-08-26', 'Mario Bianchi',
