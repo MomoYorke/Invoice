@@ -127,6 +127,20 @@ def in_salute(url, secondi=2):
         return False
 
 
+# --- il registro d'avvio ----------------------------------------------------
+def righe_subito(flusso):
+    """Ogni riga che l'app stampa arriva nel registro subito, non alla fine.
+
+    Dall'icona l'uscita dell'app va in data/start.log, e su un file Python la
+    tiene da parte a blocchi da 8 KB: le righe dell'avvio comparivano solo
+    spegnendo, e sparivano del tutto quando a spegnere era l'avviatore. Da un
+    terminale non cambia niente, li' va gia' a righe. Con pythonw, su Windows,
+    un'uscita non c'e' proprio (None) e non c'e' niente da sistemare.
+    """
+    if flusso is not None:
+        flusso.reconfigure(line_buffering=True)
+
+
 # --- la parte da riga di comando -------------------------------------------
 def main(argv):
     domanda = argv[1] if len(argv) > 1 else ''

@@ -112,7 +112,7 @@ def run_all():
         _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
-        _test_batteria_regge,
+        _test_registro_avvio, _test_batteria_regge,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -142,6 +142,46 @@ def _esegui_famiglie(r, famiglie):
                       'la famiglia «%s» si è fermata a metà: le prove dopo il '
                       'guasto non sono state fatte' % nome,
                       False, '%s: %s' % (type(guaio).__name__, guaio)))
+
+
+def _test_registro_avvio(r):
+    """Le righe dell'avvio arrivano nel registro mentre succedono.
+
+    Aperta dall'icona, l'app non ha un terminale: quello che stampa finisce in
+    data/start.log. Su un file Python non scrive riga per riga ma a blocchi da
+    8 KB, e le poche righe dell'avvio aspettavano la chiusura dell'app. Se a
+    chiuderla era l'avviatore, per rimetterne in piedi una aggiornata, non
+    arrivavano proprio: il registro di quella volta restava muto, proprio
+    quando serviva a capire com'era andata.
+    """
+    import tempfile
+    from . import launcher
+
+    with tempfile.TemporaryDirectory() as tmp:
+        perc = os.path.join(tmp, 'start.log')
+        # aperto come Python apre la sua uscita quando la mandano in un file
+        uscita = io.open(perc, 'w', encoding='utf-8')
+        try:
+            launcher.righe_subito(uscita)
+            print('  Banca: 3 accrediti letti', file=uscita)
+            with io.open(perc, encoding='utf-8') as f:
+                letto = f.read()
+        finally:
+            uscita.close()
+    _check(r, 'Registro d’avvio', 'una riga stampata è già nel file, con l’app ancora accesa',
+           letto, '  Banca: 3 accrediti letti\n')
+    # su Windows l'app parte con pythonw, che un'uscita non ce l'ha proprio:
+    # sys.stdout e' None, e un'accensione che inciampa qui non accende niente
+    _check(r, 'Registro d’avvio', 'e con pythonw, che non ha dove scrivere, non inciampa',
+           _senza_scoppiare(launcher.righe_subito, None), None)
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    avvio = programma[programma.find("if __name__ == '__main__':"):]
+    chiamata = avvio.find('launcher.righe_subito(sys.stdout)')
+    _check(r, 'Registro d’avvio', 'l’app lo chiede prima di stampare la prima riga',
+           (chiamata > 0, chiamata < avvio.find('print(')), (True, True))
 
 
 def _test_batteria_regge(r):

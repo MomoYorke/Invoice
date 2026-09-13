@@ -25,6 +25,7 @@ from core import calendar_feed
 from core import schedule as ag
 from core import overview
 from core import bank
+from core import launcher
 from core import qrbill
 from core import recurring as ric
 from core import sessions as sess
@@ -2226,6 +2227,9 @@ def _avvia(porta):
 
 
 if __name__ == '__main__':
+    # dall'icona l'uscita va in data/start.log: cosi' ogni riga ci arriva
+    # quando succede, e non si perde se l'avviatore spegne l'app per rifarla
+    launcher.righe_subito(sys.stdout)
     PORTA = int(db.env('INVOICE_PORT', 'FATTURE_PORT') or 8471)
     # prima di ogni altra cosa: se le cartelle hanno ancora i nomi vecchi le
     # rinomina. Dopo il makedirs qui sotto sarebbe troppo tardi — la cartella
