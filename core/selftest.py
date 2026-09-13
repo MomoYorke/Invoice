@@ -2292,6 +2292,54 @@ def _test_calendario(r):
     _check(r, 'Calendario', 'evento di sola giornata: nessuna ora inventata',
            C._ora('20260825'), None)
 
+    # --- le serie che finiscono ---
+    # Quando una serie con un fuso ha una fine, ogni calendario la scrive in
+    # UTC: Google, Apple e Outlook, come vuole lo standard. dateutil non
+    # mescola un inizio senza fuso con una fine in UTC, e la serie intera si
+    # riduceva alla sua prima seduta: le altre non venivano mai contate.
+    def serie(corpo):
+        testo = ('BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:serie@prova\r\nSUMMARY:Anna\r\n'
+                 + corpo + 'END:VEVENT\r\nEND:VCALENDAR\r\n')
+        return [e['data'] for e in C.leggi(testo, datetime.date(2026, 8, 1),
+                                           datetime.date(2026, 9, 30), e_testo=True)]
+
+    _check(r, 'Calendario', 'una serie che finisce conta tutte le sue sedute, non solo la prima',
+           serie('DTSTART;TZID=Europe/Zurich:20260803T070000\r\n'
+                 'RRULE:FREQ=WEEKLY;UNTIL=20260830T215959Z;BYDAY=MO\r\n'),
+           ['2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24'])
+    # Outlook scrive come fine l'inizio esatto dell'ultima seduta: quella c'e'
+    _check(r, 'Calendario', 'l’ultima seduta resta dentro anche se la fine è la sua ora esatta',
+           serie('DTSTART;TZID=W. Europe Standard Time:20260804T070000\r\n'
+                 'RRULE:FREQ=WEEKLY;UNTIL=20260825T050000Z;INTERVAL=1;BYDAY=TU;WKST=MO\r\n'),
+           ['2026-08-04', '2026-08-11', '2026-08-18', '2026-08-25'])
+    # le 22:30 in UTC del 25 sono le 00:30 del 26 a Zurigo: conta il giorno svizzero
+    _check(r, 'Calendario', 'la fine scritta in UTC si legge col giorno svizzero',
+           serie('DTSTART;TZID=Europe/Zurich:20260805T003000\r\n'
+                 'RRULE:FREQ=WEEKLY;UNTIL=20260825T223000Z\r\n'),
+           ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'])
+    _check(r, 'Calendario', 'una serie di giornate intere arriva fino al suo ultimo giorno',
+           serie('DTSTART;VALUE=DATE:20260821\r\nRRULE:FREQ=WEEKLY;UNTIL=20260904\r\n'),
+           ['2026-08-21', '2026-08-28', '2026-09-04'])
+
+    # --- i link di Apple ---
+    # Il calendario pubblico di iCloud da' un indirizzo webcal://, che e'
+    # https:// con un altro nome. urllib non lo conosce e lo rifiutava.
+    _check(r, 'Calendario', 'un link webcal:// (Apple) si scarica come https://',
+           _senza_scoppiare(lambda: [C._da_scaricare(u) for u in (
+               'webcal://p01-caldav.icloud.com/published/2/abc',
+               'WEBCAL://esempio.ch/sedute.ics',
+               'webcals://esempio.ch/sedute.ics',
+               'https://calendar.google.com/calendar/ical/x/basic.ics')]),
+           ['https://p01-caldav.icloud.com/published/2/abc',
+            'https://esempio.ch/sedute.ics',
+            'https://esempio.ch/sedute.ics',
+            'https://calendar.google.com/calendar/ical/x/basic.ics'])
+    # e scarica() lo usa davvero: dove nessuno risponde deve fallire perche'
+    # non trova nessuno, non perche' non capisce l'indirizzo
+    _check(r, 'Calendario', 'e il download lo usa davvero',
+           'unknown url type' in _senza_scoppiare(C.scarica, 'webcal://127.0.0.1:9/sedute.ics', 1),
+           False)
+
     _test_agenda(r)
 
 

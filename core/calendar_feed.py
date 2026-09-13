@@ -33,8 +33,22 @@ TIMEOUT = 20
 MAX_BYTE = 8 * 1024 * 1024      # un calendario di sessioni non pesa piu' di cosi'
 
 
+def _da_scaricare(url):
+    """L'indirizzo da chiedere alla rete.
+
+    I calendari pubblici di Apple (iCloud) danno un indirizzo webcal://, che
+    e' https:// con un altro nome: un programma di calendario lo capisce da
+    solo, urllib no, e rifiutava un indirizzo buono dicendo di non conoscerne
+    il tipo.
+    """
+    for schema in ('webcal://', 'webcals://'):
+        if url.lower().startswith(schema):
+            return 'https://' + url[len(schema):]
+    return url
+
+
 def scarica(url, timeout=TIMEOUT):
-    with urllib.request.urlopen(url, timeout=timeout) as r:
+    with urllib.request.urlopen(_da_scaricare(url), timeout=timeout) as r:
         return r.read(MAX_BYTE).decode('utf-8', errors='replace')
 
 
@@ -127,6 +141,39 @@ def _eventi_grezzi(testo):
     return eventi
 
 
+def _giorno_locale(v):
+    """Il giorno di un valore iCal, visto dall'orologio svizzero.
+
+    Un valore in UTC (finisce per Z) va riportato all'ora di Zurigo prima di
+    prenderne il giorno: le 22:30 in UTC del 25 sono le 00:30 del 26.
+    """
+    m = re.search(r'(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z', v or '')
+    if m and FUSO is not None:
+        try:
+            t = datetime.datetime(*(int(x) for x in m.groups()),
+                                  tzinfo=datetime.timezone.utc)
+        except ValueError:
+            return None
+        return t.astimezone(FUSO).date()
+    return _data(v)
+
+
+def _fine_serie(regola):
+    """La fine di una serie (UNTIL) riscritta come fine di quel giorno, senza fuso.
+
+    Le ripetizioni si calcolano da mezzogiorno e senza fuso (vedi sotto). La
+    fine invece ogni calendario la scrive in UTC quando la serie ha un fuso —
+    Google, Apple e Outlook, come vuole lo standard — e dateutil rifiuta di
+    mescolare le due cose: la serie si riduceva alla sua prima seduta. Scritta
+    come «fino alle 23:59:59 di quel giorno», l'ultimo giorno resta dentro
+    anche quando la fine e' una data sola o l'ora esatta dell'ultima seduta.
+    """
+    def riscrivi(m):
+        giorno = _giorno_locale(m.group(1))
+        return 'UNTIL=%sT235959' % giorno.strftime('%Y%m%d') if giorno else m.group(0)
+    return re.sub(r'UNTIL=([0-9TZ]+)', riscrivi, regola, flags=re.I)
+
+
 def _ripetizioni(ev, da, a):
     """Le date in cui questo evento cade dentro la finestra."""
     inizio = _data(ev.get('dtstart'))
@@ -138,7 +185,7 @@ def _ripetizioni(ev, da, a):
     # cambi d'ora, tanto la parte che conta e' il giorno
     partenza = datetime.datetime.combine(inizio, datetime.time(12))
     try:
-        regola = rrulestr(ev['rrule'], dtstart=partenza)
+        regola = rrulestr(_fine_serie(ev['rrule']), dtstart=partenza)
     except (ValueError, TypeError):
         return [inizio] if da <= inizio <= a else []
     date = []
