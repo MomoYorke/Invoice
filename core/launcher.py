@@ -128,17 +128,33 @@ def in_salute(url, secondi=2):
 
 
 # --- il registro d'avvio ----------------------------------------------------
-def righe_subito(flusso):
-    """Ogni riga che l'app stampa arriva nel registro subito, non alla fine.
+def registro_avvio(sistema, percorso):
+    """Le righe che l'app stampa arrivano nel registro d'avvio, e subito.
 
-    Dall'icona l'uscita dell'app va in data/start.log, e su un file Python la
-    tiene da parte a blocchi da 8 KB: le righe dell'avvio comparivano solo
-    spegnendo, e sparivano del tutto quando a spegnere era l'avviatore. Da un
-    terminale non cambia niente, li' va gia' a righe. Con pythonw, su Windows,
-    un'uscita non c'e' proprio (None) e non c'e' niente da sistemare.
+    Sul Mac, dall'icona, l'uscita dell'app e' gia' data/start.log: l'ha
+    deviata l'avviatore. Ma su un file Python la tiene da parte a blocchi da
+    8 KB, e le righe dell'avvio comparivano solo spegnendo, o sparivano del
+    tutto quando a spegnere era l'avviatore. Qui si passa a una riga alla
+    volta. Da un terminale non cambia niente: li' va gia' a righe.
+
+    Su Windows l'app parte con pythonw, che un'uscita non ce l'ha proprio
+    (None). Allora il registro lo apre l'app, in fondo a quello che c'e' gia'
+    e con la data dell'avvio, come fa l'avviatore del Mac. Se non si apre,
+    l'app parte lo stesso: senza registro, come prima.
+
+    «sistema» e' il modulo sys; nei collaudi, un sostituto.
     """
-    if flusso is not None:
-        flusso.reconfigure(line_buffering=True)
+    if sistema.stdout is not None:
+        sistema.stdout.reconfigure(line_buffering=True)
+        return
+    try:
+        registro = open(percorso, 'a', encoding='utf-8', buffering=1)
+    except OSError:
+        return
+    registro.write('--- %s ---\n' % time.strftime('%Y-%m-%d %H:%M:%S'))
+    sistema.stdout = registro
+    if sistema.stderr is None:
+        sistema.stderr = registro
 
 
 # --- la parte da riga di comando -------------------------------------------

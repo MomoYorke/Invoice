@@ -145,43 +145,84 @@ def _esegui_famiglie(r, famiglie):
 
 
 def _test_registro_avvio(r):
-    """Le righe dell'avvio arrivano nel registro mentre succedono.
+    """Le righe dell'avvio arrivano nel registro mentre succedono, su ogni sistema.
 
-    Aperta dall'icona, l'app non ha un terminale: quello che stampa finisce in
-    data/start.log. Su un file Python non scrive riga per riga ma a blocchi da
-    8 KB, e le poche righe dell'avvio aspettavano la chiusura dell'app. Se a
-    chiuderla era l'avviatore, per rimetterne in piedi una aggiornata, non
-    arrivavano proprio: il registro di quella volta restava muto, proprio
-    quando serviva a capire com'era andata.
+    Aperta dall'icona, sul Mac l'app non ha un terminale: quello che stampa
+    finisce in data/start.log. Su un file Python non scrive riga per riga ma a
+    blocchi da 8 KB, e le poche righe dell'avvio aspettavano la chiusura
+    dell'app. Se a chiuderla era l'avviatore, per rimetterne in piedi una
+    aggiornata, non arrivavano proprio: il registro di quella volta restava
+    muto, proprio quando serviva a capire com'era andata.
+
+    Su Windows era peggio: l'app parte con pythonw, che un'uscita non ce l'ha
+    proprio, e quelle righe non andavano da nessuna parte. Un registro
+    d'avvio li' non esisteva.
     """
     import tempfile
+    import types
     from . import launcher
 
+    riga = '  Banca: 3 accrediti letti'
     with tempfile.TemporaryDirectory() as tmp:
+        # --- Mac: l'uscita e' gia' il file, va solo scritta riga per riga ---
         perc = os.path.join(tmp, 'start.log')
         # aperto come Python apre la sua uscita quando la mandano in un file
         uscita = io.open(perc, 'w', encoding='utf-8')
         try:
-            launcher.righe_subito(uscita)
-            print('  Banca: 3 accrediti letti', file=uscita)
+            mac = types.SimpleNamespace(stdout=uscita, stderr=uscita)
+            launcher.registro_avvio(mac, os.path.join(tmp, 'altro.log'))
+            print(riga, file=uscita)
             with io.open(perc, encoding='utf-8') as f:
                 letto = f.read()
         finally:
             uscita.close()
-    _check(r, 'Registro d’avvio', 'una riga stampata è già nel file, con l’app ancora accesa',
-           letto, '  Banca: 3 accrediti letti\n')
-    # su Windows l'app parte con pythonw, che un'uscita non ce l'ha proprio:
-    # sys.stdout e' None, e un'accensione che inciampa qui non accende niente
-    _check(r, 'Registro d’avvio', 'e con pythonw, che non ha dove scrivere, non inciampa',
-           _senza_scoppiare(launcher.righe_subito, None), None)
+        _check(r, 'Registro d’avvio', 'una riga stampata è già nel file, con l’app ancora accesa',
+               (letto, mac.stdout is uscita, os.path.exists(os.path.join(tmp, 'altro.log'))),
+               (riga + '\n', True, False))
+
+        # --- Windows: nessuna uscita, il registro lo apre l'app ---
+        registro = os.path.join(tmp, 'start-win.log')
+        with io.open(registro, 'w', encoding='utf-8') as f:
+            f.write('avvio di ieri\n')
+        win = types.SimpleNamespace(stdout=None, stderr=None)
+        esito = _senza_scoppiare(launcher.registro_avvio, win, registro)
+        try:
+            # scritta a mano: un print(file=None) andrebbe nell'uscita di
+            # QUESTA app, cioe' nel registro vero
+            if win.stdout is not None:
+                win.stdout.write(riga + '\n')
+            with io.open(registro, encoding='utf-8') as f:
+                righe = f.read().splitlines()
+        finally:
+            if win.stdout is not None:
+                win.stdout.close()
+        _check(r, 'Registro d’avvio', 'su Windows, dove pythonw non ha uscita, l’app apre il registro da sé',
+               (esito, righe[2:]), (None, [riga]))
+        _check(r, 'Registro d’avvio', 'e ci finiscono anche gli avvisi e i guasti',
+               win.stderr is not None and win.stderr is win.stdout, True)
+        _check(r, 'Registro d’avvio', 'ogni avvio comincia con la sua data, come sul Mac',
+               [bool(re.match(r'--- \d{4}-\d\d-\d\d \d\d:\d\d:\d\d ---$', x)) for x in righe[1:2]],
+               [True])
+        _check(r, 'Registro d’avvio', 'e si aggiunge in fondo, senza cancellare gli avvii di prima',
+               righe[:1], ['avvio di ieri'])
+
+        # un registro che non si apre non deve impedire all'app di partire
+        chiuso = types.SimpleNamespace(stdout=None, stderr=None)
+        _check(r, 'Registro d’avvio', 'e se il registro non si può aprire, l’app parte lo stesso',
+               (_senza_scoppiare(launcher.registro_avvio, chiuso, tmp), chiuso.stdout),
+               (None, None))
 
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
         programma = f.read()
     avvio = programma[programma.find("if __name__ == '__main__':"):]
-    chiamata = avvio.find('launcher.righe_subito(sys.stdout)')
+    chiamata = avvio.find('launcher.registro_avvio(sys, START_LOG)')
     _check(r, 'Registro d’avvio', 'l’app lo chiede prima di stampare la prima riga',
            (chiamata > 0, chiamata < avvio.find('print(')), (True, True))
+    # lo stesso file che sul Mac apre l'avviatore: chi cerca il registro lo
+    # trova nello stesso posto su tutt'e due i sistemi
+    _check(r, 'Registro d’avvio', 'su Windows è lo stesso data/start.log del Mac',
+           "START_LOG = os.path.join(APP_DIR, 'data', 'start.log')" in programma, True)
 
 
 def _test_batteria_regge(r):

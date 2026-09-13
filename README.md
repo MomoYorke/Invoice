@@ -173,7 +173,9 @@ To go back to the previous version, the number is in `data/.previous-version`:
 That window stays almost empty: two lines at startup and that is it.
 Nothing scrolls while you use the app, and there is no red warning to
 interpret. If something goes wrong the page says so, and the full trace ends up
-in `data/error.log`.
+in `data/error.log`. When the app runs with no window at all — from Invoice.app
+on the Mac, or on Windows — what it has to say at startup goes to
+`data/start.log` instead, each start under its own date.
 
 ## The menu
 

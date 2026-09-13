@@ -57,6 +57,8 @@ app.jinja_env.globals['pallino'] = icons.pallino
 
 # --- log persistente dei SOLI errori: data/error.log ---
 ERROR_LOG = os.path.join(APP_DIR, 'data', 'error.log')
+# e quello dell'avvio, per quando l'app parte senza finestra (vedi __main__)
+START_LOG = os.path.join(APP_DIR, 'data', 'start.log')
 os.makedirs(os.path.dirname(ERROR_LOG), exist_ok=True)
 err_logger = logging.getLogger('fatture.errori')
 err_logger.setLevel(logging.ERROR)
@@ -2227,9 +2229,10 @@ def _avvia(porta):
 
 
 if __name__ == '__main__':
-    # dall'icona l'uscita va in data/start.log: cosi' ogni riga ci arriva
-    # quando succede, e non si perde se l'avviatore spegne l'app per rifarla
-    launcher.righe_subito(sys.stdout)
+    # senza finestra le righe qui sotto vanno in data/start.log: sul Mac ce le
+    # manda l'avviatore, su Windows (pythonw) il registro lo apre l'app. Cosi'
+    # ogni riga ci arriva quando succede e non si perde se l'app viene fermata
+    launcher.registro_avvio(sys, START_LOG)
     PORTA = int(db.env('INVOICE_PORT', 'FATTURE_PORT') or 8471)
     # prima di ogni altra cosa: se le cartelle hanno ancora i nomi vecchi le
     # rinomina. Dopo il makedirs qui sotto sarebbe troppo tardi — la cartella
