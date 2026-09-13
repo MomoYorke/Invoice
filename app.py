@@ -2236,29 +2236,12 @@ if __name__ == '__main__':
     _segna_avvio(PORTA)
     con = db.init()
     backup.make_backup('avvio')
-    # copia completa fuori dal Mac, una volta al giorno
+    # copia completa fuori dal Mac, una volta al giorno. Anche quando il sistema
+    # nega l'elenco della cartella (sul Mac, partendo dall'icona):
+    # copia_del_giorno la fa lo stesso e la ritrova dal registro
     _dest = _cartella_backup()
-    if not backup.destinazione_leggibile(_dest):
-        # succede su macOS quando l'app parte dal suo pacchetto e la cartella
-        # sta su iCloud Drive: il sistema nega l'elenco a un'app non firmata
-        print('  Backup esterno: la cartella non si riesce a leggere da qui.')
-        print('    %s' % _dest)
-        print('    Le copie dentro l\'app continuano; per quelle fuori, vedi il README.')
-    elif backup.serve_backup_oggi(_dest):
-        _e = backup.archivia_fuori(_dest, motivo='avvio')
-        print('  Backup esterno: ' + (os.path.basename(_e['path']) if _e['ok']
-                                      else 'NON riuscito — ' + _e['errore']))
-        # lo storico (129 documenti) si copia solo se e' cambiato
-        _s = backup.archivia_storico(db.get_settings(con)['source_folder'], _dest)
-        if _s.get('niente'):
-            pass                   # nessuno storico da copiare
-        elif _s['saltato']:
-            print('  Storico: invariato, nessuna copia nuova')
-        else:
-            print('  Storico: ' + (os.path.basename(_s['path']) if _s['ok']
-                                   else 'NON riuscito — ' + _s['errore']))
-        if _s.get('nota'):
-            print('  Storico: ' + _s['nota'])
+    for _riga in backup.copia_del_giorno(_dest, db.get_settings(con)['source_folder']):
+        print('  ' + _riga)
     # estratti conto: legge la cartella e collega da solo le certezze, cosi' la
     # Dashboard e' gia' aggiornata quando apri l'app
     _mov, _prob, _fatti = _leggi_banca(con)

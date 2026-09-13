@@ -111,7 +111,8 @@ def run_all():
         _test_gemelli_fra_file, _test_qr_fattura, _test_qr_iban,
         _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
-        _test_pagine_vuote, _test_qr_di_serie, _test_batteria_regge,
+        _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
+        _test_batteria_regge,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -3664,6 +3665,10 @@ def _test_backup_illeggibile(r):
         mai = os.path.join(tmp, 'mai-esistita')
 
         vero = os.listdir
+        # il registro delle copie di una prova sta nella prova: quello vero e'
+        # dell'utente, e una Verifica non ci scrive dentro
+        vero_registro = _bk.REGISTRO
+        _bk.REGISTRO = os.path.join(tmp, 'registro.json')
 
         def nega(percorso, *a, **k):
             if percorso == chiusa:
@@ -3694,13 +3699,16 @@ def _test_backup_illeggibile(r):
                    len(prova(_bk.elenco_esterni, aperta)), 1)
         finally:
             os.listdir = vero
+            _bk.REGISTRO = vero_registro
 
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
         programma = f.read()
-    # se l'avvio non lo chiede, il guaio torna a essere invisibile
-    _check(r, 'Backup illeggibile', 'e all’avvio l’app lo dice, invece di tacere',
-           'backup.destinazione_leggibile(_dest)' in programma, True)
+    # l'avvio affida la copia del giorno a copia_del_giorno, che la fa anche con
+    # l'elenco negato e lo dice. Se l'avvio tornasse a decidere da se', potrebbe
+    # tornare a saltarla — era il difetto (vedi _test_copie_dal_registro)
+    _check(r, 'Backup illeggibile', 'l’avvio affida la copia del giorno a copia_del_giorno',
+           'backup.copia_del_giorno(_dest' in programma, True)
 
     # E una guardia sulla forma, non sul comportamento: nel modulo dei backup
     # NESSUNA lettura di cartella puo' stare allo scoperto. Un solo «listdir»
@@ -3714,9 +3722,9 @@ def _test_backup_illeggibile(r):
     # «dentro un try» non basta come definizione di protetto: la rotazione
     # dello storico sta gia' dentro un try, che pero' ingoierebbe l'intero
     # backup e non solo l'elenco. Quindi si e' precisi: in questo modulo
-    # possono leggere una cartella soltanto due funzioni, quelle scritte per
-    # reggere il rifiuto. Chiunque altro e' un ramo che tornerebbe a cadere.
-    AMMESSE = {'_nomi_in', 'destinazione_leggibile'}
+    # possono leggere una cartella soltanto le funzioni scritte per reggere il
+    # rifiuto. Chiunque altro e' un ramo che tornerebbe a cadere.
+    AMMESSE = {'_nomi_in', '_copie_in', 'destinazione_leggibile'}
     scoperte = []
     for nodo in _ast.walk(albero):
         if not isinstance(nodo, _ast.FunctionDef):
@@ -3725,7 +3733,7 @@ def _test_backup_illeggibile(r):
             if (isinstance(sotto, _ast.Call) and isinstance(sotto.func, _ast.Attribute)
                     and sotto.func.attr == 'listdir' and nodo.name not in AMMESSE):
                 scoperte.append('%s() riga %d' % (nodo.name, sotto.lineno))
-    _check(r, 'Backup illeggibile', 'solo le due funzioni fatte apposta leggono le cartelle',
+    _check(r, 'Backup illeggibile', 'solo le funzioni fatte apposta leggono le cartelle',
            sorted(set(scoperte)), [])
 
 
@@ -3746,6 +3754,8 @@ def _test_storico_al_buio(r):
     from . import backup
 
     base = tempfile.mkdtemp(prefix='invoice-storico-')
+    vero_registro = backup.REGISTRO
+    backup.REGISTRO = os.path.join(base, 'registro.json')
     try:
         sorg = os.path.join(base, 'Clients Invoices')
         dest = os.path.join(base, 'Backup')
@@ -3787,23 +3797,170 @@ def _test_storico_al_buio(r):
         _check(r, 'Storico al buio', 'e non ha lasciato in giro un archivio finto',
                quanti_archivi(), prima)
 
-        # --- e se e' il SEGNO a non si leggersi (l'ha scritto un'altra
-        #     identita'), non si salta credendo di essere a posto: si copia ---
+        # --- e se e' il SEGNO a non leggersi (l'ha scritto l'app partita in
+        #     un altro modo)? Il rifiuto si intercetta invece di togliere i
+        #     permessi al file: chmod su Windows non toglie la lettura, e la
+        #     prova la' diceva il falso ---
         # non si conta quanti archivi ci sono: due copie nello stesso secondo
         # prendono lo stesso nome e il conteggio non si muove. Quello che
         # distingue una copia da un salto e' «path», che sul salto resta vuoto.
-        firma = os.path.join(dest, backup.FIRMA)
-        os.chmod(firma, 0)
-        try:
-            e = backup.archivia_storico(sorg, dest)
-        finally:
-            os.chmod(firma, 0o644)
-        _check(r, 'Storico al buio', 'segno illeggibile: si copia invece di saltare',
+        firma = os.path.abspath(os.path.join(dest, backup.FIRMA))
+
+        def segno_altrui(percorso, *a, **k):
+            if os.path.abspath(os.fspath(percorso)) == firma:
+                raise PermissionError(1, 'Operation not permitted', percorso)
+            return io.open(percorso, *a, **k)
+
+        def storico_col_segno_altrui():
+            backup.open = segno_altrui
+            try:
+                return backup.archivia_storico(sorg, dest)
+            finally:
+                del backup.open
+
+        # il registro ricorda la firma dell'ultima copia: se quella copia c'e'
+        # ancora non si rifanno 7 MB a ogni avvio dall'icona
+        e = storico_col_segno_altrui()
+        _check(r, 'Storico al buio', 'segno illeggibile, ma registro e archivio ci sono: non si ricopia',
+               (e['ok'], e['saltato']), (True, True))
+        # ...il registro da solo pero' non basta: senza l'archivio si copia
+        for nome in os.listdir(dest):
+            if nome.startswith('storico-'):
+                os.remove(os.path.join(dest, nome))
+        e = storico_col_segno_altrui()
+        _check(r, 'Storico al buio', 'segno illeggibile e archivio sparito: si copia invece di saltare',
                (e['ok'], e['saltato'], bool(e['path'])), (True, False, True))
         _check(r, 'Storico al buio', 'e se il segno non si scrive, la copia resta buona',
                (e['ok'], bool(e['nota'])), (True, True))
+        # e senza nessun registro, come prima: nel dubbio si copia
+        os.remove(backup.REGISTRO)
+        e = storico_col_segno_altrui()
+        _check(r, 'Storico al buio', 'segno illeggibile e nessun registro: si copia',
+               (e['ok'], e['saltato'], bool(e['path'])), (True, False, True))
     finally:
+        backup.REGISTRO = vero_registro
         shutil.rmtree(base, ignore_errors=True)
+
+
+def _test_copie_dal_registro(r):
+    """Con l'elenco della cartella negato le copie fuori si fanno, e si ritrovano.
+
+    Sul Mac, all'app partita dall'icona il sistema nega l'elenco della cartella
+    iCloud dei backup, ma le lascia scrivere uno zip nuovo, rileggerlo e
+    chiedere se un nome esiste: misurato il 13.09.2026 con un'app di prova non
+    firmata. L'avvio pero' guardava l'elenco, lo trovava vuoto e saltava la
+    copia del giorno, e la Dashboard diceva «mai fatta» con la cartella piena.
+    Ora l'app si segna le copie in un registro accanto al database.
+    """
+    import datetime
+    import shutil
+    import sqlite3
+    import tempfile
+    from . import backup as B
+    from . import overview
+
+    base = tempfile.mkdtemp(prefix='invoice-registro-')
+    dest = os.path.join(base, 'Backup')
+    sorg = os.path.join(base, 'Storico')
+    os.makedirs(dest)
+    os.makedirs(sorg)
+    with io.open(os.path.join(sorg, 'vecchia.txt'), 'w', encoding='utf-8') as f:
+        f.write('x' * 16)
+    # un database finto con una fattura: la copia e la sua verifica sono vere,
+    # ma quello dell'utente non si apre
+    finto = os.path.join(base, 'fatture.db')
+    con = sqlite3.connect(finto)
+    con.execute('CREATE TABLE invoices (id INTEGER, deleted_at TEXT)')
+    con.execute('INSERT INTO invoices VALUES (1, NULL)')
+    con.commit()
+    con.close()
+
+    vero = {'REGISTRO': B.REGISTRO, '_sorgenti': B._sorgenti,
+            '_conta_fatture': B._conta_fatture}
+    vero_listdir = os.listdir
+    negata = os.path.abspath(dest)
+
+    def nega(percorso='.', *a, **k):
+        if os.path.abspath(os.fspath(percorso)) == negata:
+            raise PermissionError(1, 'Operation not permitted', percorso)
+        return vero_listdir(percorso, *a, **k)
+
+    def zip_veri():
+        return sorted(n for n in vero_listdir(dest) if n.startswith('fatture-app-'))
+
+    def nomi_di(copie):
+        return [c['name'] for c in copie] if isinstance(copie, list) else copie
+
+    estranea = os.path.join(dest, 'fatture-app-20260901-080000.zip')
+    B.REGISTRO = os.path.join(base, 'registro.json')
+    B._sorgenti = lambda: [(finto, 'fatture.db')]
+    B._conta_fatture = lambda: 1
+    os.listdir = nega
+    try:
+        # --- primo avvio dall'icona: nessuna copia nota, elenco negato ---
+        righe = _senza_scoppiare(B.copia_del_giorno, dest, sorg)
+        _check(r, 'Backup illeggibile', 'elenco negato: la copia del giorno si fa lo stesso',
+               len(zip_veri()), 1)
+        _check(r, 'Backup illeggibile', 'e l’avvio dice che l’elenco è negato',
+               isinstance(righe, list) and any('elenco' in x for x in righe), True)
+        _check(r, 'Backup illeggibile', 'la copia appena fatta si ritrova senza elenco',
+               nomi_di(_senza_scoppiare(B.elenco_esterni, dest)), zip_veri())
+        _check(r, 'Backup illeggibile', 'quindi oggi non se ne fa un’altra',
+               _senza_scoppiare(B.serve_backup_oggi, dest), False)
+        prima = sorted(vero_listdir(dest))
+        _senza_scoppiare(B.copia_del_giorno, dest, sorg)
+        _check(r, 'Backup illeggibile', 'e un secondo avvio nello stesso giorno non rifà niente',
+               sorted(vero_listdir(dest)), prima)
+        memoria = sqlite3.connect(':memory:')
+        memoria.execute('CREATE TABLE invoices (id INTEGER, deleted_at TEXT)')
+        memoria.execute('INSERT INTO invoices VALUES (1, NULL)')
+        _check(r, 'Backup illeggibile', 'la Dashboard non avvisa di una copia mancante',
+               _senza_scoppiare(overview._backup_vecchio, memoria, dest), '')
+        memoria.close()
+
+        # --- una copia cancellata da qualcuno non si conta piu' ---
+        for nome in zip_veri():
+            os.remove(os.path.join(dest, nome))
+        _check(r, 'Backup illeggibile', 'una copia sparita dalla cartella non si conta più',
+               _senza_scoppiare(B.ultimo_esterno, dest), None)
+
+        # --- sfoltire senza elenco: si tolgono solo copie che il registro conosce ---
+        nomi = ['fatture-app-20260902-080000.zip', 'fatture-app-20260903-080000.zip',
+                'fatture-app-20260904-080000.zip']
+        for i, nome in enumerate(nomi + [os.path.basename(estranea)]):
+            p = os.path.join(dest, nome)
+            io.open(p, 'wb').close()
+            quando = datetime.datetime(2026, 9, 2 + i if i < 3 else 1, 8).timestamp()
+            os.utime(p, (quando, quando))
+            if nome in nomi:
+                _senza_scoppiare(B._ricorda, dest, nome)
+        _senza_scoppiare(B.prune_esterni, dest, 1)
+        _check(r, 'Backup illeggibile', 'sfoltire senza elenco: restano la più nuova e la prima del mese',
+               sorted(n for n in vero_listdir(dest) if n in nomi), [nomi[0], nomi[2]])
+        _check(r, 'Backup illeggibile', 'e quella tolta non si conta più',
+               nomi_di(_senza_scoppiare(B.elenco_esterni, dest)), [nomi[2], nomi[0]])
+        _check(r, 'Backup illeggibile', 'una copia che il registro non conosce non si tocca',
+               os.path.exists(estranea), True)
+    finally:
+        os.listdir = vero_listdir
+        B._sorgenti = vero['_sorgenti']
+        B._conta_fatture = vero['_conta_fatture']
+
+    try:
+        # --- con l'elenco concesso il registro si riallinea da solo ---
+        _senza_scoppiare(B.elenco_esterni, dest)
+        os.listdir = nega
+        try:
+            visti = nomi_di(_senza_scoppiare(B.elenco_esterni, dest))
+        finally:
+            os.listdir = vero_listdir
+        _check(r, 'Backup illeggibile', 'con l’elenco concesso il registro impara anche le copie che non ha fatto',
+               isinstance(visti, list) and os.path.basename(estranea) in visti, True)
+    finally:
+        B.REGISTRO = vero['REGISTRO']
+        shutil.rmtree(base, ignore_errors=True)
+    _check(r, 'Backup illeggibile', 'e la Verifica non ha toccato il registro vero',
+           B.REGISTRO, vero['REGISTRO'])
 
 
 CAMT_RIFERIMENTI = """<?xml version="1.0" encoding="UTF-8"?>

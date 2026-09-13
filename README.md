@@ -109,7 +109,8 @@ moment you do it.
 > signature macOS has no stable identity to check, so the entry in that list
 > counts for nothing. The same goes for **iCloud Drive**: the app gets into the
 > files it created there itself, and not into the ones written by the same app
-> started from the Terminal.
+> started from the Terminal. The copies off the Mac work all the same: see
+> *Two nets, not one* below.
 >
 > Which is why the rule is not «grant the permission» but **keep your data out
 > of those folders**. That includes the folder holding your older documents, if
@@ -741,6 +742,14 @@ in Settings always wins over the default. Two archives go in it.
   that folder really changes**: the app compares its fingerprint and if it is
   identical it rewrites nothing. Three are kept. The folder is only read, never
   modified.
+
+On a Mac, when the app is started from the `Invoice` icon, macOS does not let
+it list what is inside that iCloud folder. It still lets it write a new
+archive, read it back and check whether a file with a given name is there. So
+the app keeps its own list of the archives, in `data/external-copies.json`, and
+finds them through it, checking every time that they still exist: the daily
+copy is made either way. Whenever the folder can be listed, the list lines
+itself up with what is really there.
 
 As soon as it is written, every archive is reopened: the database inside must
 pass `PRAGMA integrity_check` and hold the same number of invoices as the

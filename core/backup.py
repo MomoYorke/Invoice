@@ -108,6 +108,8 @@ def restore(path):
 import zipfile
 import tempfile
 import hashlib
+import json
+import threading
 
 from . import desktop
 
@@ -231,6 +233,8 @@ def archivia_fuori(dest_dir=None, motivo='avvio'):
             esito['errore'] = perche
             return esito
         esito.update(ok=True, path=out, bytes=os.path.getsize(out))
+        # segnata subito, prima di sfoltire: senza elenco la si ritrova solo cosi'
+        _ricorda(dest_dir, os.path.basename(out))
         prune_esterni(dest_dir)
         return esito
     except Exception as e:
@@ -259,6 +263,88 @@ def _nomi_in(dest_dir):
         return []
 
 
+# --- il registro delle copie fuori -------------------------------------------
+# Senza elenco l'app non trovava nemmeno le copie appena fatte: sul Mac,
+# partita dall'icona, all'avvio saltava la copia del giorno e la Dashboard
+# diceva «mai fatta» con la cartella piena. Il sistema pero' le lascia
+# scrivere uno zip, rileggerlo e chiedere se un nome esiste (misurato il
+# 13.09.2026 con un'app di prova non firmata). Quindi l'app si segna da sola i
+# nomi dei suoi archivi e la firma dell'ultimo storico, in un file accanto al
+# database, dove nessuno lo nasconde. Quando l'elenco si legge fa fede l'elenco
+# e il registro si riallinea; quando no, fanno fede i nomi del registro che
+# esistono ancora.
+REGISTRO = os.path.join(os.path.dirname(db.DB_PATH), 'external-copies.json')
+_REGISTRO_IN_USO = threading.Lock()
+
+
+def _archivio_nostro(nome):
+    return nome.startswith(('fatture-app-', 'storico-')) and nome.endswith('.zip')
+
+
+def _voce(dati, dest_dir):
+    voce = dati.get(os.path.abspath(dest_dir))
+    return voce if isinstance(voce, dict) else {}
+
+
+def _registro():
+    try:
+        with open(REGISTRO, encoding='utf-8') as f:
+            dati = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return dati if isinstance(dati, dict) else {}
+
+
+def _registro_cambia(dest_dir, cambia):
+    """Cambia la voce di una cartella e riscrive il registro, se e' cambiata.
+
+    Un registro che non si scrive non ferma niente: si torna a come era prima,
+    cioe' a fidarsi dell'elenco.
+    """
+    with _REGISTRO_IN_USO:
+        dati = _registro()
+        prima = _voce(dati, dest_dir)
+        dopo = cambia(dict(prima))
+        if dopo == prima or (not prima and not any(dopo.values())):
+            return
+        dati[os.path.abspath(dest_dir)] = dopo
+        # le cartelle che non esistono piu' (quelle delle prove) non servono
+        dati = {k: v for k, v in dati.items() if os.path.isdir(k)}
+        try:
+            parziale = REGISTRO + '.parziale'
+            with open(parziale, 'w', encoding='utf-8') as f:
+                json.dump(dati, f, ensure_ascii=False, indent=1, sort_keys=True)
+            os.replace(parziale, REGISTRO)
+        except OSError:
+            pass
+
+
+def _ricorda(dest_dir, nome):
+    _registro_cambia(dest_dir, lambda v: dict(
+        v, nomi=sorted(set(v.get('nomi') or []) | {nome})))
+
+
+def _dimentica(dest_dir, nome):
+    _registro_cambia(dest_dir, lambda v: dict(
+        v, nomi=[n for n in v.get('nomi') or [] if n != nome]))
+
+
+def _copie_in(dest_dir):
+    """I nomi degli archivi dell'app in quella cartella.
+
+    Dall'elenco, se il sistema lo concede, e allora il registro si riallinea.
+    Altrimenti dal registro, tenendo solo i file che ci sono ancora: sapere se
+    un nome esiste e' permesso anche quando l'elenco non lo e'.
+    """
+    try:
+        nomi = sorted(n for n in os.listdir(dest_dir) if _archivio_nostro(n))
+    except OSError:
+        return [n for n in _voce(_registro(), dest_dir).get('nomi') or []
+                if os.path.exists(os.path.join(dest_dir, n))]
+    _registro_cambia(dest_dir, lambda v: dict(v, nomi=nomi))
+    return nomi
+
+
 def destinazione_leggibile(dest_dir=None):
     """Vero se la cartella dei backup si puo' davvero guardare dentro.
 
@@ -281,11 +367,14 @@ def elenco_esterni(dest_dir=None):
     if not os.path.isdir(dest_dir):
         return []
     out = []
-    for nome in _nomi_in(dest_dir):
-        if not (nome.startswith('fatture-app-') and nome.endswith('.zip')):
+    for nome in _copie_in(dest_dir):
+        if not nome.startswith('fatture-app-'):
             continue
         p = os.path.join(dest_dir, nome)
-        st = os.stat(p)
+        try:
+            st = os.stat(p)
+        except OSError:
+            continue                    # sparita fra l'elenco e adesso
         out.append({'path': p, 'name': nome, 'size': st.st_size,
                     'when': datetime.datetime.fromtimestamp(st.st_mtime)})
     return sorted(out, key=lambda x: x['when'], reverse=True)
@@ -293,6 +382,7 @@ def elenco_esterni(dest_dir=None):
 
 def prune_esterni(dest_dir=None, tieni=TIENI_GIORNALIERI):
     """Tiene le ultime copie piu' la prima di ogni mese, che non si tocca mai."""
+    dest_dir = dest_dir or DEST_DEFAULT
     copie = elenco_esterni(dest_dir)
     primi_del_mese = set()
     for c in sorted(copie, key=lambda x: x['when']):
@@ -306,7 +396,8 @@ def prune_esterni(dest_dir=None, tieni=TIENI_GIORNALIERI):
         try:
             os.remove(c['path'])
         except OSError:
-            pass
+            continue    # una copia scritta dall'app partita in un altro modo resta
+        _dimentica(dest_dir, c['name'])
 
 
 def ultimo_esterno(dest_dir=None):
@@ -318,6 +409,36 @@ def serve_backup_oggi(dest_dir=None):
     """Vero se oggi non e' ancora stata fatta nessuna copia esterna."""
     ultimo = ultimo_esterno(dest_dir)
     return ultimo is None or ultimo['when'].date() < datetime.date.today()
+
+
+def copia_del_giorno(dest_dir, sorgente):
+    """Quello che l'avvio fa fuori dal computer, e le righe per dirlo.
+
+    La copia del giorno se manca, e lo storico se e' cambiato. Un elenco
+    negato non ferma piu' niente: lo si dice, e la copia si fa lo stesso.
+    """
+    dest_dir = dest_dir or DEST_DEFAULT
+    righe = []
+    if not destinazione_leggibile(dest_dir):
+        righe.append("Backup esterno: il sistema nega l'elenco della cartella; "
+                     "le copie si fanno lo stesso e si ritrovano dal registro.")
+    if not serve_backup_oggi(dest_dir):
+        return righe
+    fuori = archivia_fuori(dest_dir, motivo='avvio')
+    righe.append('Backup esterno: ' + (os.path.basename(fuori['path']) if fuori['ok']
+                                      else 'NON riuscito — ' + fuori['errore']))
+    # lo storico si copia solo se e' cambiato
+    storico = archivia_storico(sorgente, dest_dir)
+    if storico.get('niente'):
+        pass                       # nessuno storico da copiare
+    elif storico['saltato']:
+        righe.append('Storico: invariato, nessuna copia nuova')
+    else:
+        righe.append('Storico: ' + (os.path.basename(storico['path']) if storico['ok']
+                                    else 'NON riuscito — ' + storico['errore']))
+    if storico.get('nota'):
+        righe.append('Storico: ' + storico['nota'])
+    return righe
 
 
 # --- lo storico: i documenti nella cartella indicata in Impostazioni -------
@@ -374,6 +495,22 @@ def _firma_segnata(percorso):
         return None
 
 
+def _storico_invariato(dest_dir, firma):
+    """Lo storico e' gia' al sicuro cosi' com'e'?
+
+    Fa fede il segno nella cartella. Se non si legge — l'ha scritto l'app
+    partita in un altro modo — il registro: ma solo se un archivio dello
+    storico c'e' ancora davvero, altrimenti la firma ricordata non protegge
+    niente. Nel dubbio si copia.
+    """
+    if _firma_segnata(os.path.join(dest_dir, FIRMA)) == firma:
+        # ...e il registro lo impara, per le volte in cui il segno non si leggera'
+        _registro_cambia(dest_dir, lambda v: dict(v, firma_storico=firma))
+        return True
+    return (_voce(_registro(), dest_dir).get('firma_storico') == firma
+            and any(n.startswith('storico-') for n in _copie_in(dest_dir)))
+
+
 def archivia_storico(sorgente, dest_dir=None, forza=False):
     """Copia lo storico solo se e' cambiato dall'ultima volta."""
     dest_dir = dest_dir or DEST_DEFAULT
@@ -400,7 +537,7 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
             return esito
         os.makedirs(dest_dir, exist_ok=True)
         segna = os.path.join(dest_dir, FIRMA)
-        if not forza and _firma_segnata(segna) == firma:
+        if not forza and _storico_invariato(dest_dir, firma):
             esito.update(ok=True, saltato=True)
             return esito                  # niente e' cambiato: nessuna copia nuova
         stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -424,6 +561,11 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
             os.remove(out)
             esito['errore'] = f'archivio danneggiato: {rotto}'
             return esito
+        # nel registro prima che nel segno: il segno, scritto dall'app partita
+        # in un altro modo, puo' non lasciarsi riscrivere
+        _registro_cambia(dest_dir, lambda v: dict(
+            v, firma_storico=firma,
+            nomi=sorted(set(v.get('nomi') or []) | {os.path.basename(out)})))
         try:
             with open(segna, 'w', encoding='utf-8') as f:
                 f.write(firma)
@@ -433,14 +575,13 @@ def archivia_storico(sorgente, dest_dir=None, forza=False):
             # ricopia — spreco, non perdita. Ma lo si dice.
             esito['nota'] = ('copia riuscita, ma il segno non si e\' potuto '
                              'scrivere (%s): la prossima volta si ricopia' % guaio)
-        for vecchio in sorted(
-                (n for n in _nomi_in(dest_dir)
-                 if n.startswith('storico-') and n.endswith('.zip')),
-                reverse=True)[TIENI_STORICI:]:
+        for vecchio in sorted((n for n in _copie_in(dest_dir) if n.startswith('storico-')),
+                              reverse=True)[TIENI_STORICI:]:
             try:
                 os.remove(os.path.join(dest_dir, vecchio))
             except OSError:
-                pass
+                continue
+            _dimentica(dest_dir, vecchio)
         esito.update(ok=True, path=out)
         return esito
     except Exception as e:
