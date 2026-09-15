@@ -28,6 +28,7 @@ GRUPPI = [
     ]),
     ('Chi segui', [
         ('clienti', 'Clienti', 'clienti', ('clienti',)),
+        ('servizi', 'Servizi', 'listino', ('servizi',)),
         ('crediti', 'Crediti', 'crediti', ('crediti', 'crediti_pacchetto', 'crediti_clienti')),
         ('agenda', 'Agenda', 'agenda', ('agenda',)),
     ]),

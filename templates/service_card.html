@@ -1,0 +1,49 @@
+{# La scheda di un servizio. Chi la include imposta «s» (i campi) e «k» (un
+   pezzo unico per gli id). Le domande compaiono solo quando servono: lo fa lo
+   script in fondo a services.html. #}
+<form method="post" action="{{ url_for('servizi_salva') }}" class="scheda-servizio">
+  {% if s.id %}<input type="hidden" name="id" value="{{ s.id }}">{% endif %}
+  <label for="sv-nome-{{ k }}">{{ _('Come si chiama?') }}</label>
+  <input type="text" name="nome" id="sv-nome-{{ k }}" value="{{ s.nome or '' }}" required>
+  <label for="sv-prezzo-{{ k }}">{{ _('Quanto costa?') }}</label>
+  <input type="text" name="prezzo" id="sv-prezzo-{{ k }}" value="{{ s.prezzo_testo or '' }}"
+         placeholder="110.-" inputmode="decimal" style="max-width:160px">
+  <fieldset>
+    <legend>{{ _('Si paga') }}</legend>
+    <label class="scelta"><input type="radio" name="ogni_mese" value="0" {{ 'checked' if not s.ogni_mese }}> {{ _('Una volta') }}</label>
+    <label class="scelta"><input type="radio" name="ogni_mese" value="1" {{ 'checked' if s.ogni_mese }}> {{ _('Ogni mese') }}</label>
+  </fieldset>
+  <fieldset>
+    <legend>{{ _('Comprende sedute?') }}</legend>
+    <label class="scelta"><input type="radio" name="con_sedute" value="0" {{ 'checked' if not s.con_sedute }}> {{ _('No') }}</label>
+    <label class="scelta"><input type="radio" name="con_sedute" value="1" {{ 'checked' if s.con_sedute }}> {{ _('Sì') }}</label>
+    <span data-quando="sedute">
+      <input type="number" name="sedute" min="1" max="99" value="{{ s.sedute or '' }}"
+             aria-label="{{ _('Quante sedute') }}" style="width:80px">
+      <span data-quando="mensile">{{ _('al mese') }}</span>
+    </span>
+  </fieldset>
+  <fieldset data-quando="scadenza">
+    <legend>{{ _('Le sedute scadono?') }}</legend>
+    <label class="scelta"><input type="radio" name="scadono" value="0" {{ 'checked' if not s.scadono }}> {{ _('Mai') }}</label>
+    <label class="scelta"><input type="radio" name="scadono" value="1" {{ 'checked' if s.scadono }}> {{ _('Dopo') }}</label>
+    <span data-quando="mesi">
+      <input type="number" name="scadenza_mesi" min="1" max="60" value="{{ s.scadenza_mesi or '' }}"
+             aria-label="{{ _('Quanti mesi') }}" style="width:70px"> {{ _('mesi') }}
+    </span>
+  </fieldset>
+  <fieldset data-quando="riporto">
+    <legend>{{ _('Le sedute non usate') }}</legend>
+    <label class="scelta"><input type="radio" name="passano" value="0" {{ 'checked' if not s.passano }}> {{ _('Si perdono') }}</label>
+    <label class="scelta"><input type="radio" name="passano" value="1" {{ 'checked' if s.passano }}> {{ _('Passano al mese dopo') }}</label>
+    <span data-quando="massimo">{{ _('Al massimo') }}
+      <input type="number" name="massimo" min="1" max="99" value="{{ s.massimo or '' }}"
+             aria-label="{{ _('Quante al massimo in un mese') }}" style="width:70px"> {{ _('in un mese') }}
+    </span>
+  </fieldset>
+  <p class="riassunto" aria-live="polite">{{ s.riassunto or '' }}</p>
+  {% if s.fatturato %}
+  <p class="muted" style="font-size:12.5px">{{ _('Questo servizio è già in qualche fattura: cambiare prezzo o sedute vale per le fatture nuove, non per quelle già fatte.') }}</p>
+  {% endif %}
+  <button class="btn small">{{ _('Salva') }}</button>
+</form>

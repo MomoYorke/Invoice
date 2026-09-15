@@ -1040,6 +1040,27 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'un servizio fatturato lo sa', SR.fatturato(con, pt), True)
     con.close()
 
+    # --- la pagina: la scheda mostra quello che poi salva ---------------------
+    con = _db_servizi()
+    sid = SR.salva(con, SR.dal_modulo({
+        'nome': 'Monthly abo', 'prezzo': '110.-', 'ogni_mese': '1', 'con_sedute': '1',
+        'sedute': '4', 'passano': '1', 'massimo': '6'}))
+    v = SR.per_la_pagina(con)[0]
+    _check(r, 'Servizi', 'la scheda riceve il prezzo scritto come in fattura',
+           (v['prezzo_testo'], v['con_sedute'], v['scadono'], v['fatturato']),
+           ('110.-', True, False, False))
+    ripreso = {'nome': v['nome'], 'prezzo': v['prezzo_testo'], 'ogni_mese': str(v['ogni_mese']),
+               'con_sedute': '1' if v['con_sedute'] else '0', 'sedute': str(v['sedute']),
+               'scadono': '1' if v['scadono'] else '0', 'scadenza_mesi': str(v['scadenza_mesi']),
+               'passano': str(v['passano']), 'massimo': str(v['massimo'])}
+    _check(r, 'Servizi', 'risalvare la scheda così com’è non trova niente da ridire',
+           SR.controlla(con, SR.dal_modulo(ripreso), sid), [])
+    SR.salva(con, SR.dal_modulo(ripreso), sid)
+    _check(r, 'Servizi', 'e non cambia niente',
+           {k: SR.uno(con, sid)[k] for k in ('prezzo_cents', 'sedute', 'passano', 'massimo')},
+           {'prezzo_cents': 11000, 'sedute': 4, 'passano': 1, 'massimo': 6})
+    con.close()
+
     # l'elenco: prima quello scritto a mano, altrimenti quello che si e' usato di piu'
     con = _db_finto()
     _check(r, 'Servizi', 'i servizi scritti a mano vincono',
@@ -2010,6 +2031,9 @@ def _test_menu(r):
 
     _check(r, 'Menu', 'le voci stanno in gruppi con un titolo',
            [t for t, _ in M.GRUPPI if t], ['Fatturare', 'Chi segui', 'Incassi e fisco', "L'app"])
+    chi_segui = next(v for t, v in M.GRUPPI if t == 'Chi segui')
+    _check(r, 'Menu', 'Servizi sta fra Clienti e Crediti',
+           [e for e, _t, _d, _a in chi_segui], ['clienti', 'servizi', 'crediti', 'agenda'])
     _check(r, 'Menu', 'la Dashboard sta in cima, fuori dai gruppi',
            M.GRUPPI[0][0] is None and M.GRUPPI[0][1][0][0] == 'dashboard', True)
     _check(r, 'Menu', 'i primi passi stanno fuori dai gruppi fissi',
@@ -2041,8 +2065,8 @@ def _test_menu(r):
            sorted(v[0] for v in M.FUORI_MENU), ['cestino', 'controlli', 'verifica'])
     _check(r, 'Menu', 'e i controlli le conoscono lo stesso',
            {'cestino', 'verifica'} <= {v[0] for v in M.voci()}, True)
-    _check(r, 'Menu', 'la barra tranquilla ha dodici voci, tre meno di prima',
-           len(in_barra(0)), 12)
+    _check(r, 'Menu', 'la barra tranquilla ha tredici voci, tre meno di prima',
+           len(in_barra(0)), 13)
 
 
 def _etichette_scollegate():

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Servizi') }}{% endblock %}
+{% block content %}
+<style>
+  .scheda-servizio fieldset { border: 0; padding: 0; margin: 12px 0 0; }
+  .scheda-servizio legend { font-weight: 600; font-size: 13px; padding: 0; margin-bottom: 2px; }
+  .scheda-servizio label.scelta { display: inline-flex; gap: 6px; align-items: center;
+                                  font-weight: 400; margin: 4px 16px 0 0; }
+  .scheda-servizio label.scelta input { width: auto; }
+  .scheda-servizio [hidden] { display: none !important; }
+  .scheda-servizio .riassunto { margin: 14px 0 10px; font-size: 13.5px; }
+  details.servizio { border-top: 1px solid #e2e8f0; padding: 12px 0; }
+  details.servizio > summary { cursor: pointer; }
+</style>
+<h1>{{ _('Servizi') }}</h1>
+<p class="sub">{{ _('Quello che vendi. Il nome di un servizio è anche il testo della sua riga in fattura.') }}</p>
+
+<div class="panel" style="max-width:720px">
+  {% for voce in attivi %}
+  <details class="servizio" {{ 'open' if bozza_id == voce.id }}>
+    <summary><strong>{{ voce.nome }}</strong>
+      <span class="muted" style="display:block;font-size:12.5px">{{ voce.breve }}</span></summary>
+    {% with s=(bozza if bozza_id == voce.id else voce), k=voce.id %}{% include 'service_card.html' %}{% endwith %}
+    <form method="post" action="{{ url_for('servizi_vendita', sid=voce.id) }}">
+      <button class="btn small secondary">{{ _('Non lo vendo più') }}</button>
+    </form>
+  </details>
+  {% else %}
+  <p class="muted">{{ _('Ancora nessun servizio. Scrivi il primo qui sotto: diventa un pulsante della nuova fattura.') }}</p>
+  {% endfor %}
+  <details class="servizio" {{ 'open' if (bozza and not bozza_id) or not attivi }}>
+    <summary><strong>{{ _('+ Nuovo servizio') }}</strong></summary>
+    {% with s=(bozza if (bozza and not bozza_id) else {}), k='nuovo' %}{% include 'service_card.html' %}{% endwith %}
+  </details>
+</div>
+
+{% if vecchi %}
+<details class="panel" style="max-width:720px">
+  <summary>{{ _('Non li vendi più') }} <span class="muted">{{ vecchi | length }}</span></summary>
+  {% for voce in vecchi %}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #e2e8f0">
+    <div><strong>{{ voce.nome }}</strong>
+      <span class="muted" style="display:block;font-size:12.5px">{{ voce.breve }}</span></div>
+    <form method="post" action="{{ url_for('servizi_vendita', sid=voce.id) }}">
+      <input type="hidden" name="azione" value="riprendi">
+      <button class="btn small secondary">{{ _('Lo vendo di nuovo') }}</button>
+    </form>
+  </div>
+  {% endfor %}
+</details>
+{% endif %}
+
+<script>
+/* Le domande compaiono solo quando servono, e la frase in fondo dice in
+   parole quello che hai scritto. La frase vera la riscrive il server quando
+   salvi: questa serve a vederla mentre scrivi. */
+(function () {
+  var F = {
+    seduta1: {{ _('1 seduta') | tojson }},
+    sedute: {{ _('{n} sedute') | tojson }},
+    mese1: {{ _('1 mese') | tojson }},
+    mesi: {{ _('{n} mesi') | tojson }},
+    mancaPrezzo: {{ _('Manca il prezzo.') | tojson }},
+    alMese: {{ _('{prezzo} al mese.') | tojson }},
+    unaVolta: {{ _('{prezzo}, una volta.') | tojson }},
+    entro: {{ _('{sedute}, da usare entro {mesi}.') | tojson }},
+    senzaScadenza: {{ _('{sedute}, senza scadenza.') | tojson }},
+    passano: {{ _('Ogni mese {sedute}; quelle non usate passano al mese dopo, ma in un mese non se ne possono avere più di {massimo}.') | tojson }},
+    perse: {{ _('Ogni mese {sedute}; quelle non usate si perdono.') | tojson }}
+  };
+  function riempi(frase, v) {
+    return frase.replace(/\{(\w+)\}/g, function (t, k) { return k in v ? v[k] : t; });
+  }
+  function centesimi(testo) {
+    var t = String(testo || '').toUpperCase().replace(/CHF|FR\./g, '')
+      .replace(/\.\s*[-–—]\s*$/, '').replace(/['’\s]/g, '');
+    if (!/\d/.test(t)) return null;
+    if (t.indexOf(',') >= 0 && t.indexOf('.') >= 0) {
+      t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g, '').replace(',', '.')
+                                                  : t.replace(/,/g, '');
+    } else if (t.indexOf(',') >= 0) {
+      t = /,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');
+    }
+    var n = parseFloat(t.replace(/[^0-9.]/g, ''));
+    return isNaN(n) ? null : Math.round(n * 100);
+  }
+  function chf(c) {
+    return String(Math.floor(c / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, "'") + '.' +
+           String(c % 100).padStart(2, '0') + ' CHF';
+  }
+  function scelto(form, nome) {
+    var el = form.querySelector('input[name="' + nome + '"]:checked');
+    return el ? el.value === '1' : false;
+  }
+  function aggiorna(form) {
+    var mensile = scelto(form, 'ogni_mese'), conSedute = scelto(form, 'con_sedute');
+    var scadono = scelto(form, 'scadono'), passano = scelto(form, 'passano');
+    var regole = {
+      sedute: conSedute, mensile: mensile,
+      scadenza: conSedute && !mensile, mesi: conSedute && !mensile && scadono,
+      riporto: conSedute && mensile, massimo: conSedute && mensile && passano
+    };
+    form.querySelectorAll('[data-quando]').forEach(function (el) {
+      el.hidden = !regole[el.dataset.quando];
+    });
+    var n = parseInt(form.querySelector('input[name="sedute"]').value, 10) || 0;
+    var mx = form.querySelector('input[name="massimo"]');
+    if (!mx.dataset.toccato) mx.value = n > 0 ? n + Math.ceil(n / 2) : '';
+    var cents = centesimi(form.querySelector('input[name="prezzo"]').value);
+    var frasi = [cents === null ? F.mancaPrezzo
+                 : riempi(mensile ? F.alMese : F.unaVolta, { prezzo: chf(cents) })];
+    if (conSedute && n > 0) {
+      var sed = n === 1 ? F.seduta1 : riempi(F.sedute, { n: n });
+      var mesi = parseInt(form.querySelector('input[name="scadenza_mesi"]').value, 10) || 0;
+      if (!mensile && scadono && mesi > 0) {
+        frasi.push(riempi(F.entro, { sedute: sed, mesi: mesi === 1 ? F.mese1 : riempi(F.mesi, { n: mesi }) }));
+      } else if (!mensile) {
+        frasi.push(riempi(F.senzaScadenza, { sedute: sed }));
+      } else if (passano) {
+        frasi.push(riempi(F.passano, { sedute: sed, massimo: mx.value || n }));
+      } else {
+        frasi.push(riempi(F.perse, { sedute: sed }));
+      }
+    }
+    form.querySelector('.riassunto').textContent = frasi.join(' ');
+  }
+  document.querySelectorAll('.scheda-servizio').forEach(function (form) {
+    var mx = form.querySelector('input[name="massimo"]');
+    if (mx.value) mx.dataset.toccato = '1';
+    mx.addEventListener('input', function () { mx.dataset.toccato = '1'; });
+    form.addEventListener('input', function () { aggiorna(form); });
+    form.addEventListener('change', function () { aggiorna(form); });
+    aggiorna(form);
+  });
+})();
+</script>
+{% endblock %}

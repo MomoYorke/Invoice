@@ -1234,6 +1234,65 @@ def cliente_nuovo():
     return redirect(url_for('clienti'))
 
 
+# ---------------------------------------------------------------- servizi
+def _pagina_servizi(con, bozza=None, bozza_id=None):
+    """L'elenco dei servizi. Con una bozza, la sua scheda resta aperta con
+    quello che era stato scritto: una scheda che si svuota dopo un errore fa
+    riscrivere tutto, e al secondo tentativo uno lascia perdere."""
+    servizi_pagina = srv.per_la_pagina(con, _lingua_app())
+    return render_template('services.html',
+                           attivi=[s for s in servizi_pagina if s['attivo']],
+                           vecchi=[s for s in servizi_pagina if not s['attivo']],
+                           bozza=bozza, bozza_id=bozza_id)
+
+
+@app.route('/servizi')
+def servizi():
+    """Quello che vendi: nome, prezzo, e se comprende sedute."""
+    con = get_con()
+    try:
+        return _pagina_servizi(con)
+    finally:
+        con.close()
+
+
+@app.route('/servizi/salva', methods=['POST'])
+def servizi_salva():
+    sid = request.form.get('id', type=int)
+    dati = srv.dal_modulo(request.form)
+    con = get_con()
+    try:
+        errori = srv.controlla(con, dati, sid)
+        if errori:
+            for frase, valori in errori:
+                avvisa(frase, 'error', **valori)
+            if sid:
+                dati['id'] = sid
+            return _pagina_servizi(con, bozza=dati, bozza_id=sid)
+        srv.salva(con, dati, sid)
+    finally:
+        con.close()
+    avvisa('«{nome}» salvato.', 'ok', nome=dati['nome'])
+    return redirect(url_for('servizi'))
+
+
+@app.route('/servizi/<int:sid>/vendita', methods=['POST'])
+def servizi_vendita(sid):
+    """«Non lo vendo più», e il ripensamento. Un servizio non si cancella."""
+    riprendi = request.form.get('azione') == 'riprendi'
+    con = get_con()
+    fatto = srv.archivia(con, sid, attivo=1 if riprendi else 0)
+    con.close()
+    if not fatto:
+        avvisa('Non posso rimetterlo in vendita: un altro servizio in vendita ha già lo '
+               'stesso nome.', 'error')
+    elif riprendi:
+        avvisa('Di nuovo in vendita: il pulsante torna nella nuova fattura.', 'ok')
+    else:
+        avvisa('Tolto dai pulsanti della fattura. Le fatture già fatte non cambiano.', 'ok')
+    return redirect(url_for('servizi'))
+
+
 # ---------------------------------------------------------------- commercialista
 @app.route('/commercialista')
 def commercialista():

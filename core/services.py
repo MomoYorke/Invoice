@@ -19,7 +19,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 from . import language as L
-from .money import fmt_chf, parse_amount
+from .money import fmt_chf, fmt_dash, parse_amount
 
 RX_DATA = re.compile(r'(\d{1,2})([.\-/])(\d{1,2})[.\-/](\d{2,4})')
 QUANTI_PROPOSTI = 6
@@ -332,6 +332,20 @@ def riassunto(s, lingua=None):
             frasi.append(L.t('Ogni mese {sedute}; quelle non usate si perdono.',
                              lingua).format(sedute=sedute))
     return ' '.join(frasi)
+
+
+def per_la_pagina(con, lingua=None):
+    """I servizi pronti per la pagina, con i campi scritti come li scrive chi li usa."""
+    fuori = []
+    for s in tutti(con):
+        voce = dict(s)
+        voce.update(
+            prezzo_testo=fmt_dash(s['prezzo_cents']) if s['prezzo_cents'] is not None else '',
+            con_sedute=bool(s['sedute']), scadono=bool(s['scadenza_mesi']),
+            breve=riga_breve(s, lingua), riassunto=riassunto(s, lingua),
+            fatturato=fatturato(con, s['id']))
+        fuori.append(voce)
+    return fuori
 
 
 # --- Quale servizio vende una riga ---------------------------------------------
