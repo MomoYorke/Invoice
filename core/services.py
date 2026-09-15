@@ -468,3 +468,10 @@ def servizio_della_riga(con, scelto, descrizione, servizi=None):
     if sid > 0 and uno(con, sid) is not None:
         return sid, True
     return di_testo(con, descrizione, servizi), False
+
+
+def primo_della_fattura(con, invoice_id):
+    """Il primo servizio venduto da una fattura, nell'ordine delle righe. None se nessuno."""
+    return con.execute(
+        'SELECT s.* FROM items i JOIN servizi s ON s.id = i.servizio_id '
+        'WHERE i.invoice_id = ? ORDER BY i.pos LIMIT 1', (invoice_id,)).fetchone()

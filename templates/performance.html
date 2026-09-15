@@ -150,7 +150,7 @@
       {{ _('Il registro delle sedute parte dal {anno}: prima di quella data non è che non lavorassi, è che il registro non c’era. Il confronto con l’anno prima arriverà da solo.').format(anno=lav_primo_anno) }}
     {% else %}
       {{ _('Il guadagno teorico è il valore a listino del tempo lavorato, non un totale di cassa: non deve quadrare col fatturato. Il prezzo a seduta si cambia in') }}
-      <a href="{{ url_for('crediti_clienti') }}">{{ _('Crediti') }}</a>.
+      <a href="{{ url_for('servizi') }}">{{ _('Servizi') }}</a>.
     {% endif %}
   </p>
 </div>
@@ -221,7 +221,7 @@
     </table>
     {% else %}
     <p class="muted">{{ _("Nessun dettaglio servizi per quest'anno. I servizi si scrivono in") }}
-      <a href="{{ url_for('impostazioni') }}">{{ _('Impostazioni') }}</a>.</p>
+      <a href="{{ url_for('servizi') }}">{{ _('Servizi') }}</a>.</p>
     {% endif %}
   </div>
 </div>

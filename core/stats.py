@@ -9,8 +9,6 @@ Tutti i calcoli in centesimi interi.
 import datetime
 import re
 
-from . import services
-
 LEGACY_YEARS = (2022, 2023)
 
 
@@ -90,41 +88,26 @@ NON_DETTAGLIATO = 'Non dettagliato'
 ALTRO = 'Altro'
 
 
-def regole_servizi(con):
-    """Le regole di riconoscimento, come le ha scritte chi usa l'app.
-
-    Stavano nel programma: erano i servizi di una persona sola. Ora sono due
-    righe di impostazioni, e chi fa un altro mestiere ci mette il suo."""
-    fuori = {}
-    for k in ('servizi_abbonamento', 'servizi_pacchetto'):
-        r = con.execute('SELECT value FROM settings WHERE key=?', (k,)).fetchone()
-        fuori[k] = (r[0] if r else '') or ''
-    return fuori
-
-
-def _etichetta(desc, regole):
-    nome, _modello = services.riconosci(desc, regole)
-    return nome or ALTRO
-
-
-def _servizio_dedotto(con, inv_id, client_name, cents, regole):
+def _servizio_dedotto(con, inv_id, client_name, cents):
     """Servizio di una fattura senza righe di dettaglio.
 
     Deduce SOLO quando non c'e' margine di errore: tutte le altre fatture
     dello stesso cliente con lo stesso importo esatto devono avere righe
-    che portano a un unico servizio. Altrimenti resta 'Non dettagliato'.
+    collegate a un unico servizio. Altrimenti resta 'Non dettagliato'.
     """
     if not cents:
         return NON_DETTAGLIATO
     trovati = set()
     for r in con.execute(
-            'SELECT i.description d FROM items i JOIN invoices f ON f.id = i.invoice_id '
+            'SELECT i.description d, s.nome servizio FROM items i '
+            'JOIN invoices f ON f.id = i.invoice_id '
+            'LEFT JOIN servizi s ON s.id = i.servizio_id '
             'WHERE f.client_name = ? AND f.total_cents = ? AND f.id != ? '
             'AND f.deleted_at IS NULL', (client_name, cents, inv_id)):
         d = r['d'] or ''
         if SCONTI.search(d) or OMAGGI.search(d):
             continue
-        trovati.add(_etichetta(d, regole))
+        trovati.add(r['servizio'] or ALTRO)
     if len(trovati) == 1:
         etichetta = trovati.pop()
         if etichetta != ALTRO:
@@ -133,39 +116,41 @@ def _servizio_dedotto(con, inv_id, client_name, cents, regole):
 
 
 def by_service(con, year):
-    """Fatturato dell'anno per tipo di servizio.
+    """Fatturato dell'anno per servizio collegato alla riga, col nome di adesso.
 
     La somma delle voci coincide col fatturato dell'anno:
     - gli sconti si sottraggono dal servizio della stessa fattura
       (niente voce "Sconti" a se' stante);
+    - le righe senza servizio, decise o no, vanno in 'Altro';
     - le fatture senza righe di dettaglio vengono ricondotte al loro
       servizio quando e' deducibile senza ambiguita', altrimenti
       finiscono in 'Non dettagliato'.
     """
-    regole = regole_servizi(con)
     buckets = {}
 
     def aggiungi(label, cents):
         buckets[label] = buckets.get(label, 0) + cents
 
-    righe = {}   # invoice_id -> [(etichetta|None se sconto, cents)]
+    righe = {}   # invoice_id -> [(descrizione, cents, nome del servizio o None)]
     for r in con.execute(
-            'SELECT i.description d, COALESCE(i.total_cents, 0) t, i.invoice_id FROM items i '
+            'SELECT i.description d, COALESCE(i.total_cents, 0) t, i.invoice_id, '
+            '       s.nome servizio FROM items i '
             'JOIN invoices f ON f.id = i.invoice_id '
+            'LEFT JOIN servizi s ON s.id = i.servizio_id '
             'WHERE f.year=? AND f.deleted_at IS NULL', (year,)):
-        righe.setdefault(r['invoice_id'], []).append((r['d'] or '', r['t'] or 0))
+        righe.setdefault(r['invoice_id'], []).append((r['d'] or '', r['t'] or 0, r['servizio']))
 
     for inv_id, lines in righe.items():
         locali = {}
         sconto = 0
-        for desc, val in lines:
+        for desc, val, servizio in lines:
             if SCONTI.search(desc):
                 sconto += abs(val)
                 continue
             if OMAGGI.search(desc):
                 locali['Omaggi'] = locali.get('Omaggi', 0) + val
                 continue
-            e = _etichetta(desc, regole)
+            e = servizio or ALTRO
             locali[e] = locali.get(e, 0) + val
         if sconto:
             # lo sconto si scala dal servizio piu' consistente della fattura
@@ -181,8 +166,7 @@ def by_service(con, year):
     for inv in con.execute('SELECT id, client_name, COALESCE(total_cents,0) t FROM invoices '
                            'WHERE year=? AND deleted_at IS NULL', (year,)):
         if inv['id'] not in righe and inv['t']:
-            aggiungi(_servizio_dedotto(con, inv['id'], inv['client_name'], inv['t'], regole),
-                     inv['t'])
+            aggiungi(_servizio_dedotto(con, inv['id'], inv['client_name'], inv['t']), inv['t'])
 
     return sorted((kv for kv in buckets.items() if kv[1] != 0), key=lambda kv: -kv[1])
 

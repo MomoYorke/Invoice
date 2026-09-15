@@ -903,12 +903,13 @@ def fattura_email(inv_id):
     extra, senza_pdf = _percorsi_extra(con, scelte, settings)
     tutti_oggetti, suoi_oggetti = _oggetti_email(con, inv, cli)
     mese = mailer.mese_oggetto(desc, suoi_oggetti, tutti_oggetti)
-    msg = mailer.componi(inv, cli, settings, desc, corpo, extra, modello, mese)
+    servizio = srv.primo_della_fattura(con, inv_id)
+    msg = mailer.componi(inv, cli, settings, desc, corpo, extra, modello, mese, servizio)
     # l'oggetto dell'altro modello serve gia' pronto: cosi' cambiando servizio
     # cambia subito, senza dover riscrivere anche il testo
     oggetti = {}
     for chiave, _nome in mailer.MODELLI:
-        altro = mailer.componi(inv, cli, settings, desc, corpo, extra, chiave, mese)
+        altro = mailer.componi(inv, cli, settings, desc, corpo, extra, chiave, mese, servizio)
         oggetti[chiave] = {'subject': altro['subject'], 'usa_mese': altro['usa_mese']}
     if senza_pdf:
         msg['problemi'].append('Di ' + ', '.join(senza_pdf) + " non esiste il PDF "

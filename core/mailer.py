@@ -166,18 +166,12 @@ def oggetto_modello(settings, modello, lingua=None):
     return db.modello_email(settings, 'email_oggetto_' + modello, lingua) or ''
 
 
-def _riconosciuto(descrizioni, settings):
-    """(nome, modello) della prima riga riconosciuta. ('', '') se nessuna."""
-    for desc in descrizioni or ():
-        nome, modello = srv.riconosci(desc, settings)
-        if nome:
-            return (nome, modello)
-    return ('', '')
+def modello_di(servizio=None):
+    """Quale dei due modelli usare: lo dice il servizio collegato alla fattura.
 
-
-def modello_di(descrizioni, settings):
-    """Quale dei due modelli usare, dedotto dalle righe della fattura."""
-    return _riconosciuto(descrizioni, settings)[1] or 'pt'
+    «Ogni mese» usa il modello dell'abbonamento, tutto il resto quello del
+    pacchetto — anche una fattura senza servizio, come prima."""
+    return srv.modello(servizio)
 
 
 def testo_modello(settings, modello, lingua=None):
@@ -196,17 +190,10 @@ def nome_di_battesimo(nome_completo):
     return parti[0] if parti else ''
 
 
-def servizio_di(descrizioni, settings):
-    """Il servizio da nominare nell'email, dedotto dalle righe della fattura.
-    Vuoto se nessuna regola riconosce le righe.
-
-    Usa le stesse regole della dashboard, quelle scritte in Impostazioni,
-    cosi' non esistono due logiche da tenere allineate.
-    """
-    # Nessuna regola riconosce le righe: chi usa l'app vende altro, o non ha
-    # ancora scritto i suoi servizi. Stringa vuota, e l'apertura usa la
-    # versione che il servizio non lo nomina.
-    return _riconosciuto(descrizioni, settings)[0]
+def servizio_di(servizio=None):
+    """Il nome del servizio da nominare nell'email. Vuoto se la fattura non ne
+    ha uno: allora l'apertura non lo nomina, invece di inventarne uno."""
+    return (servizio['nome'] if servizio else '') or ''
 
 
 def allegato_di(inv, settings):
@@ -223,7 +210,7 @@ def allegato_di(inv, settings):
 
 
 def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(),
-            modello=None, mese=''):
+            modello=None, mese='', servizio=None):
     """Prepara la mail. Ritorna un dizionario con anche l'elenco dei problemi.
 
     Non manda niente e non solleva: i problemi si mostrano nell'anteprima.
@@ -251,26 +238,31 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         cliente['lingua'] if cliente and 'lingua' in cliente.keys() else None)
 
     abbonato = bool(cliente['abbonamento']) if cliente and 'abbonamento' in cliente.keys() else False
+    # «la fattura di questo mese» la decide il servizio: un abbonamento mensile
+    # resta mensile anche senza ordine permanente. Senza servizio si decide
+    # come prima, dalla casella del cliente. La frase dell'ordine permanente
+    # invece resta del cliente: e' lui che paga cosi', non il servizio.
+    mensile = bool(servizio['ogni_mese']) if servizio else abbonato
     try:
         con_qr = bool((inv['qr_ref'] or '').strip())
     except (KeyError, IndexError, TypeError):
         con_qr = False
     tono = (cliente['tono'] if cliente and 'tono' in cliente.keys() else '') or 'informale'
     if modello not in NOMI_MODELLO:
-        modello = modello_di(descrizioni, settings)
+        modello = modello_di(servizio)
     corpo = testo_modello(settings, modello, lingua) if corpo is None else corpo
     corpo = (corpo or '').strip()
 
-    servizio = servizio_di(descrizioni, settings)
+    nome_servizio = servizio_di(servizio)
     if len(allegati) > 1:
         quante = QUANTE.get(len(allegati))
         apertura = L.t_doc(APERTURA_MULTIPLA, lingua).format(
             quante=L.t_doc(quante, lingua) if quante else len(allegati))
-    elif servizio:
-        apertura = L.t_doc(APERTURA_MENSILE if abbonato else APERTURA_SEMPLICE,
-                           lingua).format(servizio=servizio)
+    elif nome_servizio:
+        apertura = L.t_doc(APERTURA_MENSILE if mensile else APERTURA_SEMPLICE,
+                           lingua).format(servizio=nome_servizio)
     else:
-        apertura = L.t_doc(APERTURA_MENSILE_ANONIMA if abbonato
+        apertura = L.t_doc(APERTURA_MENSILE_ANONIMA if mensile
                            else APERTURA_SEMPLICE_ANONIMA, lingua)
     oggetto_grezzo = oggetto_modello(settings, modello, lingua)
     valori = {
@@ -279,7 +271,7 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         'nome': nome_di_battesimo(nome),
         'numero': inv['number'],
         'totale': fmt_chf(inv['total_cents']),
-        'servizio': servizio,
+        'servizio': nome_servizio,
         'riga_abbonamento': L.t_doc(FRASE_ABBONAMENTO, lingua) if abbonato else '',
         # Il codice QR si chiede solo se su QUELLA fattura c'e' davvero: il
         # riferimento scritto nel database e' la prova che il foglio e' stato

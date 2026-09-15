@@ -275,10 +275,10 @@ def _test_email(r):
 
     # Chi usa l'app ha scritto i suoi servizi in Impostazioni: e' il caso
     # normale. Le regole non sono piu' nel programma, quindi vanno date.
-    S = dict(DEFAULT_SETTINGS,
-             servizi_abbonamento='Running Coaching = running coaching\n'
-                                 'Online Coaching = coaching online',
-             servizi_pacchetto='Personal Training = session, personal training')
+    S = dict(DEFAULT_SETTINGS)
+    # il servizio collegato alla fattura: e' lui a dire il nome e il modello
+    RUNNING = {'nome': 'Running Coaching', 'ogni_mese': 1}
+    PT = {'nome': 'Personal Training', 'ogni_mese': 0}
 
     inv = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
                  client_name='Chiara De Santis')
@@ -287,7 +287,7 @@ def _test_email(r):
     pacchetto = _Finta(name='Petra Müller', email='d@esempio.ch',
                        abbonamento=0, tono='formale')
 
-    m = mailer.componi(inv, mensile, S, ['Monthly abo: running coaching'])
+    m = mailer.componi(inv, mensile, S, ['Monthly abo: running coaching'], servizio=RUNNING)
     _check(r, 'Email', 'abbonamento: "this month\'s invoice"',
            "this month's invoice for Running Coaching" in m['body'], True)
     _check(r, 'Email', 'abbonamento: c\'è la frase sull\'ordine permanente',
@@ -295,7 +295,7 @@ def _test_email(r):
     _check(r, 'Email', 'tono informale: si chiude col saluto informale',
            m['body'].rstrip().endswith('Best,'), True)
 
-    m2 = mailer.componi(inv, pacchetto, S, ['10 Sessions Pack – Personal Training'])
+    m2 = mailer.componi(inv, pacchetto, S, ['10 Sessions Pack – Personal Training'], servizio=PT)
     _check(r, 'Email', 'pacchetto: NON dice "this month\'s"',
            "this month's" in m2['body'], False)
     _check(r, 'Email', "pacchetto: l'apertura nomina il servizio",
@@ -313,7 +313,7 @@ def _test_email(r):
     con_qr = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
                     client_name='Petra Müller', qr_ref='RF8399')
 
-    m3 = mailer.componi(con_qr, pacchetto, S, ['10 Sessions Pack – Personal Training'])
+    m3 = mailer.componi(con_qr, pacchetto, S, ['10 Sessions Pack – Personal Training'], servizio=PT)
     _check(r, 'Email', 'col codice QR sulla fattura, la mail chiede di usarlo',
            'QR code' in m3['body'], True)
     _check(r, 'Email', 'e lo chiede una volta sola',
@@ -323,7 +323,8 @@ def _test_email(r):
     _check(r, 'Email', 'senza codice sulla fattura non si nomina nessun codice',
            'QR code' in m2['body'], False)
 
-    abbonata_con_qr = mailer.componi(con_qr, mensile, S, ['Monthly abo: running coaching'])
+    abbonata_con_qr = mailer.componi(con_qr, mensile, S, ['Monthly abo: running coaching'],
+                                     servizio=RUNNING)
     _check(r, 'Email', "a chi ha l'ordine permanente il codice QR non si chiede",
            'QR code' in abbonata_con_qr['body'], False)
     _check(r, 'Email', 'e resta la frase sull\'ordine permanente',
@@ -373,37 +374,43 @@ def _test_email(r):
 
     # i due modelli: sceglierli da soli e poterli forzare a mano
     prove = dict(S, email_corpo_coaching='TESTO-COACHING', email_corpo_pt='TESTO-PT')
-    _check(r, 'Email', 'running coaching → modello coaching',
-           mailer.modello_di(['Monthly abo: running coaching'], S), 'coaching')
-    _check(r, 'Email', 'coaching online → modello coaching',
-           mailer.modello_di(['Coaching online - August'], S), 'coaching')
-    _check(r, 'Email', 'righe di un pacchetto → modello «pacchetto»',
-           mailer.modello_di(['10 Sessions Pack – Personal Training'], S), 'pt')
-
-    # chi fa un altro mestiere: nessuna regola riconosce le sue righe, e
-    # l'email non deve inventargli un servizio che non vende
-    _check(r, 'Email', 'servizio non riconosciuto: non se ne inventa uno',
-           mailer.servizio_di(['Pacchetto 10 sedute di fisioterapia'], S), '')
+    _check(r, 'Email', 'servizio ogni mese → modello coaching', mailer.modello_di(RUNNING), 'coaching')
+    _check(r, 'Email', 'servizio una volta → modello «pacchetto»', mailer.modello_di(PT), 'pt')
+    _check(r, 'Email', 'senza servizio → modello «pacchetto», come prima',
+           mailer.modello_di(None), 'pt')
+    _check(r, 'Email', 'senza servizio non se ne inventa uno', mailer.servizio_di(None), '')
+    # «la fattura di questo mese» la decide il servizio, non la casella del cliente
+    senza_ordine = _Finta(name='Chiara De Santis', email='b@esempio.ch',
+                          abbonamento=0, tono='informale')
+    corpo_mese = mailer.componi(inv, senza_ordine, S, [], servizio=RUNNING)['body']
+    _check(r, 'Email', 'abbonamento senza ordine permanente: «this month’s invoice» lo stesso',
+           "this month's invoice for Running Coaching" in corpo_mese, True)
+    _check(r, 'Email', 'e senza la frase sull’ordine permanente',
+           'standing order' in corpo_mese, False)
+    _check(r, 'Email', 'senza servizio si decide ancora dalla casella del cliente',
+           "this month's invoice." in mailer.componi(inv, mensile, S, [])['body'], True)
     _check(r, 'Email', "servizio ignoto: l'apertura non lo nomina",
            mailer.componi(inv, pacchetto, S, ['Pacchetto 10 sedute'])['body'].split('\n')[2],
            'Please find attached your invoice.')
     _check(r, 'Email', "servizio noto: l'apertura lo nomina come prima",
-           mailer.componi(inv, pacchetto, S, ['10 Sessions Pack'])['body'].split('\n')[2],
+           mailer.componi(inv, pacchetto, S, ['10 Sessions Pack'],
+                          servizio=PT)['body'].split('\n')[2],
            'Please find attached your invoice for Personal Training.')
     _check(r, 'Email', 'il modello dedotto finisce nel testo',
            'TESTO-COACHING' in mailer.componi(inv, mensile, prove,
-                                              ['Monthly abo: running coaching'])['body'], True)
+                                              ['Monthly abo: running coaching'],
+                                              servizio=RUNNING)['body'], True)
     _check(r, 'Email', 'modello forzato a mano: vince sulla deduzione',
            'TESTO-PT' in mailer.componi(inv, mensile, prove,
                                         ['Monthly abo: running coaching'],
-                                        modello='pt')['body'], True)
+                                        modello='pt', servizio=RUNNING)['body'], True)
     _check(r, 'Email', 'modello inventato: si torna a quello dedotto',
            mailer.componi(inv, mensile, prove, ['Monthly abo: running coaching'],
-                          modello='inesistente')['modello'], 'coaching')
+                          modello='inesistente', servizio=RUNNING)['modello'], 'coaching')
     _check(r, 'Email', 'un testo scritto a mano batte tutti e due i modelli',
            'A MANO' in mailer.componi(inv, mensile, prove,
                                       ['Monthly abo: running coaching'],
-                                      corpo='A MANO')['body'], True)
+                                      corpo='A MANO', servizio=RUNNING)['body'], True)
     _check(r, 'Email', 'senza indirizzo: lo dice invece di mandare a vuoto',
            bool(mailer.componi(inv, _Finta(name='X', email='', abbonamento=0, tono='informale'),
                                S)['problemi']), True)
@@ -1121,6 +1128,39 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'la nuova fattura scrive il servizio su ogni riga',
            ('servizio_della_riga' in corpo, 'total_cents,servizio_id)' in corpo), (True, True))
 
+    # --- Performance: il fatturato per servizio collegato ---------------------
+    from . import stats as ST
+    con = _db_servizi()
+    pacco = SR.salva(con, SR.dal_modulo({'nome': '10 Sessions Pack', 'prezzo': '2000',
+                                         'ogni_mese': '0'}))
+    abo = SR.salva(con, SR.dal_modulo({'nome': 'Monthly abo', 'prezzo': '110',
+                                       'ogni_mese': '1'}))
+    fatture = (
+        (1, 'Giulia', 200000, [('Pacchetto di primavera', 205000, pacco),
+                               ('Loyalty discount', 5000, None)]),
+        (2, 'Marco', 11000, [('Abbonamento (August)', 11000, abo)]),
+        (3, 'Marco', 11000, []),               # senza righe: si deduce dall'altra da 110
+        (4, 'Sofia', 5000, [('Consulenza', 5000, 0)]),
+        (5, 'Sofia', 0, [('Bring a friend', 0, None)]))
+    for n, cliente, tot, linee in fatture:
+        con.execute('INSERT INTO invoices(id, number, client_name, date, year, total_cents) '
+                    'VALUES(?,?,?,?,2026,?)', (n, n, cliente, '2026-03-0%d' % n, tot))
+        for pos, (desc, t, sid) in enumerate(linee):
+            con.execute('INSERT INTO items(invoice_id, pos, description, total_cents, '
+                        'servizio_id) VALUES(?,?,?,?,?)', (n, pos, desc, t, sid))
+    con.execute("UPDATE servizi SET nome='Monthly running coaching' WHERE id=?", (abo,))
+    _check(r, 'Servizi', 'Performance raggruppa per servizio collegato, col nome di adesso',
+           dict(ST.by_service(con, 2026)),
+           {'10 Sessions Pack': 200000, 'Monthly running coaching': 22000, ST.ALTRO: 5000})
+    _check(r, 'Servizi', 'il servizio di una fattura è il primo collegato fra le righe',
+           (SR.primo_della_fattura(con, 1)['nome'], SR.primo_della_fattura(con, 4)),
+           ('10 Sessions Pack', None))
+    con.close()
+    with io.open(os.path.join(base, 'templates', 'performance.html'), encoding='utf-8') as f:
+        pagina = f.read()
+    _check(r, 'Servizi', 'Performance manda a Servizi per nomi e prezzi',
+           (pagina.count("url_for('servizi')"), 'crediti_clienti' in pagina), (2, False))
+
 
 def _db_servizi():
     """Un database in memoria con lo schema vero, colonne nuove comprese.
@@ -1806,17 +1846,19 @@ def _test_servizi_riconosciuti(r):
     _check(r, 'Servizi', 'e le sue righe non diventano quelle di un altro',
            S.riconosci('Pacchetto 10 sedute di fisioterapia', mio), (None, None))
 
-    # --- e l'email che ne esce ---
+    # --- e l'email che ne esce: il nome lo dà il servizio collegato ---
+    # Le regole qui sopra servono ormai solo alla migrazione (core/migra_servizi.py).
     inv = _Finta(number=99, total_cents=110000, pdf_path='', source_file='',
                  client_name='Sofia Ferrari')
     cli = _Finta(name='Sofia Ferrari', email='s@esempio.ch', abbonamento=0, tono='informale')
-    imp = dict(db.DEFAULT_SETTINGS, **fisio)
-    corpo = mailer.componi(inv, cli, imp, ['Pacchetto 10 sedute di fisioterapia'])['body']
+    fisioterapia = {'nome': 'Fisioterapia', 'ogni_mese': 0}
+    corpo = mailer.componi(inv, cli, dict(db.DEFAULT_SETTINGS),
+                           ['Pacchetto 10 sedute di fisioterapia'], servizio=fisioterapia)['body']
     _check(r, 'Servizi', 'il fisioterapista fattura a nome suo, non di un altro',
            'Please find attached your invoice for Fisioterapia.' in corpo, True)
     vuote = mailer.componi(inv, cli, dict(db.DEFAULT_SETTINGS),
                            ['Pacchetto 10 sedute di fisioterapia'])['body']
-    _check(r, 'Servizi', 'senza regole l\'email non nomina nessun servizio',
+    _check(r, 'Servizi', 'senza servizio collegato l\'email non nomina nessun servizio',
            'Please find attached your invoice.' in vuote, True)
 
 
@@ -5412,6 +5454,7 @@ GENTE_FINTA = {
     'Monthly abo', 'Monthly  abo', 'Personal Training',
     '12 Sessions Pack – Personal Training',  # non persone: servizi finti (Compito 2)
     '12 Sessions Pack', 'Monthly abo: running coaching',  # servizi finti (Compito 4)
+    '10 Sessions Pack', 'Running Coaching', 'Fisioterapia',  # servizi finti (Compito 5)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio
