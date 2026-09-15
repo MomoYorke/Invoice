@@ -1265,6 +1265,7 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Aggiungi i tuoi servizi': 'Add your services',
         'Quello che vendi. Il nome di un servizio è anche il testo della sua riga in fattura.':
             'What you sell. A service’s name is also the text of its invoice line.',
         'Ancora nessun servizio. Scrivi il primo qui sotto: diventa un pulsante della nuova fattura.':
@@ -2657,6 +2658,7 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Aggiungi i tuoi servizi': 'Leistungen hinzufügen',
         'Quello che vendi. Il nome di un servizio è anche il testo della sua riga in fattura.':
             'Was du verkaufst. Der Name einer Leistung ist auch der Text ihrer Rechnungszeile.',
         'Ancora nessun servizio. Scrivi il primo qui sotto: diventa un pulsante della nuova fattura.':

@@ -26,15 +26,6 @@ QUANTI_PROPOSTI = 6
 VIRGOLETTE = re.compile('["\'`«»“”„‘’]')
 
 
-def elenco(con, settings):
-    """I servizi da proporre. Prima quelli scritti a mano; se non ce ne sono,
-    quelli piu' usati nelle fatture."""
-    scritti = [r.strip() for r in (settings.get('servizi') or '').splitlines() if r.strip()]
-    if scritti:
-        return scritti[:12]
-    return piu_usati(con)
-
-
 def piu_usati(con, quanti=QUANTI_PROPOSTI):
     """Le descrizioni piu' ricorrenti, ripulite dal periodo.
 
@@ -411,3 +402,65 @@ def ultima_riga(con, client_id, servizio_id):
         'WHERE f.deleted_at IS NULL AND f.client_id = ? AND i.servizio_id = ? '
         'ORDER BY f.date DESC, COALESCE(f.number, 0) DESC, i.pos DESC LIMIT 1',
         (client_id, servizio_id)).fetchone()
+
+
+def _ultima_riga_per_nome(con, client_id, nome):
+    """Ripiego per le righe vecchie, nate prima che la riga sapesse il suo servizio."""
+    for r in con.execute(
+            'SELECT i.qty, i.description, i.unit_cents, i.total_cents, f.number '
+            'FROM items i JOIN invoices f ON f.id = i.invoice_id '
+            'WHERE f.deleted_at IS NULL AND f.client_id = ? AND i.servizio_id IS NULL '
+            'ORDER BY f.date DESC, COALESCE(f.number, 0) DESC, i.pos DESC LIMIT 40',
+            (client_id,)):
+        if stesso_servizio(nome, r['description']):
+            return r
+    return None
+
+
+def proposta(con, client_id, servizio):
+    """Cosa scrive un pulsante della nuova fattura.
+
+    Il prezzo e' quello dell'ultima riga di quel servizio fatturata a quel
+    cliente, cercata per id e non per nome; se non c'e', il prezzo del servizio.
+    La quantita' e' sempre 1: un pacchetto scritto «12 × 150.-» si ripropone
+    come «1 × 150.- = 1'800.-», che e' un pacchetto solo. Il testo e' il nome
+    del servizio; per un servizio «ogni mese» gia' fatturato, l'ultima riga con
+    il periodo spostato avanti di un mese."""
+    riga = None
+    if client_id:
+        riga = (ultima_riga(con, client_id, servizio['id'])
+                or _ultima_riga_per_nome(con, client_id, servizio['nome']))
+    fuori = {'found': riga is not None, 'servizio_id': servizio['id'],
+             'description': servizio['nome'], 'advanced': False, 'previous': '',
+             'qty': '1', 'total': '',
+             'unit': (fmt_dash(servizio['prezzo_cents'])
+                      if servizio['prezzo_cents'] is not None else '')}
+    if riga is None:
+        return fuori
+    avanzata = avanza_periodo(riga['description']) if servizio['ogni_mese'] else None
+    if avanzata:
+        fuori.update(description=avanzata, advanced=True, previous=riga['description'])
+    if riga['unit_cents'] is not None:
+        fuori['unit'] = fmt_dash(riga['unit_cents'])
+        if riga['total_cents'] is not None and riga['total_cents'] != riga['unit_cents']:
+            fuori['total'] = fmt_dash(riga['total_cents'])
+    elif riga['total_cents'] is not None:
+        fuori['unit'] = fmt_dash(riga['total_cents'])
+    return fuori
+
+
+def servizio_della_riga(con, scelto, descrizione, servizi=None):
+    """Il servizio da scrivere su una riga al salvataggio: (id o None, da_ricordare).
+
+    Collegata da un pulsante resta collegata anche se il testo e' cambiato, e
+    quel testo si ricorda. Una riga vuota perde il collegamento. Una scritta
+    a mano si collega da sola se puo'."""
+    if not (descrizione or '').strip():
+        return None, False
+    try:
+        sid = int(scelto or 0)
+    except (TypeError, ValueError):
+        sid = 0
+    if sid > 0 and uno(con, sid) is not None:
+        return sid, True
+    return di_testo(con, descrizione, servizi), False

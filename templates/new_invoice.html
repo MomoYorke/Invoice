@@ -76,7 +76,9 @@
   <h2>{{ _('Servizio') }}</h2>
   <div>
     {% for s in servizi %}
-    <button type="button" class="chip preset" data-desc="{{ s }}">{{ s }}</button>
+    <button type="button" class="chip preset" data-id="{{ s.id }}">{{ s.nome }}</button>
+    {% else %}
+    <a href="{{ url_for('servizi') }}">{{ _('Aggiungi i tuoi servizi') }}</a>
     {% endfor %}
   </div>
   <div class="suggestion" id="running-suggestion">

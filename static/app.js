@@ -59,7 +59,7 @@
     return fr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + '.' + String(ct).padStart(2, '0') + ' CHF';
   }
 
-  function addRow(desc, qty, unit, tot) {
+  function addRow(desc, qty, unit, tot, servizio) {
     const i = rowCount++;
     const div = document.createElement('div');
     div.className = 'item-row';
@@ -68,9 +68,15 @@
       `<input type="text" name="desc_${i}" value="${desc || ''}" placeholder="${T.descrizione}">` +
       `<input type="text" name="unit_${i}" value="${unit || ''}" placeholder="110.-">` +
       `<input type="text" name="tot_${i}" value="${tot || ''}" placeholder="auto">` +
+      // quale servizio vende la riga: lo mette un pulsante, e resta anche se
+      // il testo cambia; svuotare la descrizione lo scioglie
+      `<input type="hidden" name="servizio_${i}" value="${servizio || ''}">` +
       `<button type="button" class="remove-row" title="${T.rimuovi}">✕</button>`;
     div.querySelector('.remove-row').onclick = () => { div.remove(); updateTotal(); };
     div.querySelectorAll('input').forEach(el => el.addEventListener('input', updateTotal));
+    const descEl = div.querySelector(`input[name="desc_${i}"]`);
+    const servEl = div.querySelector(`input[name="servizio_${i}"]`);
+    descEl.addEventListener('input', () => { if (!descEl.value.trim()) servEl.value = ''; });
     itemsBox.appendChild(div);
     updateTotal();
     return div;
@@ -107,38 +113,32 @@
       clientSel.value = String(PRE.client_id);
       clientSel.dispatchEvent(new Event('change'));
     }
-    addRow(PRE.descrizione, '1', PRE.importo, '');
+    addRow(PRE.descrizione, '1', PRE.importo, '', PRE.servizio_id);
   } else {
     addRow(); // prima riga
   }
 
-  // ---- preset servizi ----
+  // ---- pulsanti dei servizi ----
+  // Il server sa cosa scrivere: l'ultima riga di questo servizio per questo
+  // cliente (o il prezzo del servizio), e per un abbonamento gia' fatturato
+  // il periodo del mese dopo.
   document.querySelectorAll('.preset').forEach(btn => {
     btn.onclick = async () => {
-      const desc = btn.dataset.desc;
       const firstRow = itemsBox.querySelector('.item-row') || addRow();
       const inputs = firstRow.querySelectorAll('input');
-      // se questo servizio e' gia' stato fatturato a questo cliente con un
-      // periodo dentro, il server lo ripropone con le date del mese dopo
-      let ripreso = false;
-      if (clientSel.value) {
-        const r = await fetch('/api/periodo-successivo?client_id=' + clientSel.value +
-                              '&servizio=' + encodeURIComponent(desc)).then(r => r.json());
-        if (r.found && r.description) {
-          ripreso = true;
-          inputs[1].value = r.description;
-          if (r.unit) inputs[2].value = r.unit;
-          if (r.advanced) {
-            sugBox.style.display = 'block';
-            sugTesto.innerHTML = riempi(alSicuro(T.periodo),
-                     { periodo: '<em>' + alSicuro(r.previous) + '</em>' });
-          } else {
-            sugBox.style.display = 'none';
-          }
-        }
-      }
-      if (!ripreso) {
-        inputs[1].value = desc;
+      const r = await fetch('/api/periodo-successivo?servizio_id=' + btn.dataset.id +
+                            '&client_id=' + (clientSel.value || '')).then(x => x.json());
+      if (!r.servizio_id) return;
+      inputs[0].value = r.qty || '1';
+      inputs[1].value = r.description;
+      inputs[2].value = r.unit || '';
+      inputs[3].value = r.total || '';
+      inputs[4].value = r.servizio_id;
+      if (r.advanced) {
+        sugBox.style.display = 'block';
+        sugTesto.innerHTML = riempi(alSicuro(T.periodo),
+                 { periodo: '<em>' + alSicuro(r.previous) + '</em>' });
+      } else {
         sugBox.style.display = 'none';
       }
       updateTotal();

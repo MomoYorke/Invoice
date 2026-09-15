@@ -1061,16 +1061,63 @@ def _test_servizi(r):
            {'prezzo_cents': 11000, 'sedute': 4, 'passano': 1, 'massimo': 6})
     con.close()
 
-    # l'elenco: prima quello scritto a mano, altrimenti quello che si e' usato di piu'
-    con = _db_finto()
-    _check(r, 'Servizi', 'i servizi scritti a mano vincono',
-           SR.elenco(con, {'servizi': 'Uno\nDue\n\n  Tre  '}), ['Uno', 'Due', 'Tre'])
-    proposti = SR.elenco(con, {'servizi': ''})
-    _check(r, 'Servizi', "senza elenco si propone quello che hai usato di piu'",
-           proposti[0] if proposti else None, 'Monthly abo: running coaching')
-    _check(r, 'Servizi', 'una descrizione usata una volta sola non si propone',
-           'Una tantum' in proposti, False)
+    # --- i pulsanti della nuova fattura --------------------------------------
+    con = _db_servizi()
+    mese_id = SR.salva(con, SR.dal_modulo({'nome': 'Monthly abo: running coaching',
+                                           'prezzo': '110', 'ogni_mese': '1'}))
+    pacco_id = SR.salva(con, SR.dal_modulo({'nome': '12 Sessions Pack', 'prezzo': "1'800",
+                                            'ogni_mese': '0', 'con_sedute': '1',
+                                            'sedute': '12'}))
+    mese, pacco = SR.uno(con, mese_id), SR.uno(con, pacco_id)
+    con.execute("INSERT INTO clients(id, key, name) VALUES(1, 'giulia', 'Giulia Ferrari'),"
+                " (2, 'marco', 'Marco Neri')")
+    _check(r, 'Servizi', 'mai fatturato: il nome e il prezzo del servizio',
+           {k: SR.proposta(con, 1, pacco)[k]
+            for k in ('description', 'qty', 'unit', 'total', 'servizio_id', 'advanced')},
+           {'description': '12 Sessions Pack', 'qty': '1', 'unit': "1'800.-", 'total': '',
+            'servizio_id': pacco_id, 'advanced': False})
+    _check(r, 'Servizi', 'senza cliente scelto, lo stesso',
+           SR.proposta(con, None, pacco)['unit'], "1'800.-")
+    for n, (cliente, data, qty, desc, unit, tot, sid) in enumerate((
+            (1, '2026-08-13', '12', '12 Sessions Pack', 15000, 180000, pacco_id),
+            (1, '2026-08-13', '1', 'Monthly abo: running coaching 13.08.26 – 12.09.26',
+             10000, 10000, mese_id),
+            (2, '2026-07-01', '1', 'Monthly abo: running coaching 01.07.26 – 31.07.26',
+             11000, 11000, None)), 1):
+        con.execute('INSERT INTO invoices(id, number, client_id, client_name, date, year, '
+                    'total_cents) VALUES(?,?,?,?,?,2026,?)', (n, n, cliente, 'x', data, tot))
+        con.execute('INSERT INTO items(invoice_id, pos, qty, description, unit_cents, '
+                    'total_cents, servizio_id) VALUES(?,0,?,?,?,?,?)',
+                    (n, qty, desc, unit, tot, sid))
+    p = SR.proposta(con, 1, pacco)
+    _check(r, 'Servizi', 'già fatturato: il prezzo dell’ultima riga, per un pacchetto solo',
+           (p['description'], p['qty'], p['unit'], p['total']),
+           ('12 Sessions Pack', '1', '150.-', "1'800.-"))
+    p = SR.proposta(con, 1, mese)
+    _check(r, 'Servizi', 'un abbonamento già fatturato riparte dal mese dopo',
+           (p['description'], p['unit'], p['advanced']),
+           ('Monthly abo: running coaching 13.09.26 – 12.10.26', '100.-', True))
+    p = SR.proposta(con, 2, mese)
+    _check(r, 'Servizi', 'una riga vecchia senza collegamento si trova ancora per nome',
+           (p['description'], p['unit']),
+           ('Monthly abo: running coaching 01.08.26 – 31.08.26', '110.-'))
+    _check(r, 'Servizi', 'il pulsante collega la riga anche se il testo cambia',
+           SR.servizio_della_riga(con, str(pacco_id), 'Pacchetto di Natale'), (pacco_id, True))
+    _check(r, 'Servizi', 'una riga svuotata perde il collegamento',
+           SR.servizio_della_riga(con, str(pacco_id), '   '), (None, False))
+    _check(r, 'Servizi', 'un servizio che non esiste non si scrive',
+           SR.servizio_della_riga(con, '999', 'Consulenza'), (None, False))
+    _check(r, 'Servizi', 'scritta a mano, si collega da sola',
+           SR.servizio_della_riga(con, '', '12 Sessions Pack 01.10.26'), (pacco_id, False))
     con.close()
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        sorgente = f.read()
+    corpo = sorgente[sorgente.index('def _crea_fattura'):]
+    corpo = corpo[:corpo.index('\n# ----')]
+    _check(r, 'Servizi', 'la nuova fattura scrive il servizio su ogni riga',
+           ('servizio_della_riga' in corpo, 'total_cents,servizio_id)' in corpo), (True, True))
 
 
 def _db_servizi():
@@ -1084,24 +1131,6 @@ def _db_servizi():
     con.row_factory = sqlite3.Row
     con.executescript(D.SCHEMA)
     D._migrate(con)
-    return con
-
-
-def _db_finto():
-    """Un database in memoria con qualche fattura, per provare le proposte."""
-    import sqlite3
-    con = sqlite3.connect(':memory:')
-    con.row_factory = sqlite3.Row
-    con.executescript(
-        'CREATE TABLE invoices(id INTEGER PRIMARY KEY, number INTEGER, deleted_at TEXT);'
-        'CREATE TABLE items(id INTEGER PRIMARY KEY, invoice_id INTEGER, description TEXT);')
-    righe = [('Monthly abo: running coaching 01.06.26 - 30.06.26',),
-             ('Monthly abo: running coaching 01.07.26 - 31.07.26',),
-             ('Monthly abo: running coaching 01.08.26 - 31.08.26',),
-             ('10 Sessions Pack',), ('10 Sessions Pack',), ('Una tantum',)]
-    for i, (d,) in enumerate(righe, 1):
-        con.execute('INSERT INTO invoices(id, number, deleted_at) VALUES(?,?,NULL)', (i, i))
-        con.execute('INSERT INTO items(invoice_id, description) VALUES(?,?)', (i, d))
     return con
 
 
@@ -5380,6 +5409,7 @@ GENTE_FINTA = {
     'client', 'Kunde',            # non persone: «cliente» tradotto
     'Monthly abo', 'Monthly  abo', 'Personal Training',
     '12 Sessions Pack – Personal Training',  # non persone: servizi finti (Compito 2)
+    '12 Sessions Pack', 'Monthly abo: running coaching',  # servizi finti (Compito 4)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio

@@ -336,7 +336,7 @@ def nuova():
     today = datetime.date.today()
     cestinata = con.execute('SELECT client_name FROM invoices WHERE number=? '
                             'AND deleted_at IS NOT NULL', (nxt,)).fetchone()
-    elenco_servizi = srv.elenco(con, db.get_settings(con))
+    elenco_servizi = srv.tutti(con, solo_attivi=True)
     pre = _precompila_abbonamento(con, request.args.get('abbonamento', type=int),
                                   request.args.get('mese', ''))
     con.close()
@@ -402,6 +402,7 @@ def _crea_fattura(con):
     intestatario = (client['intestatario'] or '').strip() or client['name']
 
     # --- righe ---
+    listino = con.execute('SELECT id, nome, attivo FROM servizi').fetchall()
     items = []
     total = 0
     for i in range(8):
@@ -440,7 +441,9 @@ def _crea_fattura(con):
                        n=i + 1, qty=qty, unit=fmt_chf(unit_c), calc=fmt_chf(calc),
                        tot=fmt_chf(tot_c), suggerimento=suggerimento)
                 return redirect(url_for('nuova'))
-        items.append({'qty': qty, 'description': desc, 'unit_cents': unit_c, 'total_cents': tot_c})
+        servizio_id, ricorda = srv.servizio_della_riga(con, f.get(f'servizio_{i}'), desc, listino)
+        items.append({'qty': qty, 'description': desc, 'unit_cents': unit_c,
+                      'total_cents': tot_c, 'servizio_id': servizio_id, 'ricorda': ricorda})
         total += tot_c
     if not items:
         avvisa('Inserisci almeno una riga con descrizione e importo.', 'error')
@@ -524,10 +527,12 @@ def _crea_fattura(con):
          total, docx_path, pdf_path, db.now_iso(), qr_ref, ric_id, periodo))
     inv_id = cur.lastrowid
     for pos, it in enumerate(items):
-        con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,total_cents) '
-                    'VALUES(?,?,?,?,?,?)',
+        con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,'
+                    'total_cents,servizio_id) VALUES(?,?,?,?,?,?,?)',
                     (inv_id, pos, str(it['qty']), it['description'],
-                     it['unit_cents'], it['total_cents']))
+                     it['unit_cents'], it['total_cents'], it['servizio_id']))
+        if it['ricorda']:
+            srv.ricorda(con, it['description'], it['servizio_id'])
     con.commit()
     con.close()
     lg = _lingua_app()
@@ -2158,36 +2163,17 @@ def backup_ora():
 # ---------------------------------------------------------------- API
 @app.route('/api/periodo-successivo')
 def api_periodo_successivo():
-    """La stessa riga dell'ultima volta, col periodo spostato avanti di un mese.
+    """Cosa scrive un pulsante della nuova fattura: vedi services.proposta.
 
-    Serve agli abbonamenti: il testo lo scrive chi usa l'app, noi tocchiamo
-    solo le date. Se il servizio scelto non e' mai stato fatturato a questo
-    cliente, o se l'ultima volta non aveva un periodo, non si propone niente."""
+    Si cerca per cliente e servizio, non per nome: due clienti che si chiamano
+    allo stesso modo non si scambiano piu' il prezzo."""
     client_id = request.args.get('client_id', type=int)
-    scelto = request.args.get('servizio', '')
+    servizio_id = request.args.get('servizio_id', type=int)
     con = get_con()
-    client = con.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-    if not client:
-        con.close()
-        return jsonify({'found': False})
-    righe = con.execute(
-        'SELECT i.description d, i.unit_cents u, i.total_cents t '
-        'FROM items i JOIN invoices f ON f.id = i.invoice_id '
-        'WHERE f.deleted_at IS NULL AND f.client_name LIKE ? '
-        'ORDER BY COALESCE(f.number, 0) DESC LIMIT 40',
-        (client['name'].split()[0] + '%',)).fetchall()
+    servizio = srv.uno(con, servizio_id) if servizio_id else None
+    fuori = srv.proposta(con, client_id, servizio) if servizio else {'found': False}
     con.close()
-    riga = next((r for r in righe if srv.stesso_servizio(scelto, r['d'])), None)
-    if riga is None:
-        return jsonify({'found': False})
-    avanzata = srv.avanza_periodo(riga['d'])
-    return jsonify({
-        'found': True,
-        'description': avanzata or riga['d'],
-        'advanced': bool(avanzata),
-        'previous': riga['d'],
-        'unit': fmt_dash(riga['u']) if riga['u'] is not None else '',
-        'total': fmt_dash(riga['t']) if riga['t'] is not None else ''})
+    return jsonify(fuori)
 
 
 @app.route('/api/client/<int:cid>')
