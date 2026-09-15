@@ -77,13 +77,19 @@ def precedente(reg, m):
 
 
 def riportate(reg, m):
-    """Le sedute che arrivano dal mese prima. Mai meno di zero."""
+    """Le sedute che arrivano dal mese prima. Mai meno di zero.
+
+    Calcola disponibili(reg, p) una volta sola: chiamare anche usate(reg, p),
+    che internamente richiama di nuovo disponibili(reg, p), raddoppierebbe il
+    lavoro ad ogni mese di catena (con 18 mesi consecutivi che si riportano,
+    oltre un milione di chiamate)."""
     if not m.get('passano'):
         return 0
     p = precedente(reg, m)
     if p is None or not p.get('fattura_numero'):
         return 0            # un mese senza fattura non riporta niente
-    return max(0, disponibili(reg, p) - usate(reg, p))
+    d = disponibili(reg, p)
+    return max(0, d - min(len(p.get('sessioni') or []), d))
 
 
 def disponibili(reg, m):

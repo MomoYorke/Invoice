@@ -733,6 +733,12 @@ def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=No
     frasi = []
     for servizio, qty, totale in righe:
         if servizio['ogni_mese']:
+            try:
+                q = float(qty)
+            except (TypeError, ValueError):
+                q = 1.0
+            if q <= 0:
+                continue    # spec 7: quantita' 0 o negativa, nessuna seduta
             nome = nome_cliente(chiave)
             m = mensili.da_fattura(reg, chiave, nome, numero, data, servizio, periodo, giorno)
             frasi.append(('Sedute di {nome} dal {dal} al {al}: {sedute}.',

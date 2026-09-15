@@ -1808,7 +1808,7 @@ def agenda():
     cliente = request.args.get('cliente', '').strip()
     anno = request.args.get('anno', '').strip()
     righe = ag.elenco(reg, cliente=cliente or None, anno=anno or None)
-    clienti = sorted({p['cliente'] for p in reg.get('pacchetti', []) if p.get('cliente')})
+    clienti = ag.clienti(reg)
     return render_template('sessions.html', righe=righe, r=ag.riepilogo(righe),
                            clienti=clienti, anni=ag.anni(reg),
                            cliente=cliente, anno=anno,

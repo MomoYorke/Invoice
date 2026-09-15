@@ -2246,6 +2246,15 @@ def _test_sedute_dai_servizi(r):
             _check(r, cat, f'«{frase[:40]}…» si legge anche in inglese e in tedesco',
                    (L.t(frase, 'en') != frase, L.t(frase, 'de') != frase), (True, True))
 
+        # spec §7: quantita' zero o negativa su una riga «ogni mese» = nessuna seduta
+        for qty_prova, numero_prova, perche in ((0, 210, 'quantità zero'),
+                                                 (-1, 211, 'quantità negativa')):
+            reg_qty = reg_vuoto()
+            dette_qty = S.sedute_dalla_fattura(reg_qty, 'giulia', numero_prova, '2026-09-14',
+                                               [(ABO, qty_prova, 22000)], '2026-09', 13)
+            _check(r, cat, f'una riga «ogni mese» con {perche} non apre nessun mese e non lo dice',
+                   (dette_qty, reg_qty['mensili']), ([], []))
+
         # il registro sa che quelle sedute ci sono già, e l'Agenda le mostra
         S.aggiungi_sessione(reg, 'giulia', '2026-09-16', 'Giulia', 'ev-agenda')
         _check(r, cat, 'le sedute dei mesi contano per non registrarle due volte',
@@ -2254,6 +2263,19 @@ def _test_sedute_dai_servizi(r):
         _check(r, cat, 'l’Agenda mostra anche le sedute degli abbonamenti',
                ([x['pacchetto'] for x in AG.elenco(reg, orari={})], AG.anni(reg)),
                (['GIU-M01'], ['2026']))
+
+        # il filtro clienti dell'Agenda non deve perdere chi ha solo un abbonamento
+        reg_solo_mensile = {
+            'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia',
+                          'sessioni': [{'data': '2026-09-01', 'titolo': 'Giulia'}]}],
+            'mensili': [{'id': 'LUC-M01', 'cliente': 'Luca',
+                        'sessioni': [{'data': '2026-09-05', 'titolo': 'Luca'}]}],
+        }
+        _check(r, cat, 'l’elenco clienti dell’Agenda include anche chi ha solo un abbonamento',
+               AG.clienti(reg_solo_mensile), ['Giulia', 'Luca'])
+        _check(r, cat, 'l’Agenda filtrata su un cliente solo abbonato mostra le sue sedute dei mesi',
+               [x['pacchetto'] for x in AG.elenco(reg_solo_mensile, orari={}, cliente='Luca')],
+               ['LUC-M01'])
 
         # la seduta in più di aggancia_pacchetto, spostata in un mese che ha già
         # una seduta più avanti: deve arrivare sulla seduta giusta, non
@@ -2277,6 +2299,58 @@ def _test_sedute_dai_servizi(r):
 
     _check(r, cat, 'la lettura del calendario salva anche quando una seduta va fra gli esclusi',
            "rap.get('esclusi_nuovi')" in sorgente, True)
+
+    # --- guardia: tanti mesi che si riportano non devono raddoppiare il conto ---
+    # riportate() chiamava disponibili(reg, p) e poi usate(reg, p), che richiama
+    # di nuovo disponibili(reg, p): ogni mese in piu' di catena raddoppiava il
+    # lavoro (col revisore, 18 mesi consecutivi = oltre un milione di chiamate,
+    # 4.9 secondi per ogni seduta aggiunta). La prova gira anche dentro la
+    # pagina Controlli dell'app viva, dove una richiesta concorrente potrebbe
+    # incappare in un dato globale toccato dalla prova: percio' qui non si
+    # tocca nessun oggetto di core.mensili, si conta il lavoro sui dati di
+    # prova stessi, con un dict che si accorge da solo se legge troppe volte.
+    import datetime as _dt
+
+    class _ContaLetture(dict):
+        """Un dict che conta le sue letture con get(); oltre un tetto largo si
+        rifiuta di continuare, cosi' un calcolo tornato esponenziale si vede
+        rosso in un attimo invece di restare li' a girare."""
+        _letture = [0]
+        _tetto = 200000
+
+        def get(self, *a, **k):
+            _ContaLetture._letture[0] += 1
+            if _ContaLetture._letture[0] > _ContaLetture._tetto:
+                raise RuntimeError('troppe letture: il calcolo dei mesi non è più lineare')
+            return super().get(*a, **k)
+
+    def _mese_di_prova(i, dal, al):
+        return _ContaLetture(
+            id=f'GIU-M{i + 1:02d}', chiavi=['giulia'], cliente='Giulia', servizio_id=9,
+            fattura_numero=900 + i, dal=dal, al=al, sedute=4, passano=1, massimo=6,
+            prezzo_seduta_cents=5500,
+            sessioni=[{'data': dal, 'titolo': 'Giulia', 'cancellata': False}])
+
+    def _catena_di_mesi(n):
+        reg = {'mensili': [], 'esclusi': []}
+        data = '2023-01-13'
+        for i in range(n):
+            dal, al = M.periodo_di(data)
+            reg['mensili'].append(_mese_di_prova(i, dal, al))
+            data = (_dt.date.fromisoformat(al) + _dt.timedelta(days=1)).isoformat()
+        return reg
+
+    def _numeri_ultimo_mese():
+        reg36 = _catena_di_mesi(36)
+        M.ricalcola_tutti(reg36)
+        ultimo = reg36['mensili'][-1]
+        return ultimo['riportate'], ultimo['disponibili'], ultimo['usate'], ultimo['in_piu']
+
+    numeri = _senza_scoppiare(_numeri_ultimo_mese)
+    _check(r, cat, 'trentasei mesi consecutivi che si riportano: il calcolo resta limitato, '
+                   'e i numeri dell’ultimo mese sono giusti',
+           (numeri, _ContaLetture._letture[0] <= _ContaLetture._tetto),
+           ((5, 6, 1, 0), True))
 
 
 def _test_migrazione_servizi(r):

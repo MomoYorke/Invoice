@@ -123,6 +123,12 @@ def anni(reg):
     return sorted({s['data'][:4] for _gruppo, s in _sedute(reg) if s.get('data')}, reverse=True)
 
 
+def clienti(reg):
+    """I clienti che hanno almeno una seduta, da pacchetti e da mesi di
+    abbonamento insieme: chi ha solo un abbonamento non va perso dal filtro."""
+    return sorted({gruppo['cliente'] for gruppo, _s in _sedute(reg) if gruppo.get('cliente')})
+
+
 def riepilogo(righe):
     """I due numeri che servono in cima alla pagina."""
     return {
