@@ -16,9 +16,15 @@
       <div>
         {% if i.kind == 'duplicato' %}{{ pallino('rosso', _('numero doppio')) }}
         {%- elif i.kind == 'buco' %}{{ pallino('arancio', _('numero saltato')) }}
+        {%- elif i.kind == 'servizi' %}{{ pallino('rosso', _('da riprovare')) }}
         {%- else %}{{ pallino('giallo', _('dato mancante')) }}{% endif %}
+        {% if i.kind == 'servizi' %}
+        <strong>{{ _('Aggiornamento dei servizi non riuscito') }}</strong>
+        <div class="muted" style="font-size:12px;margin-top:2px">{{ _('L’app riprova da sola al prossimo avvio. Il dettaglio è in data/error.log.') }}</div>
+        {% else %}
         <strong>{{ i.msg }}</strong>
         {% if i.detail %}<div class="muted" style="font-size:12px;margin-top:2px">{{ i.detail }}</div>{% endif %}
+        {% endif %}
       </div>
       <div style="white-space:nowrap">
         {% if i.fixable %}

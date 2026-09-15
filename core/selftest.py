@@ -104,7 +104,7 @@ def run_all():
     # ogni famiglia per conto suo: se una si schianta, le altre vanno avanti
     _esegui_famiglie(r, (
         _test_email, _test_oggetto, _test_intestazione_fattura, _test_marchio,
-        _test_clienti_crediti, _test_servizi, _test_servizi_riconosciuti,
+        _test_clienti_crediti, _test_servizi, _test_servizi_riconosciuti, _test_migrazione_servizi,
         _test_da_fare, _test_lingua, _test_primi_passi, _test_icone, _test_menu,
         _test_etichette, _test_finestra_stretta, _test_calendario,
         _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
@@ -1833,6 +1833,229 @@ def _test_da_fare(r):
     _check(r, 'Da fare', 'un registro incomprensibile non fa saltare niente',
            C._crediti_finiti('non-un-registro'), [])
 
+
+
+def _test_migrazione_servizi(r):
+    """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
+
+    Prima i servizi stavano in tre caselle delle Impostazioni: i pulsanti della
+    nuova fattura e le regole «Nome = parole». La migrazione ne fa la tabella
+    dei servizi e collega le righe gia' fatturate. Le prove girano su database
+    costruiti qui dentro: mai sui dati di chi usa l'app."""
+    import json
+    import inspect
+    import logging
+    import sqlite3
+    import tempfile
+    from . import db as D
+    from . import migra_servizi as M
+    from . import sessions as S
+    from . import stats as ST
+    cat = 'Migrazione dei servizi'
+
+    def con_righe(impostazioni, righe):
+        con = _db_servizi()
+        for chiave, valore in impostazioni.items():
+            con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)',
+                        (chiave, valore))
+        for numero, data, testo, cents, cestino in righe:
+            fid = con.execute(
+                'INSERT INTO invoices(number, client_name, date, year, total_cents, deleted_at) '
+                'VALUES(?,?,?,?,?,?)',
+                (numero, 'Giulia Ferrari', data, int(data[:4]), cents,
+                 '2026-08-06 10:00:00' if cestino else None)).lastrowid
+            con.execute('INSERT INTO items(invoice_id, pos, qty, description, unit_cents, '
+                        'total_cents) VALUES(?,0,?,?,?,?)', (fid, '1', testo, cents, cents))
+        con.commit()
+        return con
+
+    def listino(con):
+        return [(s['nome'], s['prezzo_cents'], s['ogni_mese'], s['sedute'])
+                for s in con.execute('SELECT * FROM servizi ORDER BY pos')]
+
+    def servizio_della_riga(con, testo):
+        riga = con.execute('SELECT s.nome FROM items i LEFT JOIN servizi s ON s.id = i.servizio_id '
+                           'WHERE i.description = ? LIMIT 1', (testo,)).fetchone()
+        return riga['nome'] if riga else 'riga assente'
+
+    def forma(con):
+        return {t['name']: {c['name'] for c in con.execute('PRAGMA table_info("%s")' % t['name'])}
+                for t in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+
+    def leggi_json(percorso):
+        with open(percorso, encoding='utf-8') as f:
+            return json.load(f)
+
+    def servizi_in_controlli(con):
+        return [i['key'] for i in ST.health(con) if i['kind'] == 'servizi']
+
+    PACCHETTO_12 = '12 Sessions Pack – Personal Training at Home'
+    PACCHETTO_10 = '10 Sessions Pack – Personal Training at Home'
+    MENSILE = 'Monthly abo: running coaching'
+    IMPOSTAZIONI = {
+        'servizi': '\n'.join((PACCHETTO_12, PACCHETTO_10, MENSILE)),
+        'servizi_abbonamento': 'Running Coaching = running coaching\n'
+                               'Online Coaching = coaching online',
+        'servizi_pacchetto': 'Personal Training = session, personal training, add-on, credit\n'
+                             'Yoga di gruppo = yoga',
+    }
+    RIGHE = [
+        (1, '2026-01-10', PACCHETTO_10, 200000, False),
+        (2, '2026-03-02', PACCHETTO_12, 180000, False),
+        (3, '2026-06-01', MENSILE + ' 01.06.26 - 30.06.26', 11000, False),
+        (4, '2026-07-01', MENSILE + ' 01.07.26 - 31.07.26', 11000, False),
+        (5, '2026-07-15', 'Coaching online 15.07.26 - 14.08.26', 9000, False),
+        (6, '2026-08-01', PACCHETTO_12, 99900, True),        # nel Cestino: non conta
+        (7, '2026-08-05', 'Add-on 10 credits', 90000, False),
+    ]
+    REGISTRO = {'pacchetti': [
+        {'id': 'GIU-01', 'cliente': 'Giulia', 'fattura_numero': '1', 'crediti': 10},
+        {'id': 'GIU-02', 'cliente': 'Giulia', 'fattura_numero': 2, 'crediti': 12},
+        {'id': 'GIU-03', 'cliente': 'Giulia', 'fattura_numero': 6, 'crediti': 99},
+    ]}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        percorso_registro = os.path.join(tmp, 'sessions.json')
+        with open(percorso_registro, 'w', encoding='utf-8') as f:
+            json.dump(REGISTRO, f)
+        nessun_registro = os.path.join(tmp, 'non-c-e.json')
+
+        # --- con pulsanti e regole ---
+        con = con_righe(IMPOSTAZIONI, RIGHE)
+        prima = forma(con)
+        _check(r, cat, 'la prima volta la migrazione si fa',
+               _senza_scoppiare(lambda: M.esegui(con, percorso_registro, fai_copia=False)), True)
+        _check(r, cat, 'i pulsanti diventano servizi; delle regole solo quelle che un pulsante '
+                       'non contiene e che hanno riconosciuto almeno una riga',
+               listino(con), [(PACCHETTO_12, 180000, 0, 12), (PACCHETTO_10, 200000, 0, 10),
+                              (MENSILE, 11000, 1, 0), ('Online Coaching', 9000, 1, 0)])
+        _check(r, cat, 'le righe col nome del servizio si collegano da sole',
+               [servizio_della_riga(con, t)
+                for t in (PACCHETTO_10, PACCHETTO_12, MENSILE + ' 01.06.26 - 30.06.26')],
+               [PACCHETTO_10, PACCHETTO_12, MENSILE])
+        _check(r, cat, 'quelle senza il nome restano da decidere',
+               [servizio_della_riga(con, t)
+                for t in ('Coaching online 15.07.26 - 14.08.26', 'Add-on 10 credits')],
+               [None, None])
+        _check(r, cat, 'la migrazione resta segnata come fatta', M.fatta(con), True)
+        _check(r, cat, 'la seconda volta non si rifà',
+               M.esegui(con, percorso_registro, fai_copia=False), False)
+        _check(r, cat, 'e il listino resta quello', len(listino(con)), 4)
+        _check(r, cat, 'un listino che c’è già non si tocca',
+               M.crea_servizi(con, D.get_settings(con), REGISTRO), 0)
+        dopo = forma(con)
+        _check(r, cat, 'nessuna tabella e nessuna colonna tolta',
+               {t: sorted(c - dopo.get(t, set())) for t, c in prima.items()
+                if c - dopo.get(t, set())}, {})
+        _check(r, cat, 'le caselle vecchie restano nel database',
+               all(D.get_settings(con).get(k) == v for k, v in IMPOSTAZIONI.items()), True)
+        con.close()
+
+        # --- senza pulsanti né regole: le descrizioni che si ripetono ---
+        con = con_righe({}, [
+            (1, '2026-05-01', 'Abbonamento yoga 01.05.26 - 31.05.26', 8000, False),
+            (2, '2026-06-01', 'Abbonamento yoga 01.06.26 - 30.06.26', 8500, False),
+            (3, '2026-06-10', 'Lezione privata', 12000, False),
+            (4, '2026-06-20', 'Lezione privata', 12500, False),
+            (5, '2026-06-25', 'Consulenza', 5000, False),
+        ])
+        M.esegui(con, nessun_registro, fai_copia=False)
+        _check(r, cat, 'senza niente di scritto, il listino viene dalle righe che si ripetono '
+                       '(con due date è «ogni mese»)',
+               sorted(listino(con)),
+               [('Abbonamento yoga', 8500, 1, 0), ('Lezione privata', 12500, 0, 0)])
+        _check(r, cat, 'una riga usata una volta sola non diventa un servizio',
+               servizio_della_riga(con, 'Consulenza'), None)
+        con.close()
+
+        # --- un'app appena installata ---
+        con = _db_servizi()
+        _check(r, cat, 'senza fatture non si crea niente, e la migrazione si segna fatta',
+               (M.esegui(con, nessun_registro), listino(con), M.fatta(con)), (True, [], True))
+        con.close()
+
+        # --- se qualcosa va storto: niente a metà, e Controlli lo dice ---
+        con = con_righe(IMPOSTAZIONI, RIGHE)
+        con.execute('DROP TABLE servizi_testi')
+        con.commit()
+        errori = logging.getLogger('fatture.errori')
+        errori.disabled = True      # il guaio qui è voluto: non va nel registro vero
+        try:
+            riuscita = _senza_scoppiare(lambda: M.esegui(con, percorso_registro, fai_copia=False))
+        finally:
+            errori.disabled = False
+        _check(r, cat, 'se un passo si rompe la migrazione non esplode', riuscita, False)
+        _check(r, cat, 'e non lascia servizi a metà', listino(con), [])
+        _check(r, cat, 'e non si segna fatta', M.fatta(con), False)
+        _check(r, cat, 'Controlli lo dice', servizi_in_controlli(con), ['servizi:migrazione'])
+        con.executescript(D.SCHEMA)          # il guaio si ripara da solo
+        _check(r, cat, 'al tentativo dopo riesce',
+               M.esegui(con, percorso_registro, fai_copia=False), True)
+        _check(r, cat, 'e l’avviso in Controlli sparisce', servizi_in_controlli(con), [])
+        con.close()
+
+        # --- la copia di sicurezza, prima di toccare qualcosa ---
+        percorso_db = os.path.join(tmp, 'fatture.db')
+        con = sqlite3.connect(percorso_db)
+        con.row_factory = sqlite3.Row
+        con.executescript(D.SCHEMA)
+        D._migrate(con)
+        con.execute("INSERT INTO invoices(number, client_name) VALUES(1, 'Giulia Ferrari')")
+        con.commit()
+        copie = M.copia_di_sicurezza(con, percorso_registro)
+        con.close()
+        # os.path.realpath: sqlite risolve i link simbolici del percorso del
+        # database (su macOS /var -> /private/var) prima di scriverlo in
+        # PRAGMA database_list; senza risolverlo anche qui il confronto
+        # fallirebbe per una differenza di sola grafia, non di sostanza.
+        cartella = os.path.join(os.path.realpath(tmp), 'backups', M.CARTELLA_COPIE)
+        _check(r, cat, 'le copie vanno in una cartella che la pulizia delle copie non tocca',
+               sorted(os.path.dirname(c) for c in copie), [cartella, cartella])
+        copia_db = next((c for c in copie if c.endswith('.db')), None)
+        quante = 0
+        if copia_db:
+            letto = sqlite3.connect(copia_db)
+            quante = letto.execute('SELECT COUNT(*) FROM invoices').fetchone()[0]
+            letto.close()
+        _check(r, cat, 'nella copia del database ci sono le fatture', quante, 1)
+        copia_reg = next((c for c in copie if c.endswith('.json')), None)
+        _check(r, cat, 'e c’è anche il registro delle sedute',
+               leggi_json(copia_reg) if copia_reg else None, REGISTRO)
+        _check(r, cat, 'un database in memoria non ha niente da copiare',
+               M.copia_di_sicurezza(_db_servizi()), [])
+
+        # --- parte da sola all'avvio ---
+        # Le regole vuote con fatture presenti fanno scrivere a _migrate le
+        # regole di chi ha scritto l'app: qui si vede che non diventano servizi.
+        vero_db, vero_registro = D.DB_PATH, S.REGISTRY
+        try:
+            D.DB_PATH = os.path.join(tmp, 'avvio', 'fatture.db')
+            S.REGISTRY = os.path.join(tmp, 'avvio', 'sessions.json')   # il registro vero non si legge
+            os.makedirs(os.path.dirname(D.DB_PATH))
+            con = sqlite3.connect(D.DB_PATH)
+            con.row_factory = sqlite3.Row
+            con.executescript(D.SCHEMA)
+            D._migrate(con)
+            con.execute("INSERT INTO settings(key, value) VALUES('servizi', 'Lezione privata')")
+            fid = con.execute("INSERT INTO invoices(number, client_name, date) "
+                              "VALUES(1, 'Giulia Ferrari', '2026-06-10')").lastrowid
+            con.execute("INSERT INTO items(invoice_id, description, total_cents) "
+                        "VALUES(?, 'Lezione privata', 12000)", (fid,))
+            con.commit()
+            con.close()
+            con = D.init()
+            _check(r, cat, 'all’avvio l’app fa la migrazione da sola, con la copia prima',
+                   (M.fatta(con), listino(con),
+                    os.path.isdir(os.path.join(tmp, 'avvio', 'backups', M.CARTELLA_COPIE))),
+                   (True, [('Lezione privata', 12000, 0, 0)], True))
+            con.close()
+        finally:
+            D.DB_PATH, S.REGISTRY = vero_db, vero_registro
+
+    from . import importer
+    _check(r, cat, 'dopo un Reimporta le righe ritrovano il loro servizio',
+           _senza_scoppiare(lambda: 'srv.collega_righe(con)' in inspect.getsource(importer.import_all)),
+           True)
 
 
 def _test_servizi_riconosciuti(r):

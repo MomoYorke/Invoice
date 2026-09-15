@@ -432,7 +432,22 @@ def init():
     for k, v in DEFAULT_SETTINGS.items():
         con.execute('INSERT OR IGNORE INTO settings(key, value) VALUES(?,?)', (k, v))
     con.commit()
+    _migra_servizi_una_volta(con)
     return con
+
+
+# I database su cui questo processo ha gia' tentato la migrazione dei servizi.
+# Ogni pagina chiama init(): se la migrazione non riesce, si riprova al
+# prossimo avvio, non a ogni pagina (e non si rifa' la copia ogni volta).
+_SERVIZI_TENTATI = set()
+
+
+def _migra_servizi_una_volta(con):
+    if DB_PATH in _SERVIZI_TENTATI:
+        return
+    _SERVIZI_TENTATI.add(DB_PATH)
+    from . import migra_servizi          # qui dentro: migra_servizi importa db
+    migra_servizi.esegui(con)
 
 
 def _migrate(con):

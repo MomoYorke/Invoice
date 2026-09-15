@@ -271,6 +271,15 @@ def health(con, include_acknowledged=False):
             'total_cents': inv['total_cents'], 'date': inv['date'],
             'client': inv['client_name'], 'number': inv['number']})
 
+    # --- l'aggiornamento dei servizi non e' riuscito (core/migra_servizi.py) ---
+    # L'app parte lo stesso e riprova al prossimo avvio. La frase la scrive
+    # la pagina, nella lingua di chi legge.
+    if con.execute("SELECT 1 FROM settings WHERE key='servizi_migrazione_errore'").fetchone():
+        issues.append({
+            'kind': 'servizi', 'key': 'servizi:migrazione',
+            'msg': 'Aggiornamento dei servizi non riuscito',
+            'fixable': False, 'inv_id': None})
+
     if not include_acknowledged:
         done = acknowledged_keys(con)
         issues = [i for i in issues if i['key'] not in done]

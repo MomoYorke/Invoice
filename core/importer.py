@@ -251,6 +251,11 @@ def import_all(con, root, log=None):
     if n_corr:
         say(f'Correzioni manuali ri-applicate: {n_corr}')
 
+    # le righe importate sono nate adesso, senza servizio: lo ritrovano dal
+    # nome dei servizi e da quello che hai gia' deciso una volta
+    from . import services as srv
+    srv.collega_righe(con)
+
     con.commit()
     return msgs
 

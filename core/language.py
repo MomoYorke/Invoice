@@ -1265,6 +1265,11 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Migrazione dei servizi': 'Services migration',
+        'da riprovare': 'to retry',
+        'Aggiornamento dei servizi non riuscito': 'Services update failed',
+        'L’app riprova da sola al prossimo avvio. Il dettaglio è in data/error.log.':
+            'The app tries again by itself at the next start. The details are in data/error.log.',
         'Righe senza servizio': 'Lines without a service',
         'Righe di fatture vecchie che l’app non ha saputo collegare a un servizio. Scegli una volta: poi Performance le conta al posto giusto. Quelle che lasci su «Scegli…» restano qui per la prossima volta.':
             'Lines from old invoices that the app could not link to a service. Choose once: then Performance counts them in the right place. Those you leave on «Choose…» stay here for next time.',
@@ -2676,6 +2681,11 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Migrazione dei servizi': 'Übernahme der Leistungen',
+        'da riprovare': 'wird wiederholt',
+        'Aggiornamento dei servizi non riuscito': 'Aktualisierung der Leistungen fehlgeschlagen',
+        'L’app riprova da sola al prossimo avvio. Il dettaglio è in data/error.log.':
+            'Die App versucht es beim nächsten Start von selbst noch einmal. Die Details stehen in data/error.log.',
         'Righe senza servizio': 'Zeilen ohne Leistung',
         'Righe di fatture vecchie che l’app non ha saputo collegare a un servizio. Scegli una volta: poi Performance le conta al posto giusto. Quelle che lasci su «Scegli…» restano qui per la prossima volta.':
             'Zeilen alter Rechnungen, die die App keiner Leistung zuordnen konnte. Wähle einmal: danach zählt Performance sie am richtigen Ort. Was auf «Auswählen…» bleibt, steht beim nächsten Mal wieder hier.',
