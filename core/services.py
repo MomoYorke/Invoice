@@ -475,3 +475,18 @@ def primo_della_fattura(con, invoice_id):
     return con.execute(
         'SELECT s.* FROM items i JOIN servizi s ON s.id = i.servizio_id '
         'WHERE i.invoice_id = ? ORDER BY i.pos LIMIT 1', (invoice_id,)).fetchone()
+
+
+def righe_con_sedute(con, items):
+    """Le righe di una fattura che portano sedute: [(servizio, quantita', totale)].
+
+    Contano anche i servizi che non si vendono piu': la fattura li ha venduti."""
+    fuori = []
+    for it in items:
+        sid = it.get('servizio_id')
+        if not sid:
+            continue
+        servizio = uno(con, sid)
+        if servizio is not None and int(servizio['sedute'] or 0) > 0:
+            fuori.append((servizio, it['qty'], it['total_cents']))
+    return fuori

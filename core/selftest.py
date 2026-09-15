@@ -105,6 +105,7 @@ def run_all():
     _esegui_famiglie(r, (
         _test_email, _test_oggetto, _test_intestazione_fattura, _test_marchio,
         _test_clienti_crediti, _test_servizi, _test_servizi_riconosciuti, _test_migrazione_servizi,
+        _test_sedute_dai_servizi,
         _test_da_fare, _test_lingua, _test_primi_passi, _test_icone, _test_menu,
         _test_etichette, _test_finestra_stretta, _test_calendario,
         _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
@@ -1907,6 +1908,171 @@ def _test_da_fare(r):
     _check(r, 'Da fare', 'un registro incomprensibile non fa saltare niente',
            C._crediti_finiti('non-un-registro'), [])
 
+
+def _test_sedute_dai_servizi(r):
+    """Le sedute arrivano dalla riga del servizio venduto, non dall'importo.
+
+    Prima una fattura diventava un pacchetto se il totale era uno dei prezzi
+    scritti a mano per quel cliente: bastava uno sconto per perdere le sedute.
+    Adesso le porta il servizio: quante sedute, a che prezzo, fino a quando."""
+    from decimal import Decimal
+    from . import language as L
+    from . import services as SR
+    from . import sessions as S
+    cat = 'Sedute dai servizi'
+
+    PACCHETTO = {'id': 7, 'nome': '12 Sessions Pack', 'prezzo_cents': 180000, 'ogni_mese': 0,
+                 'sedute': 12, 'scadenza_mesi': 6, 'passano': 0, 'massimo': 0}
+    SENZA_PREZZO = dict(PACCHETTO, id=8, prezzo_cents=None, scadenza_mesi=0)
+    frasi = []
+
+    # --- quante sedute compra una riga ---
+    for qty, totale, servizio, atteso, perche in (
+            (1, 180000, PACCHETTO, 12, 'un pacchetto'),
+            (2, 360000, PACCHETTO, 24, 'due pacchetti'),
+            (12, 180000, PACCHETTO, 12, '«12 × 150.-»: la quantità conta le sedute'),
+            (Decimal('0.5'), 90000, PACCHETTO, 6, 'mezzo pacchetto'),
+            (Decimal('0.05'), 9000, PACCHETTO, 0, 'meno di una seduta: niente'),
+            (0, 0, PACCHETTO, 0, 'quantità zero: niente'),
+            (-1, -180000, PACCHETTO, 0, 'quantità negativa: niente'),
+            (12, None, SENZA_PREZZO, 12, 'senza prezzo, quantità uguale alle sedute'),
+            (3, None, SENZA_PREZZO, 36, 'senza prezzo, tre pacchetti'),
+            (1, 11000, dict(PACCHETTO, sedute=0), 0, 'un servizio senza sedute')):
+        _check(r, cat, f'sedute della riga: {perche}',
+               _senza_scoppiare(lambda: S.sedute_della_riga(servizio, qty, totale)), atteso)
+    _check(r, cat, 'il pacchetto porta servizio, prezzo a seduta e scadenza',
+           _senza_scoppiare(lambda: S.dati_del_servizio(PACCHETTO, '2026-09-14')),
+           {'servizio_id': 7, 'prezzo_seduta_cents': 15000, 'scade': '2027-03-14'})
+    _check(r, cat, 'senza prezzo niente valore, e senza mesi niente scadenza',
+           _senza_scoppiare(lambda: S.dati_del_servizio(SENZA_PREZZO, '2026-09-14')),
+           {'servizio_id': 8, 'prezzo_seduta_cents': None, 'scade': None})
+
+    GIULIA = {'id': 1, 'name': 'Giulia Ferrari', 'nome_calendario': '', 'chiave_sedute': 'giulia',
+              'archived': 0, 'intestatario': '', 'compagno': None}
+
+    def seduta(n, data):
+        return {'n': n, 'data': data, 'titolo': 'Giulia', 'cancellata': False}
+
+    def aperto(crediti, sedute, **altro):
+        return dict({'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'], 'crediti': crediti,
+                     'inizio': '2026-08-01', 'fine': None, 'fatturato': 'no',
+                     'sessioni': [seduta(i + 1, d) for i, d in enumerate(sedute)]}, **altro)
+
+    prima = S._CONFIG
+    try:
+        S.configura([GIULIA])
+
+        # --- 1. nessun pacchetto: ne nasce uno, già pagato ---
+        reg = {'pacchetti': [], 'esclusi': []}
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 101, '2026-09-14', 12, PACCHETTO)
+        frasi.append(frase)
+        p = reg['pacchetti'][0] if reg['pacchetti'] else {}
+        _check(r, cat, 'senza pacchetto la fattura ne apre uno, già pagato',
+               (esito, p.get('id'), p.get('crediti'), p.get('chiavi'), p.get('fattura_numero'),
+                p.get('servizio_id'), p.get('prezzo_seduta_cents'), p.get('scade')),
+               ('nuovo', 'GIU-01', 12, ['giulia'], 101, 7, 15000, '2027-03-14'))
+
+        # --- 2. pacchetto aperto dal calendario e non pagato: la fattura lo paga ---
+        reg = {'pacchetti': [aperto(10, ['2026-09-01', '2026-09-03', '2026-09-08'])], 'esclusi': []}
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 102, '2026-09-10', 12, PACCHETTO)
+        frasi.append(frase)
+        p = reg['pacchetti'][0]
+        _check(r, cat, 'il pacchetto aperto e non pagato lo paga la fattura, con le sedute della riga',
+               (esito, len(reg['pacchetti']), p['crediti'], p.get('fattura_numero'),
+                valori.get('rimasti')), ('collegato', 1, 12, 102, 9))
+
+        # --- 3. pacchetto aperto e già pagato: la fattura aspetta, con le sue sedute ---
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 103, '2026-09-12', 12, PACCHETTO)
+        frasi.append(frase)
+        _check(r, cat, 'se il pacchetto è già pagato la fattura resta in attesa, con le sue sedute',
+               (esito, reg.get('prepagate')),
+               ('in_attesa', {'giulia': [{'numero': 103, 'sedute': 12, 'servizio_id': 7,
+                                          'prezzo_seduta_cents': 15000, 'scade': '2027-03-12'}]}))
+        p['crediti'] = 3            # tre sedute già fatte: il pacchetto in corso è pieno
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-15', 'Giulia', 'ev-4')
+        nuovo = reg['pacchetti'][-1]
+        _check(r, cat, 'il pacchetto dopo nasce dalla fattura in attesa, con le sue sedute',
+               (len(reg['pacchetti']), reg['pacchetti'][0]['fine'], nuovo['crediti'],
+                nuovo.get('fattura_numero'), nuovo.get('servizio_id'), nuovo.get('scade'),
+                len(nuovo['sessioni']), reg['prepagate'].get('giulia')),
+               (2, '2026-09-08', 12, 103, 7, '2027-03-12', 1, None))
+
+        # --- la forma vecchia delle fatture in attesa si legge ancora ---
+        reg = {'pacchetti': [aperto(1, ['2026-08-02'], fatturato='si - #88', fattura_numero=88)],
+               'esclusi': [], 'prepagate': {'giulia': 90}}
+        S.aggiungi_sessione(reg, 'giulia', '2026-08-05', 'Giulia', 'ev-2')
+        _check(r, cat, 'una fattura in attesa scritta alla vecchia maniera apre ancora il pacchetto dopo',
+               (reg['pacchetti'][-1].get('fattura_numero'), reg['pacchetti'][-1]['crediti'],
+                'giulia' in reg['prepagate']), (90, 1, False))
+
+        # --- 4. pacchetto finito: si chiude, e la fattura ne apre uno nuovo ---
+        reg = {'pacchetti': [aperto(2, ['2026-08-02', '2026-08-09'])], 'esclusi': []}
+        esito, _detto = S.aggancia_pacchetto(reg, 'giulia', 104, '2026-08-10', 12, PACCHETTO)
+        _check(r, cat, 'un pacchetto finito si chiude, e la fattura ne apre uno nuovo',
+               (esito, reg['pacchetti'][0]['fine'], reg['pacchetti'][-1]['crediti']),
+               ('nuovo', '2026-08-09', 12))
+
+        # --- la scadenza ---
+        reg = {'pacchetti': [aperto(12, ['2026-09-30'], fatturato='si - #105', fattura_numero=105,
+                                    scade='2026-10-01')], 'esclusi': []}
+        S.aggiungi_sessione(reg, 'giulia', '2026-10-01', 'Giulia', 'ev-2')
+        _check(r, cat, 'il giorno della scadenza la seduta entra ancora',
+               (len(reg['pacchetti']), len(reg['pacchetti'][0]['sessioni'])), (1, 2))
+        S.aggiungi_sessione(reg, 'giulia', '2026-10-02', 'Giulia', 'ev-3')
+        vecchio, nuovo = reg['pacchetti'][0], reg['pacchetti'][-1]
+        _check(r, cat, 'il giorno dopo il pacchetto si chiude scaduto, e le sedute rimaste si perdono',
+               (vecchio.get('fine'), vecchio.get('scaduto'), vecchio['rimasti'],
+                len(vecchio['sessioni'])), ('2026-10-01', True, 10, 2))
+        _check(r, cat, 'e la seduta apre il pacchetto dopo, da fatturare',
+               (nuovo['id'], nuovo['fatturato'], len(nuovo['sessioni'])), ('GIU-02', 'no', 1))
+
+        # --- dalla fattura: le righe, e le frasi per chi fattura ---
+        reg = {'pacchetti': [], 'esclusi': []}
+        dette = _senza_scoppiare(lambda: S.sedute_dalla_fattura(
+            reg, 'giulia', 106, '2026-09-14', [(PACCHETTO, 1, 180000)]))
+        _check(r, cat, 'la fattura col pacchetto apre le sedute e lo dice',
+               ([f for f, _v in dette] if isinstance(dette, list) else dette,
+                [p['crediti'] for p in reg['pacchetti']]),
+               (['Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.'], [12]))
+        _check(r, cat, 'una riga che non arriva a una seduta non tocca niente',
+               (_senza_scoppiare(lambda: S.sedute_dalla_fattura(
+                   reg, 'giulia', 107, '2026-09-14', [(PACCHETTO, Decimal('0.05'), 9000)])),
+                len(reg['pacchetti'])), ([], 1))
+    finally:
+        S._CONFIG = prima
+
+    for frase in sorted(set(frasi)):
+        _check(r, cat, f'«{frase[:40]}…» si legge anche in inglese e in tedesco',
+               (L.t(frase, 'en') != frase, L.t(frase, 'de') != frase), (True, True))
+
+    # --- quali righe portano sedute ---
+    con = _db_servizi()
+    for nome, sedute, ogni_mese in (('12 Sessions Pack', 12, 0), ('Abo con sedute', 4, 1),
+                                    ('Consulenza', 0, 0)):
+        con.execute('INSERT INTO servizi(nome, prezzo_cents, ogni_mese, sedute) VALUES(?,?,?,?)',
+                    (nome, 10000, ogni_mese, sedute))
+    ids = {x['nome']: x['id'] for x in con.execute('SELECT id, nome FROM servizi')}
+    righe = [{'servizio_id': ids['12 Sessions Pack'], 'qty': 1, 'total_cents': 180000},
+             {'servizio_id': ids['Consulenza'], 'qty': 1, 'total_cents': 9000},
+             {'servizio_id': ids['Abo con sedute'], 'qty': 1, 'total_cents': 11000},
+             {'servizio_id': None, 'qty': 1, 'total_cents': 500},
+             {'servizio_id': 0, 'qty': 1, 'total_cents': 500}]
+    _check(r, cat, 'portano sedute solo le righe di un servizio che le comprende',
+           _senza_scoppiare(lambda: [(s['nome'], q, t) for s, q, t in SR.righe_con_sedute(con, righe)]),
+           [('12 Sessions Pack', 1, 180000), ('Abo con sedute', 1, 11000)])
+    con.close()
+
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app.py'),
+              encoding='utf-8') as f:
+        sorgente = f.read()
+    corpo = sorgente[sorgente.index('def _crea_fattura'):]
+    corpo = corpo[:corpo.index('\n@app.route')]
+    _check(r, cat, 'la nuova fattura manda le sedute dalle righe, non dall’importo',
+           ('sedute_dalla_fattura' in corpo, 'analizza_fattura' in corpo, 'aggancia_fattura' in corpo),
+           (True, False, False))
+    _check(r, cat, 'il riconoscimento per importo non c’è più',
+           [n for n in ('riconosci_pacchetto', 'analizza_fattura', 'aggancia_fattura',
+                        '_candidati_per_fattura', 'PAROLE_PACCHETTO') if hasattr(S, n)], [])
 
 
 def _test_migrazione_servizi(r):

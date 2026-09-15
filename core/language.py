@@ -1265,6 +1265,17 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Sedute dai servizi': 'Sessions from services',
+        'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
+            'Opened pack {pid} for {nome}: {crediti} sessions available.',
+        'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.':
+            'Linked to pack {pid} of {nome}, which still has {rimasti} sessions.',
+        '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima seduta utile.':
+            '{nome} still has sessions on pack {pid}: this invoice waits and will open the next pack at the first session that comes.',
+        'Nel calendario «{nome}» è anche il nome di un altro cliente: scrivi nella scheda del cliente come compare nel calendario, per esempio «{nome} R.».':
+            'In the calendar «{nome}» is also the name of another client: write in the client card how they appear in the calendar, for example «{nome} R.».',
+        'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
+            'I could not update the sessions for this invoice: have a look at the Credits page.',
         'Migrazione dei servizi': 'Services migration',
         'da riprovare': 'to retry',
         'Aggiornamento dei servizi non riuscito': 'Services update failed',
@@ -2681,6 +2692,17 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Sedute dai servizi': 'Sitzungen aus Leistungen',
+        'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
+            'Paket {pid} für {nome} eröffnet: {crediti} Sitzungen verfügbar.',
+        'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.':
+            'Mit Paket {pid} von {nome} verknüpft, das noch {rimasti} Sitzungen hat.',
+        '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima seduta utile.':
+            '{nome} hat noch Sitzungen auf Paket {pid}: diese Rechnung wartet und öffnet das nächste Paket bei der ersten passenden Sitzung.',
+        'Nel calendario «{nome}» è anche il nome di un altro cliente: scrivi nella scheda del cliente come compare nel calendario, per esempio «{nome} R.».':
+            'Im Kalender ist «{nome}» auch der Name einer anderen Person: schreib in der Kundenkarte, wie sie im Kalender heisst, zum Beispiel «{nome} R.».',
+        'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
+            'Ich konnte die Sitzungen für diese Rechnung nicht aktualisieren: schau auf der Seite Guthaben nach.',
         'Migrazione dei servizi': 'Übernahme der Leistungen',
         'da riprovare': 'wird wiederholt',
         'Aggiornamento dei servizi non riuscito': 'Aktualisierung der Leistungen fehlgeschlagen',

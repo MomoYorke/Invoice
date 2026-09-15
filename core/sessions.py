@@ -17,6 +17,8 @@ import json
 import shutil
 import datetime
 
+from dateutil.relativedelta import relativedelta
+
 from .money import fmt_chf
 
 from . import db as _db
@@ -367,21 +369,39 @@ def ricalcola(p):
     return p
 
 
+def chiudi_scaduto(p):
+    """Chiude un pacchetto scaduto: le sedute rimaste si perdono."""
+    p['fine'] = p['scade']
+    p['scaduto'] = True
+    ricalcola(p)
+    return p
+
+
+def _apri_successivo(reg, chiave, data):
+    """Il pacchetto dopo: con le sedute della fattura in attesa, se ce n'e' una."""
+    attesa = _prima_prepagata(reg, chiave)
+    p = apri_pacchetto(reg, chiave, data,
+                       crediti=attesa.get('sedute') if isinstance(attesa, dict) else None)
+    usa_prepagata(reg, chiave, p)
+    return p
+
+
 def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=None):
-    """Aggiunge una sessione al pacchetto aperto, aprendo il successivo se pieno.
-    Ritorna (pacchetto, aperto_nuovo: bool)."""
+    """Aggiunge una sessione al pacchetto aperto, aprendo il successivo se e'
+    pieno o scaduto. Ritorna (pacchetto, aperto_nuovo: bool)."""
     p = pacchetto_aperto_di(reg, chiave)
     aperto_nuovo = False
+    if p is not None and p.get('scade') and data > p['scade']:
+        chiudi_scaduto(p)
+        p = None
     if p is None:
-        p = apri_pacchetto(reg, chiave, data)
-        usa_prepagata(reg, chiave, p)
+        p = _apri_successivo(reg, chiave, data)
         aperto_nuovo = True
     elif len(p.get('sessioni', [])) >= p['crediti']:
         # pacchetto pieno: si chiude e si apre il successivo (spec 6.1 punto 7)
         p['fine'] = max(s['data'] for s in p['sessioni'])
         ricalcola(p)
-        p = apri_pacchetto(reg, chiave, data)
-        usa_prepagata(reg, chiave, p)
+        p = _apri_successivo(reg, chiave, data)
         aperto_nuovo = True
     p.setdefault('sessioni', []).append({
         'n': len(p.get('sessioni', [])) + 1,
@@ -474,118 +494,150 @@ def collega_fattura(reg, pacchetto_id, numero_fattura, chiudi=True):
     return p, nuovo
 
 
-# ------------------------------------------------------------------ aggancio automatico
-def _candidati_per_fattura(client_name):
-    """Clienti-crediti la cui fattura e' intestata a questo nome."""
-    low = (client_name or '').lower()
-    out = []
-    for chiave, cfg in clienti().items():
-        intestatario = cfg['fattura_a'] or cfg['nome']
-        if intestatario.lower() in low or cfg['nome'].lower() in low:
-            out.append(chiave)
-    return out
+# ------------------------------------------------------------------ sedute dalla fattura
+# Le sedute le porta la riga del servizio venduto: quante, a che prezzo, fino a
+# quando. Prima una fattura diventava un pacchetto se il totale era uno dei
+# prezzi scritti a mano per quel cliente, e bastava uno sconto per perderle.
+
+def sedute_della_riga(servizio, qty, total_cents=None):
+    """Quante sedute compra una riga: le sedute del servizio per la quantita',
+    per difetto.
+
+    L'eccezione e' la quantita' che conta le sedute invece dei pacchetti
+    («12 × 150.-» per il pacchetto da 12). Lo dice il totale, che e' il prezzo
+    di un pacchetto e non di dodici; senza prezzo, la quantita' uguale alle
+    sedute del servizio."""
+    n = int(servizio['sedute'] or 0)
+    try:
+        q = float(qty)
+    except (TypeError, ValueError):
+        q = 1.0
+    if n <= 0 or q <= 0:
+        return 0
+    prezzo = servizio['prezzo_cents']
+    if q > 1:
+        if prezzo and total_cents is not None:
+            if abs(total_cents - prezzo) < abs(total_cents - prezzo * q):
+                return int(q)
+        elif q == n:
+            return n
+    return int(n * q)
 
 
-# Parole che indicano "questa fattura compra un pacchetto di sessioni"
-PAROLE_PACCHETTO = ('sessions pack', 'session pack', 'sessions -', 'credits',
-                    'crediti', 'add-on', 'addon', 'pacchetto')
+def dati_del_servizio(servizio, data):
+    """Quello che un pacchetto si porta dietro dal servizio, al momento della
+    fattura: il prezzo a seduta di allora e il giorno in cui scade."""
+    n = int(servizio['sedute'] or 0)
+    prezzo = servizio['prezzo_cents']
+    mesi = int(servizio['scadenza_mesi'] or 0)
+    scade = None
+    if mesi > 0:
+        scade = (datetime.date.fromisoformat(data) + relativedelta(months=mesi)).isoformat()
+    return {'servizio_id': servizio['id'],
+            'prezzo_seduta_cents': prezzo // n if prezzo and n else None,
+            'scade': scade}
 
 
-def riconosci_pacchetto(client_name, total_cents):
-    """Chiave cliente se l'importo corrisponde a un prezzo di pacchetto noto."""
-    if total_cents is None:
-        return None
-    for chiave in _candidati_per_fattura(client_name):
-        if total_cents in (cliente(chiave) or {}).get('prezzi', []):
-            return chiave
-    return None
+def _paga(p, numero, sedute, dati, nota=None):
+    """La fattura paga il pacchetto: numero, sedute della riga, dati del servizio."""
+    p['fatturato'] = f'si - #{numero}'
+    p['fattura_numero'] = numero
+    if sedute:
+        # mai meno delle sedute gia' fatte: quelle ci sono state
+        p['crediti'] = max(int(sedute), len(p.get('sessioni', [])))
+    p.update(dati)
+    if nota:
+        p['nota'] = nota
+    ricalcola(p)
 
 
-def analizza_fattura(client_name, total_cents, descrizioni=()):
-    """Capisce che tipo di fattura e' e cosa deve succedere ai crediti.
+def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
+    """Le sedute di una riga «una volta» entrano nel registro. Tre casi:
 
-    Ritorna un dict:
-      chiave         cliente-crediti coinvolto (o None)
-      e_pacchetto    True se la fattura compra un pacchetto di sessioni
-      prezzo_ok      True se l'importo corrisponde al prezzo abituale
-      prezzo_atteso  lista dei prezzi noti per quel cliente (centesimi)
-      ha_crediti     True se l'intestatario ha pacchetti a crediti
-    """
-    testo = ' '.join(descrizioni).lower()
-    candidati = _candidati_per_fattura(client_name)
-    res = {'chiave': None, 'e_pacchetto': False, 'prezzo_ok': False,
-           'prezzo_atteso': [], 'ha_crediti': bool(candidati)}
+      - pacchetto aperto non ancora pagato -> la fattura lo paga, con le sedute della riga
+      - pacchetto aperto gia' pagato       -> la fattura aspetta in `prepagate`
+      - nessun pacchetto, o finito         -> ne nasce uno nuovo, gia' pagato
 
-    # 1) l'importo corrisponde a un prezzo noto: caso pulito
-    chiave = riconosci_pacchetto(client_name, total_cents)
-    if chiave:
-        res.update(chiave=chiave, e_pacchetto=True, prezzo_ok=True,
-                   prezzo_atteso=cliente(chiave)['prezzi'])
-        return res
-
-    # 2) la descrizione dice che e' un pacchetto, ma l'importo e' inatteso
-    if candidati and any(w in testo for w in PAROLE_PACCHETTO):
-        supplemento = [k for k in candidati if (cliente(k) or {}).get('compagno')]
-        if 'add-on' in testo or 'addon' in testo:
-            scelto = supplemento[0] if supplemento else candidati[0]
-        else:
-            # il cliente "proprio", cioe' quello che non e' un supplemento
-            scelto = next((k for k in candidati if k not in supplemento), candidati[0])
-        res.update(chiave=scelto, e_pacchetto=True, prezzo_ok=False,
-                   prezzo_atteso=(cliente(scelto) or {}).get('prezzi', []))
-    return res
-
-
-def aggancia_fattura(reg, client_name, numero, total_cents, data=None):
-    """Collega automaticamente una fattura appena emessa al pacchetto giusto.
-
-    Tre casi:
-      - nessun pacchetto aperto (o esaurito) -> ne apre uno nuovo, gia' pagato
-      - pacchetto aperto e senza fattura     -> registra la fattura su quello
-      - pacchetto aperto e gia' collegato    -> la mette in attesa: verra' usata
-                                                dal pacchetto successivo
-    Ritorna (esito, messaggio) con esito in {None,'nuovo','collegato','in_attesa'}.
-    """
-    chiave = riconosci_pacchetto(client_name, total_cents)
-    if not chiave:
-        return None, None
+    Ritorna (esito, (frase, valori))."""
     nome = nome_cliente(chiave)
+    dati = dati_del_servizio(servizio, data)
     p = pacchetto_aperto_di(reg, chiave)
-
+    if p is not None and p.get('scade') and data > p['scade']:
+        chiudi_scaduto(p)
+        p = None
     if p is not None and p['crediti'] - len(p.get('sessioni', [])) > 0:
-        # si attacca al pacchetto in corso SOLO se quello non risulta gia' pagato:
-        # altrimenti questa fattura sta comprando il pacchetto successivo
         if not e_saldato(p):
-            p['fatturato'] = f'si - #{numero}'
-            p['fattura_numero'] = numero
+            _paga(p, numero, sedute, dati)
             return 'collegato', (
-                'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} crediti.',
-                {'pid': p['id'], 'nome': nome,
-                 'rimasti': p['crediti'] - len(p.get('sessioni', []))})
-        reg.setdefault('prepagate', {})[chiave] = numero
+                'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.',
+                {'pid': p['id'], 'nome': nome, 'rimasti': p['rimasti']})
+        prepagate = reg.setdefault('prepagate', {})
+        attese = prepagate.get(chiave)
+        if not isinstance(attese, list):
+            attese = [] if attese in (None, '') else [attese]
+        attese.append(dict(numero=numero, sedute=int(sedute), **dati))
+        prepagate[chiave] = attese
         return 'in_attesa', (
-            '{nome} ha ancora crediti sul pacchetto {pid}: questa fattura resta in '
-            'attesa e aprirà il pacchetto successivo alla prima sessione utile.',
+            '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa '
+            'e aprirà il pacchetto successivo alla prima seduta utile.',
             {'nome': nome, 'pid': p['id']})
-
-    # pacchetto esaurito o inesistente: la fattura ne apre uno nuovo, gia' pagato
     if p is not None:
         p['fine'] = max((x['data'] for x in p.get('sessioni', [])), default=None) or p['inizio']
         ricalcola(p)
-    nuovo = apri_pacchetto(reg, chiave, data or datetime.date.today().isoformat())
-    nuovo['fatturato'] = f'si - #{numero}'
-    nuovo['fattura_numero'] = numero
-    nuovo['nota'] = f'Aperto dalla fattura #{numero}'
-    return 'nuovo', ('Aperto il pacchetto {pid} per {nome}: {crediti} crediti '
-                     'disponibili.',
+    nuovo = apri_pacchetto(reg, chiave, data, crediti=int(sedute))
+    _paga(nuovo, numero, sedute, dati, nota=f'Aperto dalla fattura #{numero}')
+    return 'nuovo', ('Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.',
                      {'pid': nuovo['id'], 'nome': nome, 'crediti': nuovo['crediti']})
 
 
+def _prima_prepagata(reg, chiave):
+    """La prima fattura in attesa per quel cliente, senza toglierla: un
+    dizionario, un numero (la forma vecchia) oppure None."""
+    attese = (reg.get('prepagate') or {}).get(chiave)
+    if isinstance(attese, list):
+        return attese[0] if attese else None
+    return attese or None
+
+
 def usa_prepagata(reg, chiave, pacchetto):
-    """Se c'era una fattura in attesa per quel cliente, la applica al pacchetto nuovo."""
-    numero = (reg.get('prepagate') or {}).pop(chiave, None)
-    if numero:
+    """Se c'era una fattura in attesa per quel cliente, la applica al pacchetto nuovo.
+
+    `prepagate` era {chiave: numero}; ora e' {chiave: [attese]}, la piu' vecchia
+    prima. La forma vecchia si legge ancora. Ritorna il numero, o None."""
+    attesa = _prima_prepagata(reg, chiave)
+    if attesa is None:
+        return None
+    prepagate = reg['prepagate']
+    if isinstance(prepagate[chiave], list):
+        prepagate[chiave].pop(0)
+        if not prepagate[chiave]:
+            del prepagate[chiave]
+    else:
+        del prepagate[chiave]
+    if isinstance(attesa, dict):
+        numero = attesa['numero']
+        _paga(pacchetto, numero, attesa.get('sedute'),
+              {k: attesa.get(k) for k in ('servizio_id', 'prezzo_seduta_cents', 'scade')})
+    else:
+        numero = attesa
         pacchetto['fatturato'] = f'si - #{numero}'
         pacchetto['fattura_numero'] = numero
-        pacchetto['nota'] = f'Pagato dalla fattura #{numero} (emessa in anticipo)'
+    pacchetto['nota'] = f'Pagato dalla fattura #{numero} (emessa in anticipo)'
     return numero
+
+
+def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=None):
+    """Le sedute delle righe di una fattura appena salvata.
+
+    righe: [(servizio, quantita', totale)] da services.righe_con_sedute.
+    Ritorna le frasi da mostrare a chi fattura: [(frase, valori)]."""
+    frasi = []
+    for servizio, qty, totale in righe:
+        if servizio['ogni_mese']:
+            continue
+        sedute = sedute_della_riga(servizio, qty, totale)
+        if sedute <= 0:
+            continue
+        _esito, frase = aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio)
+        frasi.append(frase)
+    return frasi

@@ -536,6 +536,15 @@ def _crea_fattura(con):
                      it['unit_cents'], it['total_cents'], it['servizio_id']))
         if it['ricorda']:
             srv.ricorda(con, it['description'], it['servizio_id'])
+    # le sedute vanno al cliente della fattura: la sua chiave nasce qui, insieme
+    # alla fattura, la prima volta che compra un servizio con sedute
+    righe_sedute = srv.righe_con_sedute(con, items)
+    chiave_sedute, doppione = (db.assegna_chiave_sedute(con, client['id'])
+                               if righe_sedute else (None, False))
+    giorno_rinnovo = None
+    if ric_id:
+        regola = con.execute('SELECT giorno FROM ricorrenti WHERE id=?', (ric_id,)).fetchone()
+        giorno_rinnovo = regola['giorno'] if regola else None
     con.commit()
     con.close()
     lg = _lingua_app()
@@ -544,37 +553,26 @@ def _crea_fattura(con):
     if nel_cestino:
         msg += lng.t(' Il numero #{n} è stato riusato da una fattura nel Cestino.',
                      lg).format(n=number)
-    # --- crediti: si aggiornano da soli, e se qualcosa non torna lo dicono ---
+    # --- sedute: le porta la riga del servizio venduto ---
     avviso = None
-    try:
-        reg = sess.carica()
-        info = sess.analizza_fattura(client['name'], total,
-                                     [it['description'] for it in items])
-        if info['e_pacchetto'] and info['prezzo_ok']:
-            esito, dettaglio = sess.aggancia_fattura(reg, client['name'], number,
-                                                     total, date_iso)
-            if esito:
-                sess.salva(reg)
-                frase, valori = dettaglio
-                msg += ' 🎟️ ' + lng.t(frase, lg).format(**valori)
-        elif info['e_pacchetto'] and not info['prezzo_ok']:
-            # sembra un pacchetto ma l'importo non e' quello solito: NON tocco i crediti
-            attesi = ' o '.join(fmt_chf(x) for x in info['prezzo_atteso']) or '—'
-            avviso = lng.t(
-                '⚠️ Crediti NON aggiornati. Questa sembra una fattura-pacchetto per '
-                '{chi}, ma il totale è {tot} mentre il pacchetto costa {attesi}. '
-                'Controlla la quantità e il prezzo: per un pacchetto da {crediti} '
-                'crediti la quantità di solito non è 1. Se invece il prezzo è cambiato '
-                'davvero, aggiornalo nella scheda del cliente a crediti.', lg).format(
-                    chi=sess.nome_cliente(info['chiave']), tot=fmt_chf(total),
-                    attesi=attesi, crediti=sess.cliente(info['chiave'])['crediti'])
-        elif info['ha_crediti']:
-            msg += lng.t(' 🎟️ Crediti invariati: questa fattura non compra un '
-                         'pacchetto di sessioni.', lg)
-    except Exception as e:
-        err_logger.error('Aggancio crediti fallito per #%s: %s', number, e)
-        avviso = lng.t('Non sono riuscito ad aggiornare i crediti per questa '
-                       'fattura: controlla la pagina Crediti.', lg)
+    if righe_sedute:
+        try:
+            sess.ricarica()             # la chiave del cliente puo' essere appena nata
+            reg = sess.carica()
+            frasi = sess.sedute_dalla_fattura(reg, chiave_sedute, number, date_iso,
+                                              righe_sedute, periodo, giorno_rinnovo)
+            sess.salva(reg)
+            for frase, valori in frasi:
+                msg += ' ' + lng.t(frase, lg).format(**valori)
+            if doppione:
+                avviso = lng.t('Nel calendario «{nome}» è anche il nome di un altro cliente: '
+                               'scrivi nella scheda del cliente come compare nel calendario, '
+                               'per esempio «{nome} R.».', lg).format(
+                                   nome=sess.nome_cliente(chiave_sedute))
+        except Exception as e:
+            err_logger.error('Sedute non aggiornate per #%s: %s', number, e)
+            avviso = lng.t('Non sono riuscito ad aggiornare le sedute per questa '
+                           'fattura: controlla la pagina Crediti.', lg)
     # --- copia fuori dal Mac: una fattura appena fatta non deve stare in un
     # posto solo nemmeno per un minuto ---
     esito = backup.archivia_fuori(_cartella_backup(), motivo=f'fattura-{number}')
