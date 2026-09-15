@@ -1326,6 +1326,20 @@ def _test_servizi(r):
            SR.di_testo(con, 'Consulenza nutrizionale 01.10.26'), 0)
     con.close()
 
+    # --- le Impostazioni non chiedono più i servizi (spec §5) ---
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'templates', 'settings.html'), encoding='utf-8') as f:
+        impostazioni = f.read()
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    _check(r, 'Servizi', 'le Impostazioni non chiedono più i servizi: stanno in Servizi',
+           [n for n in ('servizi', 'servizi_abbonamento', 'servizi_pacchetto')
+            if 'name="%s"' % n in impostazioni], [])
+    salva = programma[programma.index('def impostazioni():'):]
+    salva = salva[:salva.index('\n@app.route')]
+    _check(r, 'Servizi', 'salvare le Impostazioni non svuota le caselle che mancano dal modulo',
+           'if k not in request.form:' in salva, True)
+
 
 def _db_servizi():
     """Un database in memoria con lo schema vero, colonne nuove comprese.

@@ -71,26 +71,6 @@
       <p class="muted" style="font-size:12px;margin:-4px 0 8px">{{ _('Il registro e il riepilogo li legge chi tiene la tua contabilità, non tu: se usi l’app in una lingua e lei ne legge un’altra, scegli la sua. Gli importi non cambiano mai.') }}</p>
     </div>
   </div>
-  <label for="c-servizi">{{ _('Servizi proposti sulla nuova fattura') }}</label>
-  <textarea id="c-servizi" name="servizi" rows="4"
-            style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
-            placeholder="{{ _('uno per riga, per esempio:') }}&#10;{{ _('Pacchetto 10 sedute') }}&#10;{{ _('Abbonamento mensile') }}">{{ settings.servizi }}</textarea>
-  <span class="muted" style="font-size:11.5px">{{ _("Diventano i pulsanti sopra le righe della fattura. Se lasci vuoto, l'app propone le descrizioni che hai già usato di più. Per gli abbonamenti non scrivere le date: quando scegli il servizio, l'app riprende l'ultima fattura di quel cliente e sposta il periodo avanti di un mese.") }}</span>
-  <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px">
-    <p class="etichetta" style="margin-bottom:2px">{{ _("Servizi che l'app deve riconoscere") }}</p>
-    <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _("A cosa servono: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio e sceglie il testo giusto. Una riga per servizio, così: {esempio} — le parole sono quelle che compaiono nelle righe delle tue fatture. Senza {uguale}, il nome fa anche da parola. Vince la prima riga che riconosce, e gli abbonamenti si provano per primi. {vuoto}, l'app non prova a indovinare: l'email non nomina il servizio e la Dashboard mette tutto in «Altro».").format(
-         esempio='<code>' + _('Nome del servizio = parola, parola') + '</code>',
-         uguale='<code>=</code>',
-         vuoto='<strong>' + _('Se lasci vuoto') + '</strong>') | safe }}</p>
-    <label for="c-servizi_abbonamento" style="font-size:13px">{{ _('In abbonamento — si rinnova ogni mese') }}</label>
-    <textarea id="c-servizi_abbonamento" name="servizi_abbonamento" rows="3"
-              style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
-              placeholder="{{ _('per esempio:') }}&#10;{{ _('Fisioterapia = fisioterapia, seduta') }}&#10;{{ _('Coaching = coaching') }}">{{ settings.servizi_abbonamento }}</textarea>
-    <label for="c-servizi_pacchetto" style="font-size:13px">{{ _('A pacchetto — si compra una volta e si consuma') }}</label>
-    <textarea id="c-servizi_pacchetto" name="servizi_pacchetto" rows="3"
-              style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px"
-              placeholder="{{ _('per esempio:') }}&#10;{{ _('Pacchetto sedute = pacchetto, sedute, session') }}">{{ settings.servizi_pacchetto }}</textarea>
-  </div>
   <label for="c-source_folder">{{ _('Cartella storico (solo lettura)') }}</label>
   <input id="c-source_folder" type="text" name="source_folder" value="{{ settings.source_folder }}"
          placeholder="{{ _('vuoto: nessuno storico da importare') }}">
