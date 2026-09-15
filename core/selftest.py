@@ -2069,6 +2069,57 @@ def _test_migrazione_servizi(r):
         _check(r, cat, 'due tentativi falliti di fila lasciano una sola copia, non due',
                len(glob.glob(os.path.join(cartella2, 'fatture-*.db'))), 1)
 
+        # --- un tentativo interrotto non lascia mai una copia col nome finale ---
+        # Trovato dalla revisione: sqlite3.connect(copia) crea gia' il file
+        # fatture-....db, prima ancora che con.backup ne copi una sola
+        # pagina; se il tentativo si ferma li' (disco pieno, processo ucciso,
+        # database bloccato) quel file resta, e _copia_gia_fatta lo scambia
+        # per una copia buona - non se ne fa mai piu' una vera. Qui si
+        # interrompe subito dopo che il database e' stato scritto per intero
+        # (durante la copia del registro, che viene dopo): anche in questo
+        # caso, meno grave di un backup a meta', il nome finale non deve
+        # comparire finche' anche il registro non e' stato copiato.
+        percorso_db3 = os.path.join(tmp, 'interrotto', 'fatture.db')
+        os.makedirs(os.path.dirname(percorso_db3))
+        con = sqlite3.connect(percorso_db3)
+        con.row_factory = sqlite3.Row
+        con.executescript(D.SCHEMA)
+        D._migrate(con)
+        popola(con, IMPOSTAZIONI, RIGHE)
+        cartella3 = os.path.join(os.path.dirname(percorso_db3), 'backups', M.CARTELLA_COPIE)
+
+        vero_copy2 = M.shutil.copy2
+        chiamate = []
+
+        def copy2_che_si_rompe(src, dst):
+            chiamate.append(1)
+            if len(chiamate) == 1:
+                raise OSError('disco pieno (simulato)')
+            return vero_copy2(src, dst)
+
+        M.shutil.copy2 = copy2_che_si_rompe
+        errori.disabled = True
+        try:
+            interrotta = _senza_scoppiare(lambda: M.esegui(con, percorso_registro))
+        finally:
+            M.shutil.copy2 = vero_copy2
+            errori.disabled = False
+        _check(r, cat, 'un tentativo interrotto dopo aver scritto il database non riesce',
+               interrotta, False)
+        _check(r, cat, 'e non lascia nessun fatture-....db col nome finale',
+               glob.glob(os.path.join(cartella3, 'fatture-*.db')), [])
+        _check(r, cat, 'il tentativo dopo rifa’ davvero la copia',
+               M.esegui(con, percorso_registro), True)
+        copie3 = glob.glob(os.path.join(cartella3, 'fatture-*.db'))
+        _check(r, cat, 'stavolta il file finale c’è, uno solo', len(copie3), 1)
+        vera = sqlite3.connect(copie3[0]) if copie3 else None
+        _check(r, cat, 'e si apre come sqlite, con dentro tutte le fatture',
+               vera.execute('SELECT COUNT(*) FROM invoices').fetchone()[0] if vera else None,
+               len(RIGHE))
+        if vera:
+            vera.close()
+        con.close()
+
         # --- parte da sola all'avvio ---
         # Le regole vuote con fatture presenti fanno scrivere a _migrate le
         # regole di chi ha scritto l'app: qui si vede che non diventano servizi.

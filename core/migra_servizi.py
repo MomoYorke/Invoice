@@ -92,7 +92,14 @@ def copia_di_sicurezza(con, registro_path=None):
     """Copia database e registro prima di toccarli. Ritorna i file scritti.
 
     Stanno in backups/prima-dei-servizi/: la pulizia delle copie tiene solo le
-    ultime 40 dentro backups/, e questa deve restare."""
+    ultime 40 dentro backups/, e questa deve restare. Il database si scrive
+    prima sotto un nome temporaneo fisso, che il pattern `fatture-*.db` di
+    `_copia_gia_fatta` non riconosce; solo quando anche il registro e' stato
+    copiato il file temporaneo diventa `fatture-<data>.db`, con `os.replace`.
+    Cosi' un tentativo interrotto a meta' (disco pieno, processo ucciso,
+    database bloccato) non lascia mai una copia col nome finale: il prossimo
+    tentativo la rifa' da capo, invece di scambiare il rottame per una copia
+    buona e non riprovare mai piu'."""
     riga = next((x for x in con.execute('PRAGMA database_list') if x[1] == 'main'), None)
     percorso = riga[2] if riga else ''
     if not percorso or not con.execute('SELECT 1 FROM invoices LIMIT 1').fetchone():
@@ -100,18 +107,23 @@ def copia_di_sicurezza(con, registro_path=None):
     cartella = os.path.join(os.path.dirname(percorso), 'backups', CARTELLA_COPIE)
     os.makedirs(cartella, exist_ok=True)
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    copia = os.path.join(cartella, f'fatture-{stamp}.db')
-    dest = sqlite3.connect(copia)
+    in_corso = os.path.join(cartella, 'fatture-in-corso.db.tmp')
+    if os.path.exists(in_corso):
+        os.remove(in_corso)     # un tentativo precedente puo' averlo lasciato a meta'
+    dest = sqlite3.connect(in_corso)
     try:
         con.backup(dest)
     finally:
         dest.close()
-    scritti = [copia]
+    scritti = []
     registro = registro_path or sess.REGISTRY
     if os.path.exists(registro):
         copia_reg = os.path.join(cartella, f'sessions-{stamp}.json')
         shutil.copy2(registro, copia_reg)
         scritti.append(copia_reg)
+    copia = os.path.join(cartella, f'fatture-{stamp}.db')
+    os.replace(in_corso, copia)     # solo adesso, con tutto fatto, compare col nome finale
+    scritti.insert(0, copia)
     return scritti
 
 
