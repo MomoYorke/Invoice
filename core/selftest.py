@@ -2057,6 +2057,27 @@ def _test_migrazione_servizi(r):
            _senza_scoppiare(lambda: 'srv.collega_righe(con)' in inspect.getsource(importer.import_all)),
            True)
 
+    # --- chi chiama init() nelle prove non deve leggere il registro vero ---
+    # init() fa girare la migrazione da solo (Passo 4): una prova che scambia
+    # solo D.DB_PATH e non anche S.REGISTRY fa leggere - e a volte copiare,
+    # se il database ha una fattura - il registro delle sedute di chi usa
+    # l'app davvero.
+    def prove_con_init_senza_registro(sorgente):
+        intestazioni = list(re.finditer(r'\ndef (_test_\w+)\(', sorgente))
+        fuori = []
+        for i, m in enumerate(intestazioni):
+            fine = intestazioni[i + 1].start() if i + 1 < len(intestazioni) else len(sorgente)
+            corpo = sorgente[m.start():fine]
+            if re.search(r'\.init\(', corpo) and '.REGISTRY = ' not in corpo:
+                fuori.append(m.group(1))
+        return fuori
+
+    with io.open(os.path.abspath(__file__), encoding='utf-8') as f:
+        sorgente_prove = f.read()
+    _check(r, cat, 'chi chiama init() nelle prove sposta anche il registro delle sedute, '
+                   'non solo il database',
+           prove_con_init_senza_registro(sorgente_prove), [])
+
 
 def _test_servizi_riconosciuti(r):
     """Quali servizi l'app riconosce nelle righe della fattura.
@@ -2604,6 +2625,7 @@ def _test_qr_di_serie(r):
     import shutil
     import tempfile
     from . import db as D
+    from . import sessions as S
 
     fattura = ("INSERT INTO invoices(id, number, client_name) "
                "VALUES(1, 1, 'Tizio');")
@@ -2619,8 +2641,10 @@ def _test_qr_di_serie(r):
          "INSERT INTO settings(key,value) VALUES('qr_fattura','0');" + fattura,   '0'),
     ]
     vero = D.DB_PATH
+    vero_registro = S.REGISTRY
     cartella = tempfile.mkdtemp()
     try:
+        S.REGISTRY = os.path.join(cartella, 'sessions.json')   # il registro vero non si legge
         for i, (nome, prima, atteso) in enumerate(casi):
             D.DB_PATH = os.path.join(cartella, 'p%d.db' % i)
             if prima:
@@ -2635,6 +2659,7 @@ def _test_qr_di_serie(r):
             _check(r, 'QR di serie', nome, avuto, atteso)
     finally:
         D.DB_PATH = vero
+        S.REGISTRY = vero_registro
         shutil.rmtree(cartella, ignore_errors=True)
 
     # ...e la prova che il caso «appena installata» non e\' truccato: su un
@@ -5304,9 +5329,12 @@ def _test_compleanni(r):
 
     # --- il posto nel database ---------------------------------------------
     from . import db as D
+    from . import sessions as S
     vero = D.DB_PATH
+    vero_registro = S.REGISTRY
     cartella = tempfile.mkdtemp()
     try:
+        S.REGISTRY = os.path.join(cartella, 'sessions.json')   # il registro vero non si legge
         D.DB_PATH = os.path.join(cartella, 'nuovo.db')
         con = D.init()
         colonne = [x[1] for x in con.execute('PRAGMA table_info(clients)')]
@@ -5329,6 +5357,7 @@ def _test_compleanni(r):
                dopo, (True, 'Vera Buergi'))
     finally:
         D.DB_PATH = vero
+        S.REGISTRY = vero_registro
         shutil.rmtree(cartella, ignore_errors=True)
 
     # --- la Dashboard e la scheda del cliente passano davvero di qui -------
