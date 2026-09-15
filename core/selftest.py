@@ -6555,6 +6555,27 @@ def _test_abbonamenti(r):
            _senza_scoppiare(lambda: [(x['descrizione'], x['importo_cents'])
                                      for x in A.da_fare(con, d(2026, 9, 14), MESI_DOC)]),
            [('Monthly abo: running coaching 13.09.26 – 12.10.26', 10000)])
+
+    # --- la fattura preparata da un abbonamento porta l'importo e il servizio
+    # veri, non quelli scritti sulla regola (altrimenti l'anteprima mentirebbe) ---
+    import app as APP
+    con.execute("INSERT INTO ricorrenti(id, client_id, descrizione, importo_cents, giorno, dal, "
+                "attiva, servizio_id, stile) VALUES(2, 1, 'Coaching {mese}', 7000, 1, "
+                "'2026-01', 1, 999, 'date')")
+
+    def precompilato(ric_id, mese='2026-09'):
+        with APP.app.test_request_context():
+            pre = APP._precompila_abbonamento(con, ric_id, mese)
+        return (pre['descrizione'], pre['importo'], pre['servizio_id'], pre['client_id'])
+
+    _check(r, 'Abbonamenti', "la fattura preparata porta l'importo e il servizio del "
+                             "servizio, non l'importo scritto sulla regola",
+           _senza_scoppiare(precompilato, 1),
+           ('Monthly abo: running coaching 13.09.26 – 12.10.26', fmt_dash(10000), mensile, 1))
+    _check(r, 'Abbonamenti', "se il servizio non c'è più, la fattura preparata tiene testo "
+                             "e importo della regola, senza servizio",
+           _senza_scoppiare(precompilato, 2),
+           ('Coaching September', fmt_dash(7000), None, 1))
     con.close()
 
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
