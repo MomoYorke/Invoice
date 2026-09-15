@@ -1107,6 +1107,8 @@ def _test_servizi(r):
            SR.servizio_della_riga(con, str(pacco_id), '   '), (None, False))
     _check(r, 'Servizi', 'un servizio che non esiste non si scrive',
            SR.servizio_della_riga(con, '999', 'Consulenza'), (None, False))
+    _check(r, 'Servizi', 'un id troppo grande per sqlite non si scrive',
+           SR.servizio_della_riga(con, '99999999999999999999', 'Consulenza'), (None, False))
     _check(r, 'Servizi', 'scritta a mano, si collega da sola',
            SR.servizio_della_riga(con, '', '12 Sessions Pack 01.10.26'), (pacco_id, False))
     con.close()

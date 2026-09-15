@@ -461,6 +461,10 @@ def servizio_della_riga(con, scelto, descrizione, servizi=None):
         sid = int(scelto or 0)
     except (TypeError, ValueError):
         sid = 0
+    # un id manomesso puo' essere troppo grande per una colonna sqlite:
+    # sqlite3 solleva OverflowError, non ValueError, quando lo si passa a `uno`
+    if sid > 2**63 - 1:
+        sid = 0
     if sid > 0 and uno(con, sid) is not None:
         return sid, True
     return di_testo(con, descrizione, servizi), False
