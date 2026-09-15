@@ -906,6 +906,140 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'una descrizione vuota non somiglia a niente',
            SR.stesso_servizio('', 'Monthly abo'), False)
 
+    # --- la scheda del servizio ---------------------------------------------
+    from . import language as L
+    con = _db_servizi()
+    f = {'nome': ' Monthly  abo ', 'prezzo': '110.-', 'ogni_mese': '1', 'con_sedute': '1',
+         'sedute': '4', 'passano': '1', 'massimo': '6', 'scadono': '1', 'scadenza_mesi': '3'}
+    d = SR.dal_modulo(f)
+    _check(r, 'Servizi', 'il nome si ripulisce dagli spazi', d['nome'], 'Monthly abo')
+    _check(r, 'Servizi', 'il prezzo si legge come in fattura', d['prezzo_cents'], 11000)
+    _check(r, 'Servizi', 'una domanda che non si vede non vale: ogni mese non scade',
+           d['scadenza_mesi'], 0)
+    _check(r, 'Servizi', "senza sedute non passano e non c'è massimo",
+           {k: v for k, v in SR.dal_modulo(dict(f, con_sedute='0')).items()
+            if k in ('sedute', 'passano', 'massimo')},
+           {'sedute': 0, 'passano': 0, 'massimo': 0})
+    _check(r, 'Servizi', 'la scheda giusta non ha niente da ridire', SR.controlla(con, d), [])
+    guasti = (
+        (dict(f, nome='  '), 'senza nome non si salva'),
+        (dict(f, prezzo=''), 'senza prezzo non si salva'),
+        (dict(f, prezzo='boh'), 'un prezzo che non si capisce non si salva'),
+        (dict(f, sedute='0'), 'zero sedute con «Sì» non si salva'),
+        (dict(f, sedute='100'), 'più di 99 sedute non si salva'),
+        (dict(f, massimo='3'), 'un massimo sotto le sedute del mese non si salva'),
+        (dict(f, ogni_mese='0', scadenza_mesi='61'), 'più di 60 mesi di scadenza non si salva'),
+        (dict(f, ogni_mese='0', scadenza_mesi='0'), 'zero mesi di scadenza non si salva'))
+    for guasto, desc in guasti:
+        _check(r, 'Servizi', desc, len(SR.controlla(con, SR.dal_modulo(guasto))), 1)
+
+    sid = SR.salva(con, d)
+    _check(r, 'Servizi', 'salvato, si rilegge uguale',
+           {k: SR.uno(con, sid)[k] for k in ('nome', 'prezzo_cents', 'ogni_mese', 'sedute',
+                                              'passano', 'massimo', 'attivo')},
+           {'nome': 'Monthly abo', 'prezzo_cents': 11000, 'ogni_mese': 1, 'sedute': 4,
+            'passano': 1, 'massimo': 6, 'attivo': 1})
+    doppio = SR.controlla(con, SR.dal_modulo(dict(f, nome='MONTHLY ABO')))
+    _check(r, 'Servizi', 'lo stesso nome, maiuscole a parte, non si ripete', len(doppio), 1)
+    _check(r, 'Servizi', 'ma la scheda stessa si risalva col suo nome',
+           SR.controlla(con, d, sid), [])
+    frasi = {fr for fr, _v in doppio}
+    for guasto, _desc in guasti:
+        frasi |= {fr for fr, _v in SR.controlla(con, SR.dal_modulo(guasto))}
+    _check(r, 'Servizi', 'ogni rimprovero della scheda è tradotto',
+           sorted(x for x in frasi if x not in L.TESTI['en'] or x not in L.TESTI['de']), [])
+
+    SR.archivia(con, sid)
+    _check(r, 'Servizi', '«Non lo vendo più» lo toglie dai pulsanti',
+           [s['id'] for s in SR.tutti(con, solo_attivi=True)], [])
+    _check(r, 'Servizi', 'ma resta nella storia', [s['id'] for s in SR.tutti(con)], [sid])
+    _check(r, 'Servizi', 'un servizio che non si vende più libera il nome',
+           SR.controlla(con, SR.dal_modulo(dict(f, nome='Monthly abo'))), [])
+    altro = SR.salva(con, SR.dal_modulo(dict(f, nome='monthly ABO')))
+    _check(r, 'Servizi', 'e non si riprende se il nome ora è di un altro',
+           (SR.archivia(con, sid, attivo=1), SR.uno(con, sid)['attivo']), (False, 0))
+    con.execute('DELETE FROM servizi WHERE id=?', (altro,))
+    _check(r, 'Servizi', 'il massimo proposto è le sedute più la metà, per eccesso',
+           [SR.massimo_proposto(n) for n in (0, 1, 4, 5)], [0, 2, 6, 8])
+    _check(r, 'Servizi', 'ogni mese scrive come un abbonamento, una volta come un pacchetto',
+           (SR.modello({'ogni_mese': 1}), SR.modello({'ogni_mese': 0}), SR.modello(None)),
+           ('coaching', 'pt', 'pt'))
+
+    # --- la frase che dice in parole cosa hai scritto ------------------------
+    mese = {'prezzo_cents': 11000, 'ogni_mese': 1, 'sedute': 4, 'scadenza_mesi': 0,
+            'passano': 1, 'massimo': 6}
+    _check(r, 'Servizi', 'la frase della scheda dice tutto in parole', SR.riassunto(mese),
+           '110.00 CHF al mese. Ogni mese 4 sedute; quelle non usate passano al mese dopo, '
+           'ma in un mese non se ne possono avere più di 6.')
+    _check(r, 'Servizi', 'e in inglese', SR.riassunto(mese, 'en'),
+           '110.00 CHF a month. Every month 4 sessions; unused ones carry over to the next '
+           'month, but no more than 6 can be held in a month.')
+    pacco = {'prezzo_cents': 180000, 'ogni_mese': 0, 'sedute': 12, 'scadenza_mesi': 6,
+             'passano': 0, 'massimo': 0}
+    _check(r, 'Servizi', 'un pacchetto che scade, in tedesco', SR.riassunto(pacco, 'de'),
+           "1'800.00 CHF, einmalig. 12 Sitzungen, gültig für 6 Monate.")
+    _check(r, 'Servizi', 'una seduta sola si scrive al singolare',
+           SR.riassunto(dict(pacco, sedute=1, scadenza_mesi=1)),
+           "1'800.00 CHF, una volta. 1 seduta, da usare entro 1 mese.")
+    _check(r, 'Servizi', 'che si perdono, senza scadenza',
+           (SR.riassunto(dict(mese, passano=0)), SR.riassunto(dict(pacco, scadenza_mesi=0))),
+           ('110.00 CHF al mese. Ogni mese 4 sedute; quelle non usate si perdono.',
+            "1'800.00 CHF, una volta. 12 sedute, senza scadenza."))
+    _check(r, 'Servizi', "la riga dell'elenco è corta",
+           (SR.riga_breve(pacco), SR.riga_breve(dict(mese, sedute=0)),
+            SR.riga_breve(mese), SR.riga_breve(dict(pacco, prezzo_cents=None))),
+           ("1'800.00 CHF · 12 sedute", '110.00 CHF al mese',
+            '110.00 CHF al mese · 4 sedute al mese', 'manca il prezzo · 12 sedute'))
+
+    # --- quale servizio vende una riga scritta a mano ------------------------
+    pt = SR.salva(con, SR.dal_modulo({'nome': 'Personal Training', 'prezzo': '150',
+                                      'ogni_mese': '0', 'con_sedute': '1', 'sedute': '1'}))
+    pacco12 = SR.salva(con, SR.dal_modulo({
+        'nome': '12 Sessions Pack – Personal Training', 'prezzo': "1'800",
+        'ogni_mese': '0', 'con_sedute': '1', 'sedute': '12'}))
+    _check(r, 'Servizi', 'il nome dentro il testo collega la riga',
+           SR.di_testo(con, 'Personal Training 14.09.26'), pt)
+    _check(r, 'Servizi', 'con due nomi dentro vince il più lungo',
+           SR.di_testo(con, '"12 Sessions Pack – Personal Training"'), pacco12)
+    _check(r, 'Servizi', 'maiuscole, virgolette e date non contano',
+           SR.di_testo(con, '«PERSONAL TRAINING» 01.09.26 – 30.09.26'), pt)
+    _check(r, 'Servizi', 'un nome dentro una parola più lunga non conta',
+           SR.di_testo(con, 'Personal Trainings'), None)
+    _check(r, 'Servizi', 'una riga libera resta libera', SR.di_testo(con, 'Consulenza'), None)
+    _check(r, 'Servizi', 'uno sconto non vende niente',
+           SR.di_testo(con, 'Personal Training discount'), None)
+    SR.ricorda(con, 'Consulenza 01.10.26', 0)
+    _check(r, 'Servizi', '«nessun servizio» deciso una volta si ricorda',
+           SR.di_testo(con, 'consulenza'), 0)
+    SR.ricorda(con, 'Pacchetto speciale', pacco12)
+    _check(r, 'Servizi', 'e anche un servizio scelto a mano',
+           SR.di_testo(con, 'Pacchetto speciale'), pacco12)
+
+    con.execute("INSERT INTO clients(id, key, name) VALUES(1, 'giulia', 'Giulia Ferrari')")
+    for n, (data, desc, unit, tot) in enumerate((
+            ('2026-07-01', '12 Sessions Pack – Personal Training', 15000, 180000),
+            ('2026-08-01', 'Personal Training', 15000, 15000),
+            ('2026-09-01', '12 Sessions Pack – Personal Training', 15000, 175000),
+            ('2026-09-02', 'Consulenza', 5000, 5000)), 1):
+        con.execute('INSERT INTO invoices(id, number, client_id, client_name, date, year, '
+                    'total_cents) VALUES(?,?,1,?,?,2026,?)',
+                    (n, n, 'Giulia Ferrari', data, tot))
+        con.execute('INSERT INTO items(invoice_id, pos, qty, description, unit_cents, '
+                    "total_cents) VALUES(?,0,'1',?,?,?)", (n, desc, unit, tot))
+    _check(r, 'Servizi', 'collegare le righe scritte a mano le decide tutte',
+           SR.collega_righe(con), 4)
+    _check(r, 'Servizi', 'ognuna col suo servizio, «nessuno» compreso',
+           [x['servizio_id'] for x in con.execute('SELECT servizio_id FROM items ORDER BY id')],
+           [pacco12, pt, pacco12, 0])
+    _check(r, 'Servizi', 'rifarlo non tocca le righe già decise', SR.collega_righe(con), 0)
+    _check(r, 'Servizi', "l'ultima riga di un servizio per quel cliente",
+           SR.ultima_riga(con, 1, pacco12)['total_cents'], 175000)
+    con.execute("UPDATE invoices SET deleted_at='2026-09-03' WHERE id=3")
+    _check(r, 'Servizi', 'una fattura nel Cestino non conta',
+           SR.ultima_riga(con, 1, pacco12)['total_cents'], 180000)
+    _check(r, 'Servizi', 'un servizio fatturato lo sa', SR.fatturato(con, pt), True)
+    con.close()
+
     # l'elenco: prima quello scritto a mano, altrimenti quello che si e' usato di piu'
     con = _db_finto()
     _check(r, 'Servizi', 'i servizi scritti a mano vincono',
@@ -5216,10 +5350,12 @@ def _test_nomi_accentati(r):
 # bisogna scriverlo qui: un gesto piccolo, che pero' obbliga a guardarlo.
 GENTE_FINTA = {
     'Anna', 'Anna Rossi', 'Bruno Keller', 'Caio', 'Céline Favre', 'Elena',
-    'Erika Von Arx', 'Giulia', 'Ignoto', 'Ivan', 'Ivan + Elena', 'Ivana',
-    'Jonas', 'Luca', 'Marco', 'Nina', 'Nina + Pierre', 'Petra Müller',
+    'Erika Von Arx', 'Giulia', 'giulia', 'Ignoto', 'Ivan', 'Ivan + Elena',
+    'Ivana', 'Jonas', 'Luca', 'Marco', 'Nina', 'Nina + Pierre', 'Petra Müller',
     'Pierre', 'Tizia', 'Vera Buergi',
     'client', 'Kunde',            # non persone: «cliente» tradotto
+    'Monthly abo', 'Monthly  abo', 'Personal Training',
+    '12 Sessions Pack – Personal Training',  # non persone: servizi finti (Compito 2)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio
