@@ -24,6 +24,7 @@ import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core import sessions as S
+from core import mensili
 
 CAL_EM_PT = 'cd4f38a7aee2123f09dde5cf8b69a9dc793403e4e7ae56d7931b8019e17e4eac@group.calendar.google.com'
 CAL_ARCHIVIO = '707c70ca25fe3e1525c8a5a0480992fee1dcd67cc58b92222b6a31aeff71d98d@group.calendar.google.com'
@@ -70,7 +71,7 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
     rap = {'finestra': (da.isoformat(), a.isoformat()), 'letti': len(eventi),
            'aggiunte': [], 'duplicati': 0, 'fuori_finestra': 0, 'future': 0,
            'scartati': [], 'cancellati_google': 0, 'nuovi_pacchetti': [],
-           'da_fatturare': []}
+           'da_fatturare': [], 'esclusi_nuovi': []}
 
     # Prima passata: capisco quali clienti si allenano in ciascun giorno.
     # Serve per la regola della coppia (chi si allena in due paga un supplemento).
@@ -109,7 +110,8 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
         if chiave is None:
             rap['scartati'].append((ev['titolo'], motivo))
             continue
-        if chiave in S.ex_clienti() and S.pacchetto_aperto_di(reg, chiave) is None:
+        if (chiave in S.ex_clienti() and S.pacchetto_aperto_di(reg, chiave) is None
+                and mensili.coprente(reg, chiave, ev['data'], crea=False) is None):
             rap['scartati'].append((ev['titolo'], 'ex cliente senza pacchetto aperto'))
             continue
         # a chi va addebitato il credito (regola della coppia)
@@ -126,6 +128,15 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
                 # Un KeyError diverso (dati corrotti: non è questo il caso) non è
                 # una sottoclasse di SenzaPacchetto e continua a fermare la lettura.
                 rap['scartati'].append((ev['titolo'], 'nessun pacchetto da cui scalare'))
+                continue
+            if p is None:
+                # né pacchetto né abbonamento in corso: resta scritta fra gli
+                # esclusi, col suo motivo, e alla lettura dopo non si rilegge
+                rap['esclusi_nuovi'].append({'data': ev['data'], 'titolo': ev['titolo'],
+                                             'cliente': S.nome_cliente(addebito),
+                                             'motivo': mensili.MOTIVO_NESSUN_ABBONAMENTO})
+                if ev['id']:
+                    visti.add(ev['id'])
                 continue
             if nuovo:
                 rap['nuovi_pacchetti'].append(p['id'])

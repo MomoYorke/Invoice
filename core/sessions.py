@@ -21,6 +21,8 @@ from dateutil.relativedelta import relativedelta
 
 from .money import fmt_chf
 
+from . import mensili
+
 from . import db as _db
 
 APP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -287,10 +289,10 @@ def pacchetto_aperto_di(reg, chiave):
 
 
 def id_evento_gia_presente(reg):
-    """Tutti gli ID evento Google gia' registrati (spec 5.5)."""
+    """Tutti gli ID evento gia' registrati (spec 5.5): pacchetti, mesi, esclusi."""
     visti = set()
-    for p in reg['pacchetti']:
-        for s in p.get('sessioni', []):
+    for gruppo in list(reg['pacchetti']) + list(reg.get('mensili') or []):
+        for s in gruppo.get('sessioni', []):
             if s.get('event_id'):
                 visti.add(s['event_id'])
     for e in reg.get('esclusi', []):
@@ -300,7 +302,8 @@ def id_evento_gia_presente(reg):
 
 
 def ultima_data_registrata(reg):
-    date = [s['data'] for p in reg['pacchetti'] for s in p.get('sessioni', []) if s.get('data')]
+    date = [s['data'] for gruppo in list(reg['pacchetti']) + list(reg.get('mensili') or [])
+            for s in gruppo.get('sessioni', []) if s.get('data')]
     return max(date) if date else None
 
 
@@ -397,9 +400,17 @@ def _apri_successivo(reg, chiave, data):
     return p
 
 
-def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=None):
-    """Aggiunge una sessione al pacchetto aperto, aprendo il successivo se e'
-    pieno o scaduto. Ritorna (pacchetto, aperto_nuovo: bool)."""
+def _scade_prima(p, data, mese):
+    """Vero se il pacchetto aperto va usato prima del mese: scade prima che il
+    mese finisca, e ha ancora sedute."""
+    return (p is not None and bool(p.get('scade')) and data <= p['scade'] < mese['al']
+            and len(p.get('sessioni', [])) < p['crediti'])
+
+
+def _nel_pacchetto(reg, chiave, seduta):
+    """La seduta nel pacchetto aperto, aprendo il successivo se e' pieno o
+    scaduto. Ritorna (pacchetto, aperto_nuovo)."""
+    data = seduta['data']
     p = pacchetto_aperto_di(reg, chiave)
     aperto_nuovo = False
     if p is not None and p.get('scade') and data > p['scade']:
@@ -414,8 +425,22 @@ def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=N
         ricalcola(p)
         p = _apri_successivo(reg, chiave, data)
         aperto_nuovo = True
-    p.setdefault('sessioni', []).append({
-        'n': len(p.get('sessioni', [])) + 1,
+    p.setdefault('sessioni', []).append(dict({'n': len(p.get('sessioni', [])) + 1}, **seduta))
+    ricalcola(p)
+    return p, aperto_nuovo
+
+
+def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=None):
+    """Scrive una seduta dove va scalata. L'ordine:
+
+    1. il mese di abbonamento che copre la data, se ha ancora sedute (salvo un
+       pacchetto aperto che scade prima della fine di quel mese);
+    2. il pacchetto aperto, o il successivo, per chi ha pacchetti;
+    3. per chi ha solo abbonamenti, «in piu'» nel mese che copre la data;
+    4. se nessun mese la copre, fra gli esclusi: nessun abbonamento in corso.
+
+    Ritorna (pacchetto o mese, aperto_nuovo), oppure (None, False) se esclusa."""
+    seduta = {
         'data': data,
         'titolo': titolo,
         'cancellata': e_cancellata(titolo),
@@ -423,9 +448,18 @@ def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=N
         **({'ora': ora} if ora else {}),
         **({'event_id': event_id} if event_id else {}),
         **({'nota': nota} if nota else {}),
-    })
-    ricalcola(p)
-    return p, aperto_nuovo
+    }
+    mese = mensili.coprente(reg, chiave, data)
+    p = pacchetto_aperto_di(reg, chiave)
+    if mese is not None and mensili.ha_posto(reg, mese) and not _scade_prima(p, data, mese):
+        return mensili.aggiungi(reg, mese, seduta), False
+    if any(chiave in _chiavi_di(q) for q in reg['pacchetti']):
+        return _nel_pacchetto(reg, chiave, seduta)
+    if mese is not None:
+        return mensili.aggiungi(reg, mese, seduta), False
+    reg.setdefault('esclusi', []).append(dict(seduta, cliente=nome_cliente(chiave), chiave=chiave,
+                                              motivo=mensili.MOTIVO_NESSUN_ABBONAMENTO))
+    return None, False
 
 
 # ------------------------------------------------------------------ vista
@@ -611,7 +645,13 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
                     piazzata, _aperto = aggiungi_sessione(
                         reg, chiave, s['data'], s['titolo'],
                         s.get('event_id'), s.get('nota'), s.get('ora'))
-                    ultima = piazzata['sessioni'][-1]
+                    # piazzata puo' essere un mese: mensili.aggiungi riordina le
+                    # sessioni per data, quindi quella appena messa non e'
+                    # detto che sia l'ultima della lista. E' pero' l'ultima con
+                    # la sua stessa data e titolo, perche' un pacchetto la
+                    # accoda in fondo e l'ordinamento di un mese e' stabile.
+                    ultima = next(x for x in reversed(piazzata['sessioni'])
+                                  if x['data'] == s['data'] and x['titolo'] == s['titolo'])
                     for k, v in s.items():
                         if k != 'n' and k not in ultima:
                             ultima[k] = v
@@ -681,6 +721,10 @@ def usa_prepagata(reg, chiave, pacchetto):
     return numero
 
 
+def _giorno_breve(iso):
+    return datetime.date.fromisoformat(iso).strftime('%d.%m.%Y')
+
+
 def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=None):
     """Le sedute delle righe di una fattura appena salvata.
 
@@ -689,6 +733,11 @@ def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=No
     frasi = []
     for servizio, qty, totale in righe:
         if servizio['ogni_mese']:
+            nome = nome_cliente(chiave)
+            m = mensili.da_fattura(reg, chiave, nome, numero, data, servizio, periodo, giorno)
+            frasi.append(('Sedute di {nome} dal {dal} al {al}: {sedute}.',
+                          {'nome': nome, 'dal': _giorno_breve(m['dal']),
+                           'al': _giorno_breve(m['al']), 'sedute': m['disponibili']}))
             continue
         sedute = sedute_della_riga(servizio, qty, totale)
         if sedute <= 0:

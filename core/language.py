@@ -1265,6 +1265,7 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sessions for {nome} from {dal} to {al}: {sedute}.',
         'Sedute dai servizi': 'Sessions from services',
         'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
             'Opened pack {pid} for {nome}: {crediti} sessions available.',
@@ -2694,6 +2695,7 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sitzungen von {nome} vom {dal} bis {al}: {sedute}.',
         'Sedute dai servizi': 'Sitzungen aus Leistungen',
         'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
             'Paket {pid} für {nome} eröffnet: {crediti} Sitzungen verfügbar.',

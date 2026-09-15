@@ -82,25 +82,31 @@ def aggiorna_da_calendario(urls, da, a):
     return nuovi, errori, nomi
 
 
+def _sedute(reg):
+    """(pacchetto o mese di abbonamento, seduta), per tutte le sedute del registro."""
+    for gruppo in list(reg.get('pacchetti', [])) + list(reg.get('mensili', [])):
+        for s in gruppo.get('sessioni', []):
+            yield gruppo, s
+
+
 def elenco(reg, orari=None, cliente=None, anno=None):
     """Tutte le sessioni del registro, dalla piu' recente, pronte da mostrare."""
     orari = carica_indice() if orari is None else orari
     righe = []
-    for p in reg.get('pacchetti', []):
-        for s in p.get('sessioni', []):
-            data = s.get('data') or ''
-            righe.append({
-                'data': data,
-                'ora': s.get('ora') or orari.get(_chiave(data, s.get('titolo'))),
-                'titolo': (s.get('titolo') or '').strip(),
-                'cliente': p.get('cliente', ''),
-                'pacchetto': p.get('id', ''),
-                'n': s.get('n'),
-                'crediti': p.get('crediti'),
-                'cancellata': bool(s.get('cancellata')),
-                'nota': s.get('nota') or '',
-                'fattura': p.get('fattura_numero'),
-            })
+    for p, s in _sedute(reg):
+        data = s.get('data') or ''
+        righe.append({
+            'data': data,
+            'ora': s.get('ora') or orari.get(_chiave(data, s.get('titolo'))),
+            'titolo': (s.get('titolo') or '').strip(),
+            'cliente': p.get('cliente', ''),
+            'pacchetto': p.get('id', ''),
+            'n': s.get('n'),
+            'crediti': p.get('crediti', p.get('disponibili')),
+            'cancellata': bool(s.get('cancellata')),
+            'nota': s.get('nota') or '',
+            'fattura': p.get('fattura_numero'),
+        })
     if cliente:
         c = cliente.lower()
         righe = [r for r in righe
@@ -114,8 +120,7 @@ def elenco(reg, orari=None, cliente=None, anno=None):
 
 
 def anni(reg):
-    return sorted({s['data'][:4] for p in reg.get('pacchetti', [])
-                   for s in p.get('sessioni', []) if s.get('data')}, reverse=True)
+    return sorted({s['data'][:4] for _gruppo, s in _sedute(reg) if s.get('data')}, reverse=True)
 
 
 def riepilogo(righe):

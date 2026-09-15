@@ -1426,7 +1426,7 @@ def _sincronizza_calendario(forzata=False):
         return 'errore', f'{type(e).__name__}: {e}'
     try:
         rap = sync_sessions.sincronizza(reg, eventi)
-        if rap['aggiunte']:
+        if rap['aggiunte'] or rap.get('esclusi_nuovi'):
             sess.salva(reg)
     except Exception as e:
         err_logger.error('Sincronizzazione crediti fallita: %s', e)

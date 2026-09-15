@@ -869,9 +869,11 @@ def _test_clienti_crediti(r):
                   'stato_google': 'confirmed'}
         rap = _senza_scoppiare(lambda: SY.sincronizza({'pacchetti': [], 'esclusi': []}, [evento],
                                                       oggi=datetime.date(2026, 9, 2)))
-        _check(r, cat, 'la seduta di chi non ha ancora un pacchetto si scarta, e la lettura va avanti',
-               rap.get('scartati') if isinstance(rap, dict) else rap,
-               [('Giulia', 'nessun pacchetto da cui scalare')])
+        _check(r, cat, 'la seduta di chi non ha né pacchetto né abbonamento va fra gli esclusi, '
+                       'e la lettura va avanti',
+               ([e['motivo'] for e in rap.get('esclusi_nuovi', [])], rap.get('aggiunte'))
+               if isinstance(rap, dict) else rap,
+               (['nessun abbonamento in corso'], []))
 
         # Check 2 (revisione I1): un guaio diverso da «nessun pacchetto» — qui
         # un pacchetto aperto senza 'crediti', dati corrotti — non è una
@@ -2142,6 +2144,139 @@ def _test_sedute_dai_servizi(r):
     _check(r, cat, 'il riconoscimento per importo non c’è più',
            [n for n in ('riconosci_pacchetto', 'analizza_fattura', 'aggancia_fattura',
                         '_candidati_per_fattura', 'PAROLE_PACCHETTO') if hasattr(S, n)], [])
+
+    # --- i mesi di sedute degli abbonamenti ---
+    from . import mensili as M
+    from . import schedule as AG
+    ABO = {'id': 9, 'nome': 'Monthly abo', 'prezzo_cents': 22000, 'ogni_mese': 1, 'sedute': 4,
+           'scadenza_mesi': 0, 'passano': 1, 'massimo': 6}
+    ABO_PERSE = dict(ABO, id=10, passano=0, massimo=0)
+    ABO_CORTO = dict(ABO, id=11, nome='Abo corto')
+
+    for argomenti, atteso, perche in (
+            (('2026-09-14', '2026-09', 13), ('2026-09-13', '2026-10-12'),
+             'da un abbonamento, dal rinnovo al giorno prima del rinnovo dopo'),
+            (('2026-09-14',), ('2026-09-14', '2026-10-13'),
+             'da una fattura qualsiasi, dalla sua data a un mese dopo'),
+            (('2026-02-01', '2026-02', 31), ('2026-02-28', '2026-03-30'),
+             'il rinnovo del 31 si accorcia sui mesi corti')):
+        _check(r, cat, f'periodo del mese: {perche}',
+               _senza_scoppiare(lambda: M.periodo_di(*argomenti)), atteso)
+
+    def reg_vuoto():
+        return {'pacchetti': [], 'esclusi': [], 'mensili': []}
+
+    MARCO = dict(GIULIA, id=2, name='Marco Bianchi', chiave_sedute='marco', compagno='giulia')
+    prima = S._CONFIG
+    try:
+        S.configura([GIULIA, MARCO])
+
+        # sedute che passano, col massimo
+        reg = reg_vuoto()
+        m1 = M.da_fattura(reg, 'giulia', 'Giulia', 201, '2026-09-13', ABO, '2026-09', 13)
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-20', 'Giulia', 'ev-1')
+        m2 = M.da_fattura(reg, 'giulia', 'Giulia', 202, '2026-10-13', ABO, '2026-10', 13)
+        _check(r, cat, 'le sedute passano fino al massimo: 4 al mese, massimo 6, se ne usa 1 '
+                       'il mese dopo ne ha 6',
+               (m1['id'], m1['usate'], m2['id'], m2['riportate'], m2['disponibili']),
+               ('GIU-M01', 1, 'GIU-M02', 3, 6))
+
+        # sedute che si perdono, e sedute in più
+        reg = reg_vuoto()
+        M.da_fattura(reg, 'giulia', 'Giulia', 203, '2026-09-13', ABO_PERSE, '2026-09', 13)
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-20', 'Giulia', 'ev-1')
+        m2 = M.da_fattura(reg, 'giulia', 'Giulia', 204, '2026-10-13', ABO_PERSE, '2026-10', 13)
+        _check(r, cat, 'se le sedute non passano, il mese dopo riparte da 4',
+               (m2['riportate'], m2['disponibili']), (0, 4))
+        for i in range(5):
+            S.aggiungi_sessione(reg, 'giulia', '2026-10-%02d' % (14 + i), 'Giulia', f'ev-piu-{i}')
+        _check(r, cat, 'oltre le disponibili la seduta resta scritta, «in più»',
+               (m2['usate'], m2['in_piu'], [s.get('in_piu', False) for s in m2['sessioni']]),
+               (4, 1, [False, False, False, False, True]))
+
+        # un mese senza fattura: le rimaste valgono un periodo, poi finiscono
+        reg = reg_vuoto()
+        M.da_fattura(reg, 'giulia', 'Giulia', 205, '2026-09-13', ABO, '2026-09', 13)
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-20', 'Giulia', 'ev-1')
+        mese, _nuovo = S.aggiungi_sessione(reg, 'giulia', '2026-10-20', 'Giulia', 'ev-2')
+        _check(r, cat, 'un mese senza fattura esiste lo stesso, e ci si usano le rimaste',
+               (mese['dal'], mese['al'], mese['fattura_numero'], mese['disponibili'], mese['usate'])
+               if mese else None, ('2026-10-13', '2026-11-12', None, 3, 1))
+        esito = S.aggiungi_sessione(reg, 'giulia', '2026-11-20', 'Giulia', 'ev-3')
+        _check(r, cat, 'dopo un mese senza fattura non c’è più niente: la seduta va fra gli esclusi',
+               (esito, reg['esclusi'][-1].get('motivo') if reg['esclusi'] else None,
+                len(reg['mensili'])), ((None, False), 'nessun abbonamento in corso', 2))
+
+        # la seduta arrivata prima della fattura rientra quando la fattura arriva
+        reg = reg_vuoto()
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-13', 'Giulia', 'ev-1')
+        m = M.da_fattura(reg, 'giulia', 'Giulia', 206, '2026-09-14', ABO, '2026-09', 13)
+        _check(r, cat, 'la seduta del giorno di rinnovo, registrata prima della fattura, rientra nel mese',
+               (m['usate'], reg['esclusi']), (1, []))
+
+        # l'ordine: prima quello che scade prima
+        reg = reg_vuoto()
+        reg['pacchetti'].append({'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'],
+                                 'crediti': 10, 'inizio': '2026-06-01', 'fine': None,
+                                 'fatturato': 'si - #150', 'fattura_numero': 150,
+                                 'scade': '2026-09-25', 'sessioni': []})
+        M.da_fattura(reg, 'giulia', 'Giulia', 207, '2026-09-13', ABO, '2026-09', 13)
+        corto = M.da_fattura(reg, 'giulia', 'Giulia', 208, '2026-09-01', ABO_CORTO)
+        dove, _n = S.aggiungi_sessione(reg, 'giulia', '2026-09-20', 'Giulia', 'ev-1')
+        _check(r, cat, 'il pacchetto che scade prima della fine del mese si usa per primo',
+               dove['id'] if dove else None, 'GIU-01')
+        reg['pacchetti'][0]['scade'] = '2026-12-31'
+        dove, _n = S.aggiungi_sessione(reg, 'giulia', '2026-09-21', 'Giulia', 'ev-2')
+        _check(r, cat, 'fra due abbonamenti nello stesso giorno, prima quello che finisce prima',
+               (dove['id'] if dove else None, corto['id']), ('GIU-M02', 'GIU-M02'))
+
+        _check(r, cat, 'la regola della coppia non cambia',
+               S.attribuisci('marco', ['marco'])[0], 'giulia')
+
+        # dalla fattura, con la frase per chi fattura
+        reg = reg_vuoto()
+        dette = S.sedute_dalla_fattura(reg, 'giulia', 209, '2026-09-14', [(ABO, 1, 22000)],
+                                       '2026-09', 13)
+        frasi_mese = [f for f, _v in dette]
+        _check(r, cat, 'una fattura «ogni mese» apre il mese di sedute e lo dice',
+               (frasi_mese, dette[0][1] if dette else None, len(reg['mensili'])),
+               (['Sedute di {nome} dal {dal} al {al}: {sedute}.'],
+                {'nome': 'Giulia', 'dal': '13.09.2026', 'al': '12.10.2026', 'sedute': 4}, 1))
+        for frase in frasi_mese:
+            _check(r, cat, f'«{frase[:40]}…» si legge anche in inglese e in tedesco',
+                   (L.t(frase, 'en') != frase, L.t(frase, 'de') != frase), (True, True))
+
+        # il registro sa che quelle sedute ci sono già, e l'Agenda le mostra
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-16', 'Giulia', 'ev-agenda')
+        _check(r, cat, 'le sedute dei mesi contano per non registrarle due volte',
+               ('ev-agenda' in S.id_evento_gia_presente(reg), S.ultima_data_registrata(reg)),
+               (True, '2026-09-16'))
+        _check(r, cat, 'l’Agenda mostra anche le sedute degli abbonamenti',
+               ([x['pacchetto'] for x in AG.elenco(reg, orari={})], AG.anni(reg)),
+               (['GIU-M01'], ['2026']))
+
+        # la seduta in più di aggancia_pacchetto, spostata in un mese che ha già
+        # una seduta più avanti: deve arrivare sulla seduta giusta, non
+        # sull'ultima del mese (l'ordine cambia quando ricalcola_tutti riordina
+        # per data — vedi mensili.ricalcola)
+        reg = reg_vuoto()
+        reg['pacchetti'].append(aperto(10, ['2026-09-01', '2026-09-02', '2026-09-03']))
+        reg['pacchetti'][0]['sessioni'][-1]['segno'] = 'quella-vera'
+        m3 = M.da_fattura(reg, 'giulia', 'Giulia', 301, '2026-09-01', ABO)
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-10', 'Giulia', 'ev-dopo')
+        S.aggancia_pacchetto(reg, 'giulia', 302, '2026-09-05', 2, PACCHETTO)
+        giusta = next((s for s in m3['sessioni'] if s['data'] == '2026-09-03'), None)
+        sbagliata = next((s for s in m3['sessioni'] if s['data'] == '2026-09-10'), None)
+        _check(r, cat, 'la seduta in più spostata da un pacchetto in un mese porta i suoi dati '
+                       'sulla seduta giusta, non sull’ultima del mese',
+               (giusta.get('segno') if giusta else None,
+                sbagliata.get('segno') if sbagliata else None),
+               ('quella-vera', None))
+    finally:
+        S._CONFIG = prima
+
+    _check(r, cat, 'la lettura del calendario salva anche quando una seduta va fra gli esclusi',
+           "rap.get('esclusi_nuovi')" in sorgente, True)
 
 
 def _test_migrazione_servizi(r):
