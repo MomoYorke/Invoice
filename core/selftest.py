@@ -1931,6 +1931,9 @@ def _test_sedute_dai_servizi(r):
             (1, 180000, PACCHETTO, 12, 'un pacchetto'),
             (2, 360000, PACCHETTO, 24, 'due pacchetti'),
             (12, 180000, PACCHETTO, 12, '«12 × 150.-»: la quantità conta le sedute'),
+            (12, 162000, PACCHETTO, 12, 'dodici sedute a tariffa scontata: restano sedute'),
+            (2, 250000, PACCHETTO, 24, 'due pacchetti scontati (il caso del revisore): restano pacchetti'),
+            (2, 180000, PACCHETTO, 24, 'un pacchetto a metà prezzo: resta un pacchetto'),
             (Decimal('0.5'), 90000, PACCHETTO, 6, 'mezzo pacchetto'),
             (Decimal('0.05'), 9000, PACCHETTO, 0, 'meno di una seduta: niente'),
             (0, 0, PACCHETTO, 0, 'quantità zero: niente'),
@@ -2025,6 +2028,72 @@ def _test_sedute_dai_servizi(r):
                 len(vecchio['sessioni'])), ('2026-10-01', True, 10, 2))
         _check(r, cat, 'e la seduta apre il pacchetto dopo, da fatturare',
                (nuovo['id'], nuovo['fatturato'], len(nuovo['sessioni'])), ('GIU-02', 'no', 1))
+
+        # --- la fattura paga meno sedute di quante gia' fatte: le sposta ---
+        date_11 = [f'2026-08-{i:02d}' for i in range(1, 12)]
+        reg = {'pacchetti': [aperto(12, date_11)], 'esclusi': []}
+        reg['pacchetti'][0]['sessioni'][-1].update(event_id='ev-11', ora='09:00',
+                                                    nota='doppia seduta')
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 108, '2026-08-20', 10, PACCHETTO)
+        frasi.append(frase)
+        vecchio, spostato = reg['pacchetti'][0], reg['pacchetti'][1]
+        eventi = [s.get('event_id') for p in reg['pacchetti'] for s in p['sessioni'] if s.get('event_id')]
+        _check(r, cat, 'la fattura chiude il vecchio pacchetto alle sue sedute',
+               (esito, len(reg['pacchetti']), vecchio['crediti'], vecchio.get('fattura_numero'),
+                len(vecchio['sessioni']), vecchio['fine']),
+               ('collegato', 2, 10, 108, 10, date_11[9]))
+        _check(r, cat, 'e sposta la seduta in più nel pacchetto dopo, con i suoi dati intatti',
+               (spostato['sessioni'][0]['n'], spostato['sessioni'][0].get('event_id'),
+                spostato['sessioni'][0].get('ora'), spostato['sessioni'][0].get('nota'),
+                spostato['fatturato'], spostato['crediti']),
+               (1, 'ev-11', '09:00', 'doppia seduta', 'no', 10))
+        _check(r, cat, 'la frase dice quante sedute passano e a quale pacchetto',
+               valori, {'pid': 'GIU-01', 'nome': 'Giulia', 'sedute': 10, 'extra': 1,
+                        'nuovo': spostato['id']})
+        _check(r, cat, 'nessun event_id compare due volte nel registro',
+               len(eventi) == len(set(eventi)), True)
+
+        # --- una seduta dopo la scadenza di una fattura in attesa: il
+        # pacchetto nasce gia' scaduto, e si riprova con la prossima ---
+        reg = {'pacchetti': [aperto(3, ['2026-09-01', '2026-09-02', '2026-09-03'],
+                                    fatturato='si - #110', fattura_numero=110)],
+               'esclusi': [],
+               'prepagate': {'giulia': [
+                   {'numero': 111, 'sedute': 12, 'servizio_id': 7,
+                    'prezzo_seduta_cents': 15000, 'scade': '2026-09-10'},
+                   {'numero': 112, 'sedute': 12, 'servizio_id': 7,
+                    'prezzo_seduta_cents': 15000, 'scade': '2026-12-31'},
+               ]}}
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-15', 'Giulia', 'ev-20')
+        scaduto, pagato = reg['pacchetti'][1], reg['pacchetti'][2]
+        _check(r, cat, 'la prima fattura in attesa, gia scaduta, apre un pacchetto nato scaduto',
+               (scaduto.get('scaduto'), scaduto['inizio'], scaduto['fine'],
+                len(scaduto['sessioni']), scaduto.get('fattura_numero')),
+               (True, '2026-09-10', '2026-09-10', 0, 111))
+        _check(r, cat, 'la seduta entra nel pacchetto della fattura ancora valida',
+               (pagato.get('fattura_numero'), len(pagato['sessioni']), pagato['sessioni'][0]['n']),
+               (112, 1, 1))
+        _check(r, cat, 'nessuna fattura in attesa e rimasta per quel cliente',
+               reg.get('prepagate', {}).get('giulia'), None)
+
+        # --- con una sola fattura in attesa gia' scaduta, si perde e basta ---
+        reg = {'pacchetti': [aperto(3, ['2026-09-01', '2026-09-02', '2026-09-03'],
+                                    fatturato='si - #120', fattura_numero=120)],
+               'esclusi': [],
+               'prepagate': {'giulia': [
+                   {'numero': 121, 'sedute': 12, 'servizio_id': 7,
+                    'prezzo_seduta_cents': 15000, 'scade': '2026-09-10'},
+               ]}}
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-15', 'Giulia', 'ev-21')
+        scaduto2, nuovo2 = reg['pacchetti'][1], reg['pacchetti'][2]
+        _check(r, cat, 'con una sola fattura in attesa gia scaduta il pacchetto nasce scaduto lo stesso',
+               (scaduto2.get('scaduto'), scaduto2['inizio'], scaduto2['fine'],
+                len(scaduto2['sessioni'])),
+               (True, '2026-09-10', '2026-09-10', 0))
+        _check(r, cat, 'e la seduta apre un pacchetto da fatturare, con la misura di prima',
+               (nuovo2['fatturato'], nuovo2['crediti'], len(nuovo2['sessioni']),
+                nuovo2['sessioni'][0]['n']),
+               ('no', 12, 1, 1))
 
         # --- dalla fattura: le righe, e le frasi per chi fattura ---
         reg = {'pacchetti': [], 'esclusi': []}

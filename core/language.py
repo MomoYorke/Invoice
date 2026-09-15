@@ -1276,6 +1276,8 @@ TESTI = {
             'In the calendar «{nome}» is also the name of another client: write in the client card how they appear in the calendar, for example «{nome} R.».',
         'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
             'I could not update the sessions for this invoice: have a look at the Credits page.',
+        'Collegata al pacchetto {pid} di {nome}: paga {sedute} sedute, e quelle già fatte in più ({extra}) passano al pacchetto {nuovo}.':
+            'Linked to pack {pid} of {nome}: it pays {sedute} sessions, and the extra sessions already done ({extra}) move to pack {nuovo}.',
         'Migrazione dei servizi': 'Services migration',
         'da riprovare': 'to retry',
         'Aggiornamento dei servizi non riuscito': 'Services update failed',
@@ -2703,6 +2705,8 @@ TESTI = {
             'Im Kalender ist «{nome}» auch der Name einer anderen Person: schreib in der Kundenkarte, wie sie im Kalender heisst, zum Beispiel «{nome} R.».',
         'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
             'Ich konnte die Sitzungen für diese Rechnung nicht aktualisieren: schau auf der Seite Guthaben nach.',
+        'Collegata al pacchetto {pid} di {nome}: paga {sedute} sedute, e quelle già fatte in più ({extra}) passano al pacchetto {nuovo}.':
+            'Mit Paket {pid} von {nome} verknüpft: sie bezahlt {sedute} Sitzungen, und die schon gemachten zusätzlichen Sitzungen ({extra}) gehen in Paket {nuovo}.',
         'Migrazione dei servizi': 'Übernahme der Leistungen',
         'da riprovare': 'wird wiederholt',
         'Aggiornamento dei servizi non riuscito': 'Aktualisierung der Leistungen fehlgeschlagen',

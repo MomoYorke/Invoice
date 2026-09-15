@@ -378,11 +378,22 @@ def chiudi_scaduto(p):
 
 
 def _apri_successivo(reg, chiave, data):
-    """Il pacchetto dopo: con le sedute della fattura in attesa, se ce n'e' una."""
+    """Il pacchetto dopo: con le sedute della fattura in attesa, se ce n'e' una.
+
+    Se la fattura in attesa porta una scadenza gia' passata per `data`, il
+    pacchetto nasce gia' scaduto: si chiude subito (le sue sedute, zero, non
+    si perdono perche' non ce ne sono) e si riprova con la prossima fattura
+    in attesa, finche' non se ne trova una ancora valida o non ce ne sono
+    piu' — un pacchetto senza fattura in attesa non ha scadenza, e il giro
+    finisce li'."""
     attesa = _prima_prepagata(reg, chiave)
     p = apri_pacchetto(reg, chiave, data,
                        crediti=attesa.get('sedute') if isinstance(attesa, dict) else None)
     usa_prepagata(reg, chiave, p)
+    if p.get('scade') and data > p['scade']:
+        p['inizio'] = p['scade']
+        chiudi_scaduto(p)
+        return _apri_successivo(reg, chiave, data)
     return p
 
 
@@ -503,10 +514,12 @@ def sedute_della_riga(servizio, qty, total_cents=None):
     """Quante sedute compra una riga: le sedute del servizio per la quantita',
     per difetto.
 
-    L'eccezione e' la quantita' che conta le sedute invece dei pacchetti
-    («12 × 150.-» per il pacchetto da 12). Lo dice il totale, che e' il prezzo
-    di un pacchetto e non di dodici; senza prezzo, la quantita' uguale alle
-    sedute del servizio."""
+    Con un prezzo e un totale, la quantita' conta le sedute invece dei
+    pacchetti solo se il prezzo a unita' (totale/quantita') e' piu' vicino,
+    per rapporto, al prezzo di una seduta che a quello di un pacchetto —
+    cosi' un pacchetto scontato resta un pacchetto. Senza prezzo o senza
+    totale vale la vecchia regola: la quantita' uguale alle sedute del
+    servizio le conta, il resto sono pacchetti."""
     n = int(servizio['sedute'] or 0)
     try:
         q = float(qty)
@@ -517,7 +530,11 @@ def sedute_della_riga(servizio, qty, total_cents=None):
     prezzo = servizio['prezzo_cents']
     if q > 1:
         if prezzo and total_cents is not None:
-            if abs(total_cents - prezzo) < abs(total_cents - prezzo * q):
+            # sessioni iff totale/qty piu' vicino, per rapporto, a prezzo/n che
+            # a prezzo: il punto di parita' e' la media geometrica dei due,
+            # cioe' prezzo/sqrt(n); senza radici e senza float, al quadrato:
+            # totale² × n < prezzo² × qty²
+            if total_cents ** 2 * n < prezzo ** 2 * qty ** 2:
                 return int(q)
         elif q == n:
             return n
@@ -539,12 +556,15 @@ def dati_del_servizio(servizio, data):
 
 
 def _paga(p, numero, sedute, dati, nota=None):
-    """La fattura paga il pacchetto: numero, sedute della riga, dati del servizio."""
+    """La fattura paga il pacchetto: numero, sedute della riga, dati del servizio.
+
+    I crediti diventano le sedute della riga, punto: se il pacchetto ne aveva
+    gia' fatte di piu', le rimanenti non restano qui a passare per pagate.
+    Le sposta `aggancia_pacchetto`, prima di chiamare questa funzione."""
     p['fatturato'] = f'si - #{numero}'
     p['fattura_numero'] = numero
     if sedute:
-        # mai meno delle sedute gia' fatte: quelle ci sono state
-        p['crediti'] = max(int(sedute), len(p.get('sessioni', [])))
+        p['crediti'] = int(sedute)
     p.update(dati)
     if nota:
         p['nota'] = nota
@@ -558,6 +578,12 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
       - pacchetto aperto gia' pagato       -> la fattura aspetta in `prepagate`
       - nessun pacchetto, o finito         -> ne nasce uno nuovo, gia' pagato
 
+    Se il pacchetto aperto aveva gia' piu' sedute fatte di quante ne paga la
+    riga, tiene le piu' vecchie (per data, poi per numero) e chiude su quelle;
+    le sedute in piu' escono e vanno a `aggiungi_sessione`, che le tratta come
+    sedute lette adesso dal calendario: scadenza, fattura in attesa, o un
+    pacchetto nuovo da fatturare.
+
     Ritorna (esito, (frase, valori))."""
     nome = nome_cliente(chiave)
     dati = dati_del_servizio(servizio, data)
@@ -567,6 +593,35 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
         p = None
     if p is not None and p['crediti'] - len(p.get('sessioni', [])) > 0:
         if not e_saldato(p):
+            sessioni = p.get('sessioni', [])
+            paga_n = int(sedute) if sedute else 0
+            if paga_n and len(sessioni) > paga_n:
+                ordinate = sorted(sessioni, key=lambda s: (s['data'], s['n']))
+                tenute, eccesso = ordinate[:paga_n], ordinate[paga_n:]
+                for i, s in enumerate(tenute, 1):
+                    s['n'] = i
+                _paga(p, numero, sedute, dati)
+                # si chiude PRIMA di piazzare l'eccesso, sennò aggiungi_sessione
+                # lo ritroverebbe ancora aperto e ci rimetterebbe dentro le sedute
+                p['sessioni'] = tenute
+                p['fine'] = tenute[-1]['data']
+                ricalcola(p)
+                nuovo_id = None
+                for s in eccesso:
+                    piazzata, _aperto = aggiungi_sessione(
+                        reg, chiave, s['data'], s['titolo'],
+                        s.get('event_id'), s.get('nota'), s.get('ora'))
+                    ultima = piazzata['sessioni'][-1]
+                    for k, v in s.items():
+                        if k != 'n' and k not in ultima:
+                            ultima[k] = v
+                    if nuovo_id is None:
+                        nuovo_id = piazzata['id']
+                return 'collegato', (
+                    'Collegata al pacchetto {pid} di {nome}: paga {sedute} sedute, e quelle '
+                    'già fatte in più ({extra}) passano al pacchetto {nuovo}.',
+                    {'pid': p['id'], 'nome': nome, 'sedute': paga_n,
+                     'extra': len(eccesso), 'nuovo': nuovo_id})
             _paga(p, numero, sedute, dati)
             return 'collegato', (
                 'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.',
