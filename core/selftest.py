@@ -859,6 +859,28 @@ def _test_servizi(r):
     abbonamenti lo sposta avanti l'app senza sapere come li hai chiamati."""
     from . import services as SR
 
+    # --- lo schema: le tabelle e le colonne nuove ci sono, e rifare non rompe
+    from . import db as D
+    con = _db_servizi()
+
+    def colonne(tabella):
+        return {x['name'] for x in con.execute('PRAGMA table_info(%s)' % tabella)}
+
+    _check(r, 'Servizi', 'la tabella dei servizi ha i campi della scheda',
+           {'id', 'nome', 'prezzo_cents', 'ogni_mese', 'sedute', 'scadenza_mesi',
+            'passano', 'massimo', 'attivo', 'pos', 'creato_il'} <= colonne('servizi'), True)
+    _check(r, 'Servizi', 'le righe sanno quale servizio vendono',
+           'servizio_id' in colonne('items'), True)
+    _check(r, 'Servizi', 'i testi già decisi hanno la loro tabella',
+           {'testo', 'servizio_id'} <= colonne('servizi_testi'), True)
+    _check(r, 'Servizi', 'il cliente sa come si chiama nel calendario e con chi si allena',
+           {'nome_calendario', 'chiave_sedute', 'compagno_id'} <= colonne('clients'), True)
+    _check(r, 'Servizi', "l'abbonamento sa quale servizio rinnova e come scrive il periodo",
+           {'servizio_id', 'stile'} <= colonne('ricorrenti'), True)
+    _check(r, 'Servizi', 'aggiornare due volte lo stesso database non rompe niente',
+           _senza_scoppiare(D._migrate, con), None)
+    con.close()
+
     for testo, atteso in (
             ('Monthly abo: running coaching 13.07.26 – 12.08.26', 'Monthly abo: running coaching'),
             ('Abbonamento 01.01.2026 - 31.01.2026', 'Abbonamento'),
@@ -894,6 +916,20 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'una descrizione usata una volta sola non si propone',
            'Una tantum' in proposti, False)
     con.close()
+
+
+def _db_servizi():
+    """Un database in memoria con lo schema vero, colonne nuove comprese.
+
+    Le prove dei servizi e delle sedute non si scrivono le tabelle a mano: un
+    database finto con tre colonne passa le prove e si rompe sui dati veri."""
+    import sqlite3
+    from . import db as D
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(D.SCHEMA)
+    D._migrate(con)
+    return con
 
 
 def _db_finto():

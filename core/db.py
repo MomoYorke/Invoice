@@ -195,6 +195,30 @@ CREATE TABLE IF NOT EXISTS ricorrenti_saltati(
   quando TEXT,
   PRIMARY KEY (ricorrente_id, periodo)
 );
+-- I servizi che vendi: nome, prezzo, e se comprendono sedute. Sono l'unica
+-- fonte di queste cose: fattura, sedute, email e abbonamenti guardano qui.
+-- Un servizio non si cancella: si smette di venderlo (attivo = 0), e le
+-- fatture vecchie continuano a sapere cosa vendevano.
+CREATE TABLE IF NOT EXISTS servizi(
+  id INTEGER PRIMARY KEY,
+  nome TEXT NOT NULL,
+  prezzo_cents INTEGER,            -- NULL solo se nato dalla migrazione senza prezzo
+  ogni_mese INTEGER DEFAULT 0,     -- 0 = si paga una volta, 1 = ogni mese
+  sedute INTEGER DEFAULT 0,        -- 0 = non comprende sedute
+  scadenza_mesi INTEGER DEFAULT 0, -- solo «una volta»: 0 = non scadono
+  passano INTEGER DEFAULT 0,       -- solo «ogni mese»: le non usate passano al mese dopo
+  massimo INTEGER DEFAULT 0,       -- solo se passano: il tetto di sedute in un mese
+  attivo INTEGER DEFAULT 1,        -- 0 = non lo vendo più
+  pos INTEGER DEFAULT 0,
+  creato_il TEXT
+);
+-- I testi di riga già decisi: «questo testo è quel servizio» (0 = nessuno).
+-- Il Reimporta ricrea le righe importate, e una decisione presa una volta
+-- non va chiesta di nuovo.
+CREATE TABLE IF NOT EXISTS servizi_testi(
+  testo TEXT PRIMARY KEY,          -- ripulito: senza date, virgolette, maiuscole
+  servizio_id INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_inv_year ON invoices(year);
 CREATE INDEX IF NOT EXISTS idx_inv_number ON invoices(number);
 """
@@ -480,6 +504,27 @@ def _migrate(con):
         # «03-15» senza l'anno, «1986-03-15» con: l'anno quasi nessuno lo sa, e
         # alla Dashboard bastano giorno e mese. Vuoto per chi non l'ha detto.
         con.execute('ALTER TABLE clients ADD COLUMN compleanno TEXT DEFAULT ""')
+    if 'nome_calendario' not in cli:
+        # come si chiama nei titoli del calendario; vuoto = il primo nome. Più
+        # nomi separati da virgola, per chi divide un pacchetto
+        con.execute("ALTER TABLE clients ADD COLUMN nome_calendario TEXT DEFAULT ''")
+    if 'chiave_sedute' not in cli:
+        # la chiave con cui il registro delle sedute riconosce il cliente: nasce
+        # una volta e non cambia più, anche se cambia il nome nel calendario
+        con.execute("ALTER TABLE clients ADD COLUMN chiave_sedute TEXT DEFAULT ''")
+    if 'compagno_id' not in cli:
+        # con chi si allena: le sue sedute contano solo se c'è anche l'altra persona
+        con.execute('ALTER TABLE clients ADD COLUMN compagno_id INTEGER')
+    righe = {r['name'] for r in con.execute('PRAGMA table_info(items)')}
+    if 'servizio_id' not in righe:
+        # NULL = non ancora deciso, 0 = nessun servizio, > 0 = il servizio venduto
+        con.execute('ALTER TABLE items ADD COLUMN servizio_id INTEGER')
+    rinnovi = {r['name'] for r in con.execute('PRAGMA table_info(ricorrenti)')}
+    if 'servizio_id' not in rinnovi:
+        con.execute('ALTER TABLE ricorrenti ADD COLUMN servizio_id INTEGER')
+    if 'stile' not in rinnovi:
+        # come si scrive il periodo sulla riga: 'date', 'mese', '' = il testo di prima
+        con.execute("ALTER TABLE ricorrenti ADD COLUMN stile TEXT DEFAULT ''")
     _migra_modelli_email(con)
     _migra_riga_qr(con)
     _migra_oggetti_email(con)
