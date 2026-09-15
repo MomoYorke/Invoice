@@ -490,3 +490,13 @@ def righe_con_sedute(con, items):
         if servizio is not None and int(servizio['sedute'] or 0) > 0:
             fuori.append((servizio, it['qty'], it['total_cents']))
     return fuori
+
+
+def importo_per_cliente(con, client_id, servizio):
+    """Quanto costa di solito quel servizio a quel cliente: il prezzo dell'ultima
+    riga fatturata a lui, altrimenti il prezzo del servizio. None se il servizio
+    non ha prezzo e a quel cliente non e' mai stato fatturato."""
+    riga = ultima_riga(con, client_id, servizio['id']) if client_id else None
+    if riga is not None:
+        return riga['unit_cents'] if riga['unit_cents'] is not None else riga['total_cents']
+    return servizio['prezzo_cents']

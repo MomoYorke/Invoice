@@ -142,6 +142,43 @@ def descrizione_per(modello, mese, mesi_nella_lingua, giorno=1):
         return modello or ''
 
 
+# Come si scrive il periodo sulla riga di un abbonamento legato a un servizio.
+# Vuoto vuol dire il testo libero di prima, scritto sulla regola.
+STILI = ('date', 'mese')
+
+
+def modello_per_stile(nome, stile):
+    """Il testo della riga in quello stile: «nome {dal} – {al}» o «nome ({mese})»."""
+    return nome + (' {dal} – {al}' if stile == 'date' else ' ({mese})')
+
+
+def riga_per(con, regola, mese, mesi_nella_lingua):
+    """La riga della fattura di quel mese: (descrizione, importo_cents, servizio_id).
+
+    Una regola legata a un servizio, con uno stile, scrive il nome del servizio
+    col periodo e prende l'importo dall'ultima riga di quel servizio fatturata a
+    quel cliente (se non c'e', il prezzo del servizio). Le altre usano il testo
+    e l'importo scritti sulla regola, come prima; il servizio, se c'e', va lo
+    stesso sulla riga, perche' le sedute del mese arrivino.
+    """
+    from . import services
+    giorno = _campo(regola, 'giorno', 1)
+    sid = _campo(regola, 'servizio_id')
+    servizio = services.uno(con, sid) if sid else None
+    if servizio is not None and _campo(regola, 'stile', '') in STILI:
+        # le graffe di un nome non sono segnaposti
+        nome = servizio['nome'].replace('{', '{{').replace('}', '}}')
+        descrizione = descrizione_per(modello_per_stile(nome, _campo(regola, 'stile')), mese,
+                                      mesi_nella_lingua or [''] * 12, giorno)
+        importo = services.importo_per_cliente(con, _campo(regola, 'client_id'), servizio)
+    else:
+        testo = _campo(regola, 'descrizione', '')
+        descrizione = (descrizione_per(testo, mese, mesi_nella_lingua, giorno)
+                       if mesi_nella_lingua else testo)
+        importo = _campo(regola, 'importo_cents')
+    return descrizione, importo, (servizio['id'] if servizio is not None else None)
+
+
 # ------------------------------------------------- quello che sa il database
 def regole(con):
     """Tutti gli abbonamenti, col nome del cliente accanto."""
@@ -201,12 +238,11 @@ def da_fare(con, oggi=None, mesi_per_lingua=None):
         for mese in mesi:
             nomi = (mesi_per_lingua or {}).get(reg['lingua_cliente'] or 'en') \
                 or (mesi_per_lingua or {}).get('en') or []
+            descrizione, importo, _servizio = riga_per(con, reg, mese, nomi)
             fuori.append({
                 'regola': reg, 'cliente': reg['cliente'], 'mese': mese,
-                'importo_cents': reg['importo_cents'],
-                'descrizione': descrizione_per(reg['descrizione'], mese, nomi,
-                                               _campo(reg, 'giorno', 1))
-                               if nomi else reg['descrizione'],
+                'importo_cents': importo,
+                'descrizione': descrizione,
                 'restano': restano,
                 'gia_a_mano': _fattura_a_mano(con, reg['client_id'], mese),
             })

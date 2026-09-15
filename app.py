@@ -369,12 +369,12 @@ def _precompila_abbonamento(con, ric_id, mese):
         return None
     nomi = lng.MESI_DOC.get(reg['lingua_cliente'] or 'en', lng.MESI_DOC['en'])
     mesi_app = lng.MESI_DOC.get(_lingua_app(), lng.MESI_DOC['it'])
+    descrizione, importo, servizio_id = ric.riga_per(con, reg, mese, nomi)
     return {'ricorrente_id': reg['id'], 'client_id': reg['client_id'],
             'cliente': reg['cliente'], 'mese': mese,
             'mese_scritto': '%s %s' % (mesi_app[int(mese[5:7]) - 1], mese[:4]),
-            'descrizione': ric.descrizione_per(reg['descrizione'], mese, nomi,
-                                               reg['giorno']),
-            'importo': fmt_dash(reg['importo_cents'])}
+            'descrizione': descrizione, 'importo': fmt_dash(importo),
+            'servizio_id': servizio_id}
 
 
 def _crea_fattura(con):
@@ -1080,39 +1080,51 @@ def abbonamenti():
     lg = _lingua_app()
     coda = ric.da_fare(con, mesi_per_lingua=lng.MESI_DOC)
     regole = ric.regole(con)
-    saltati = {}
+    questo_mese = ric.mese_di(datetime.date.today())
+    saltati, anteprima = {}, {}
     for reg in regole:
         righe = con.execute('SELECT periodo FROM ricorrenti_saltati WHERE ricorrente_id=? '
                             'ORDER BY periodo DESC LIMIT 6', (reg['id'],)).fetchall()
         if righe:
             saltati[reg['id']] = [x['periodo'] for x in righe]
+        # la riga come la scriverebbe oggi: il servizio puo' aver cambiato nome
+        nomi = lng.MESI_DOC.get(reg['lingua_cliente'] or 'en', lng.MESI_DOC['en'])
+        anteprima[reg['id']] = ric.riga_per(con, reg, questo_mese, nomi)
     clienti = con.execute('SELECT id, name FROM clients WHERE archived=0 '
                           'ORDER BY name').fetchall()
+    servizi_mese = [s for s in srv.tutti(con, solo_attivi=True) if s['ogni_mese']]
     con.close()
     mesi = lng.MESI_DOC.get(lg, lng.MESI_DOC['it'])
+    prossimo = ric.mese_succ(questo_mese)
     return render_template('subscriptions.html', coda=coda, regole=regole,
                            clienti=clienti, saltati=saltati, mesi=mesi,
-                           mese_corrente=ric.mese_di(datetime.date.today()))
+                           anteprima=anteprima, servizi_mese=servizi_mese,
+                           esempio_date=ric.descrizione_per('{dal} – {al}', prossimo, mesi, 1),
+                           esempio_mese=mesi[int(prossimo[5:7]) - 1],
+                           mese_corrente=questo_mese)
 
 
 @app.route('/abbonamenti/nuovo', methods=['POST'])
 def abbonamenti_nuovo():
     f = request.form
     client_id = f.get('client_id', type=int)
-    importo = parse_amount(f.get('importo', ''))
-    descrizione = (f.get('descrizione') or '').strip()
+    servizio_id = f.get('servizio_id', type=int)
+    stile = f.get('stile') if f.get('stile') in ric.STILI else 'date'
     giorno = min(max(f.get('giorno', type=int) or 1, 1), 31)
     dal = (f.get('dal') or '').strip()
-    if not client_id or importo is None or importo <= 0 or not descrizione:
-        avvisa('Per un abbonamento servono il cliente, la riga della fattura e '
-               "un importo maggiore di zero.", 'error')
+    con = get_con()
+    servizio = srv.uno(con, servizio_id) if servizio_id else None
+    if not client_id or servizio is None or not servizio['attivo'] or not servizio['ogni_mese']:
+        con.close()
+        avvisa('Per un abbonamento servono il cliente e un servizio «ogni mese».', 'error')
         return redirect(url_for('abbonamenti'))
     if not ric.valido(dal):
         dal = ric.mese_di(datetime.date.today())
-    con = get_con()
-    con.execute('INSERT INTO ricorrenti(client_id, descrizione, importo_cents, '
-                'giorno, dal, attiva, creata_il) VALUES(?,?,?,?,?,1,?)',
-                (client_id, descrizione, importo, giorno, dal, db.now_iso()))
+    # testo e importo restano vuoti: li danno il servizio e l'ultima fattura,
+    # ogni volta che la fattura si prepara
+    con.execute('INSERT INTO ricorrenti(client_id, descrizione, importo_cents, giorno, dal, '
+                "attiva, creata_il, servizio_id, stile) VALUES(?, '', 0, ?, ?, 1, ?, ?, ?)",
+                (client_id, giorno, dal, db.now_iso(), servizio_id, stile))
     con.commit()
     con.close()
     avvisa('Abbonamento salvato. Da qui in avanti te lo ricordo io: '

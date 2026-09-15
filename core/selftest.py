@@ -1767,7 +1767,8 @@ def _db_fatture_finto(righe):
         ' archived INTEGER DEFAULT 0);'
         'CREATE TABLE ricorrenti(id INTEGER PRIMARY KEY, client_id INTEGER,'
         ' descrizione TEXT, importo_cents INTEGER, giorno INTEGER DEFAULT 1,'
-        ' dal TEXT, attiva INTEGER DEFAULT 1, creata_il TEXT);'
+        ' dal TEXT, attiva INTEGER DEFAULT 1, creata_il TEXT, servizio_id INTEGER,'
+        ' stile TEXT DEFAULT "");'
         'CREATE TABLE ricorrenti_saltati(ricorrente_id INTEGER, periodo TEXT,'
         ' quando TEXT, PRIMARY KEY (ricorrente_id, periodo));')
     for i, r in enumerate(righe, 1):
@@ -2922,6 +2923,56 @@ def _test_migrazione_servizi(r):
                (con2.execute('SELECT chiave_sedute FROM clients WHERE id=1').fetchone()[0],
                 leggi_json(percorso2)['pacchetti'][0].get('chiavi')), ('giulia', ['giulia']))
         con2.close()
+    con.close()
+
+    # --- gli abbonamenti trovano il loro servizio (spec §4) ---
+    from . import recurring as RC
+    from .language import MESI_DOC
+    con = _db_servizi()
+    for riga in ((1, 'giulia', 'Giulia Ferrari', 'en'), (2, 'marco', 'Marco Neri', 'de'),
+                 (3, 'sofia', 'Sofia Verdi', 'en'), (4, 'luca', 'Luca Bianchi', 'it')):
+        con.execute('INSERT INTO clients(id, key, name, lingua) VALUES(?,?,?,?)', riga)
+    for nome, prezzo, ogni_mese in ((MENSILE, 11000, 1), ('Coaching', 5000, 1),
+                                    ('Online Coaching', 9000, 1), ('Personal training', 12000, 0)):
+        con.execute('INSERT INTO servizi(nome, prezzo_cents, ogni_mese, sedute, scadenza_mesi, passano, '
+                    "massimo, attivo, pos, creato_il) VALUES(?,?,?,0,0,0,0,1,0,'2026-09-14')",
+                    (nome, prezzo, ogni_mese))
+    sid = {s['nome']: s['id'] for s in con.execute('SELECT id, nome FROM servizi')}
+    for numero, cliente, cents in ((1, 1, 11000), (2, 3, 10000)):
+        fid = con.execute("INSERT INTO invoices(number, client_id, client_name, date, year, total_cents) "
+                          "VALUES(?, ?, 'x', '2026-08-13', 2026, ?)", (numero, cliente, cents)).lastrowid
+        con.execute("INSERT INTO items(invoice_id, pos, qty, description, unit_cents, total_cents, "
+                    "servizio_id) VALUES(?, 0, '1', ?, ?, ?, ?)",
+                    (fid, MENSILE + ' 13.08.26 – 12.09.26', cents, cents, sid[MENSILE]))
+    REGOLE = (
+        (1, 1, MENSILE + ' {dal} – {al}', 11000, 13),          # le date, identiche
+        (2, 2, 'Online Coaching ({mese})', 9000, 1),           # il mese; vince il nome più lungo
+        (3, 3, MENSILE + ' {dal} – {al}', 11000, 13),          # l'ultima riga era scontata
+        (4, 4, 'Personal training – {mese} {anno}', 12000, 1),  # solo un servizio «una volta»
+        (5, 1, MENSILE + ' {dal} - {al}', 11000, 1),           # trattino corto: non è la forma esatta
+    )
+    for regola in REGOLE:
+        con.execute("INSERT INTO ricorrenti(id, client_id, descrizione, importo_cents, giorno, dal, attiva) "
+                    "VALUES(?,?,?,?,?,'2026-01',1)", regola)
+    con.commit()
+    lingue = {x['id']: x['lingua_cliente'] for x in RC.regole(con)}
+    prima_righe = {i: (RC.descrizione_per(testo, '2026-10', MESI_DOC[lingue[i]], giorno), cents)
+                   for i, _cliente, testo, cents, giorno in REGOLE}
+
+    _check(r, cat, 'gli abbonamenti trovano il servizio nel testo; lo stile solo se la riga resta identica',
+           _senza_scoppiare(M.abbonamenti, con), (4, 2))
+    _check(r, cat, 'servizio e stile di ogni regola',
+           [(x['id'], x['servizio_id'], x['stile'])
+            for x in con.execute('SELECT id, servizio_id, stile FROM ricorrenti ORDER BY id')],
+           [(1, sid[MENSILE], 'date'), (2, sid['Online Coaching'], 'mese'), (3, sid[MENSILE], ''),
+            (4, None, ''), (5, sid[MENSILE], '')])
+    _check(r, cat, 'le righe delle prossime fatture restano quelle di prima, importi compresi',
+           _senza_scoppiare(lambda: {x['id']: RC.riga_per(con, x, '2026-10',
+                                                          MESI_DOC[x['lingua_cliente']])[:2]
+                                     for x in RC.regole(con)}), prima_righe)
+    _check(r, cat, 'la seconda volta non cambia niente', _senza_scoppiare(M.abbonamenti, con), (0, 0))
+    _check(r, cat, 'la migrazione converte anche gli abbonamenti',
+           'abbonamenti(con)' in inspect.getsource(M.esegui), True)
     con.close()
 
     from . import importer
@@ -6448,6 +6499,84 @@ def _test_abbonamenti(r):
            A.descrizione_per('{dal} – {al}', '2026-09', MESI_DOC['en'], 31),
            '30.09.26 – 30.10.26')
 
+    # --- la riga e l'importo dal servizio (spec §4) --------------------------
+    from . import services as SR
+    con = _db_servizi()
+    for riga in ((1, 'giulia', 'Giulia Ferrari', 'en'), (2, 'marco', 'Marco Neri', 'de'),
+                 (3, 'sofia', 'Sofia Verdi', 'it')):
+        con.execute('INSERT INTO clients(id, key, name, lingua) VALUES(?,?,?,?)', riga)
+    mensile = SR.salva(con, SR.dal_modulo({'nome': 'Monthly abo: running coaching',
+                                           'prezzo': '110', 'ogni_mese': '1'}))
+    online = SR.salva(con, SR.dal_modulo({'nome': 'Online Coaching', 'prezzo': '90',
+                                          'ogni_mese': '1'}))
+    graffe = SR.salva(con, SR.dal_modulo({'nome': 'Coaching {pro}', 'ogni_mese': '1'}))
+
+    def regola(**campi):
+        base = {'id': 1, 'client_id': 1, 'descrizione': '', 'importo_cents': 0, 'giorno': 13,
+                'servizio_id': mensile, 'stile': 'date'}
+        base.update(campi)
+        return base
+
+    def riga_di(regola, mese='2026-09', lingua='en'):
+        return _senza_scoppiare(A.riga_per, con, regola, mese, MESI_DOC[lingua])
+
+    _check(r, 'Abbonamenti', 'con le date: il nome del servizio e il periodo, come le righe scritte a mano',
+           riga_di(regola()), ('Monthly abo: running coaching 13.09.26 – 12.10.26', 11000, mensile))
+    _check(r, 'Abbonamenti', 'col mese: il nome del servizio e il mese fra parentesi, nella lingua del cliente',
+           riga_di(regola(client_id=2, servizio_id=online, stile='mese', giorno=1), '2026-03', 'de'),
+           ('Online Coaching (März)', 9000, online))
+    _check(r, 'Abbonamenti', 'senza i nomi dei mesi (la Dashboard) la riga con le date si scrive lo stesso',
+           _senza_scoppiare(lambda: A.riga_per(con, regola(), '2026-09', [])[0]),
+           'Monthly abo: running coaching 13.09.26 – 12.10.26')
+    for numero, cliente, cents in ((1, 1, 10000), (2, 2, 12000)):
+        fid = con.execute("INSERT INTO invoices(number, client_id, client_name, date, year, total_cents) "
+                          "VALUES(?, ?, 'x', '2026-08-13', 2026, ?)", (numero, cliente, cents)).lastrowid
+        con.execute("INSERT INTO items(invoice_id, pos, qty, description, unit_cents, total_cents, "
+                    "servizio_id) VALUES(?, 0, '1', 'x', ?, ?, ?)", (fid, cents, cents, mensile))
+    _check(r, 'Abbonamenti', 'l’importo è quello dell’ultima riga di quel servizio fatturata a quel cliente',
+           riga_di(regola())[1], 10000)
+    _check(r, 'Abbonamenti', 'chi non l’ha mai avuto paga il prezzo del servizio, non quello di un altro cliente',
+           riga_di(regola(client_id=3))[1], 11000)
+    _check(r, 'Abbonamenti', 'un testo libero resta com’era, e porta il servizio sulla riga',
+           riga_di(regola(stile='', descrizione='Personal training – {mese} {anno}', importo_cents=8000),
+                   '2026-09', 'it'),
+           ('Personal training – Settembre 2026', 8000, mensile))
+    _check(r, 'Abbonamenti', 'un nome con le graffe non rompe la riga',
+           riga_di(regola(servizio_id=graffe, stile='mese', giorno=1), '2026-03')[0],
+           'Coaching {pro} (March)')
+    _check(r, 'Abbonamenti', 'un servizio senza prezzo e mai fatturato lascia l’importo da scrivere',
+           riga_di(regola(servizio_id=graffe, stile='mese'))[1], None)
+    _check(r, 'Abbonamenti', 'se il servizio non c’è più, restano il testo e l’importo della regola',
+           riga_di(regola(servizio_id=999, descrizione='Coaching {mese}', importo_cents=7000, giorno=1)),
+           ('Coaching September', 7000, None))
+    con.execute("INSERT INTO ricorrenti(id, client_id, descrizione, importo_cents, giorno, dal, attiva, "
+                "servizio_id, stile) VALUES(1, 1, '', 0, 13, '2026-09', 1, ?, 'date')", (mensile,))
+    _check(r, 'Abbonamenti', 'la lista da fatturare usa la riga del servizio',
+           _senza_scoppiare(lambda: [(x['descrizione'], x['importo_cents'])
+                                     for x in A.da_fare(con, d(2026, 9, 14), MESI_DOC)]),
+           [('Monthly abo: running coaching 13.09.26 – 12.10.26', 10000)])
+    con.close()
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    with io.open(os.path.join(base, 'templates', 'subscriptions.html'), encoding='utf-8') as f:
+        pagina = f.read()
+
+    def corpo(nome):
+        c = programma[programma.index('def %s(' % nome):]
+        return c[:c.index('\n\n\n')]
+
+    _check(r, 'Abbonamenti', 'il modulo chiede cliente, servizio, rinnovo, primo mese e come scrivere il periodo',
+           (all('name="%s"' % n in pagina for n in ('client_id', 'servizio_id', 'giorno', 'dal', 'stile')),
+            'name="descrizione"' in pagina, 'name="importo"' in pagina), (True, False, False))
+    _check(r, 'Abbonamenti', 'un abbonamento nuovo si salva col servizio e lo stile',
+           ('servizio_id' in corpo('abbonamenti_nuovo'), 'stile' in corpo('abbonamenti_nuovo')),
+           (True, True))
+    _check(r, 'Abbonamenti', 'la fattura preparata da un abbonamento porta il servizio sulla riga',
+           ('riga_per' in corpo('_precompila_abbonamento'),
+            "'servizio_id'" in corpo('_precompila_abbonamento')), (True, True))
+
 
 def _test_lavoro(r):
     """Le sedute per mese e quanto valgono.
@@ -6677,6 +6806,7 @@ GENTE_FINTA = {
     '10 Sessions Pack', 'Running Coaching', 'Fisioterapia',  # servizi finti (Compito 5)
     '10 Sessions Pack – Personal Training',  # servizio finto (Compito 6)
     'Giulia + Marco', 'Sofia', 'Qualcuno', 'giulia-ferrari',  # clienti finti (Compito 8)
+    'Online Coaching', 'Coaching {pro}',  # servizi finti (Compito 13)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio

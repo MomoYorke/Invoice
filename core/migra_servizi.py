@@ -52,6 +52,7 @@ def esegui(con, registro_path=None, fai_copia=True):
             crea_servizi(con, D.get_settings(con), registro)
             srv.collega_righe(con)
             clienti_da_crediti(con, registro)
+            abbonamenti(con)
             con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?, ?)',
                         (MARCATORE, '1'))
             con.execute('DELETE FROM settings WHERE key=?', (ERRORE,))
@@ -402,3 +403,44 @@ def chiavi_nel_registro(con, registro_path=None):
     except Exception:
         logging.getLogger('fatture.errori').exception('Chiavi dei pacchetti non scritte nel registro')
         return 0
+
+
+# --- Abbonamenti -> servizio e stile ---------------------------------------------
+
+def abbonamenti(con, oggi=None):
+    """Ogni abbonamento senza servizio cerca il suo: il servizio «ogni mese» il cui
+    nome e' contenuto nel testo della regola (vince il nome piu' lungo).
+
+    Lo stile si scrive solo se il testo e' esattamente «nome {dal} – {al}» o
+    «nome ({mese})», e la riga della prossima fattura resta identica, importo
+    compreso: la migrazione non deve cambiare quanto chiede un abbonamento.
+    Altrimenti la regola tiene testo e importo di prima, col servizio accanto.
+    Ritorna (collegate, con_stile). Il commit lo fa chi chiama."""
+    from . import recurring as ric
+    from .language import MESI_DOC
+    servizi = sorted(con.execute('SELECT id, nome FROM servizi WHERE ogni_mese = 1').fetchall(),
+                     key=lambda s: -len(s['nome'] or ''))
+    mese = ric.mese_di(oggi or datetime.date.today())
+    collegate = con_stile = 0
+    for regola in ric.regole(con):
+        if regola['servizio_id'] is not None:
+            continue
+        testo = regola['descrizione'] or ''
+        servizio = next((s for s in servizi
+                         if s['nome'] and s['nome'].lower() in testo.lower()), None)
+        if servizio is None:
+            continue
+        stile = next((x for x in ric.STILI
+                      if testo == ric.modello_per_stile(servizio['nome'], x)), '')
+        if stile:
+            nomi = MESI_DOC.get(regola['lingua_cliente'] or 'en', MESI_DOC['en'])
+            prima = ric.riga_per(con, regola, mese, nomi)[:2]
+            dopo = ric.riga_per(con, dict(regola, servizio_id=servizio['id'], stile=stile),
+                                mese, nomi)[:2]
+            if prima != dopo:
+                stile = ''
+        con.execute('UPDATE ricorrenti SET servizio_id=?, stile=? WHERE id=?',
+                    (servizio['id'], stile, regola['id']))
+        collegate += 1
+        con_stile += 1 if stile else 0
+    return collegate, con_stile

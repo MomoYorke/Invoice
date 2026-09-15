@@ -1265,6 +1265,17 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Per un abbonamento servono il cliente e un servizio «ogni mese».':
+            'A subscription needs a client and an «every month» service.',
+        'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':
+            'A subscription starts from an «every month» service: it takes the name and the price from there.',
+        'Rinnovo il': 'Renews on day',
+        'Primo mese': 'First month',
+        'Periodo scritto come': 'Period written as',
+        'con le date': 'with dates',
+        'con il nome del mese': 'with the month name',
+        'La riga è il nome del servizio seguito dal periodo, nella lingua del cliente. L’importo è quello dell’ultima fattura di quel servizio a quel cliente, o il prezzo del servizio.':
+            'The line is the service name followed by the period, in the client’s language. The amount is the one on that client’s last invoice for the service, or the service price.',
         'Sedute': 'Sessions',
         'Nel calendario si chiama': 'Name in the calendar',
         'Come compare nei titoli del tuo calendario. Più nomi separati da virgola, se divide le sedute con un’altra persona.':
@@ -2730,6 +2741,17 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Per un abbonamento servono il cliente e un servizio «ogni mese».':
+            'Für ein Abo braucht es eine Kundin oder einen Kunden und eine Leistung «jeden Monat».',
+        'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':
+            'Ein Abo beruht auf einer Leistung «jeden Monat»: Name und Preis kommen von dort.',
+        'Rinnovo il': 'Verlängert sich am',
+        'Primo mese': 'Erster Monat',
+        'Periodo scritto come': 'Zeitraum geschrieben als',
+        'con le date': 'mit Daten',
+        'con il nome del mese': 'mit dem Monatsnamen',
+        'La riga è il nome del servizio seguito dal periodo, nella lingua del cliente. L’importo è quello dell’ultima fattura di quel servizio a quel cliente, o il prezzo del servizio.':
+            'Die Zeile ist der Name der Leistung mit dem Zeitraum, in der Sprache der Kundschaft. Der Betrag ist der der letzten Rechnung dieser Leistung an diese Person, sonst der Preis der Leistung.',
         'Sedute': 'Sitzungen',
         'Nel calendario si chiama': 'Name im Kalender',
         'Come compare nei titoli del tuo calendario. Più nomi separati da virgola, se divide le sedute con un’altra persona.':

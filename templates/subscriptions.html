@@ -19,7 +19,7 @@
         <div style="font-size:12px">{{ icona('avviso', 'ic-mini') }}
           {{ _('In quel mese questo cliente ha già la fattura #{n}. Se è la stessa cosa, salta il mese invece di rifarla.').format(n=v.gia_a_mano) }}</div>
         {% endif %}</td>
-      <td class="num">{{ v.importo_cents | chf(false) }}</td>
+      <td class="num">{{ v.importo_cents | chf(false) if v.importo_cents is not none else '—' }}</td>
       <td class="right" style="white-space:nowrap">
         <a class="btn small" href="{{ url_for('nuova', abbonamento=v.regola.id, mese=v.mese) }}">{{ _('Prepara la fattura') }}</a>
         <form method="post" action="{{ url_for('abbonamenti_salta') }}" style="display:inline">
@@ -52,8 +52,8 @@
     <tr {% if not r.attiva %}style="opacity:.5"{% endif %}>
       <td><strong>{{ r.cliente }}</strong>
         {% if not r.attiva %}<div class="muted" style="font-size:12px">{{ _('sospeso') }}</div>{% endif %}</td>
-      <td class="muted" style="font-size:13px">{{ r.descrizione }}</td>
-      <td class="num">{{ r.importo_cents | chf(false) }}</td>
+      <td class="muted" style="font-size:13px">{{ anteprima[r.id][0] }}</td>
+      <td class="num">{{ anteprima[r.id][1] | chf(false) if anteprima[r.id][1] is not none else '—' }}</td>
       <td class="muted" style="font-size:13px">
         {{ _('il {g} di ogni mese').format(g=r.giorno) }}
         <div style="font-size:11.5px">{{ _('dal {mese}').format(mese=mesi[r.dal[5:7] | int - 1] ~ ' ' ~ r.dal[:4]) if r.dal else '' }}</div>
@@ -91,31 +91,40 @@
 
 <div class="panel mt" style="max-width:640px">
   <h2 style="margin-top:0">{{ _('Aggiungi un abbonamento') }}</h2>
+  {% if not servizi_mese %}
+  <p>{{ _('Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.') }}</p>
+  <a class="btn" href="{{ url_for('servizi') }}">{{ _('Vai ai servizi') }}</a>
+  {% else %}
   <form method="post" action="{{ url_for('abbonamenti_nuovo') }}">
     <label for="c-client_id">{{ _('Cliente') }}</label>
     <select id="c-client_id" name="client_id">
       <option value="">{{ _('— scegli cliente —') }}</option>
       {% for c in clienti %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
     </select>
-    <label for="c-descrizione">{{ _('Riga della fattura') }}</label>
-    <input id="c-descrizione" type="text" name="descrizione" placeholder="{{ _('Personal training – {mese} {anno}') }}"
-           value="{{ _('Personal training – {mese} {anno}') }}">
-    <span class="muted" style="font-size:12px">{{ _('Scrivi {mese} e {anno} dove vuoi che finiscano il mese e l’anno: l’app li mette nella lingua del cliente. Se sulle tue fatture ci sono le date, usa {dal} e {al}: diventano il periodo coperto, che parte dal giorno in cui fatturi.') }}</span>
+    <label for="c-servizio_id">{{ _('Servizio') }}</label>
+    <select id="c-servizio_id" name="servizio_id">
+      {% for s in servizi_mese %}<option value="{{ s.id }}">{{ s.nome }}</option>{% endfor %}
+    </select>
     <div class="form-grid mt">
       <div>
-        <label for="c-importo">{{ _('Importo') }}</label>
-        <input id="c-importo" type="text" name="importo" placeholder="110.-">
-      </div>
-      <div>
-        <label for="c-giorno">{{ _('Giorno del mese') }}</label>
+        <label for="c-giorno">{{ _('Rinnovo il') }}</label>
         <input id="c-giorno" type="number" name="giorno" value="1" min="1" max="31">
         <span class="muted" style="font-size:12px">{{ _('Prima di quel giorno non te lo chiedo. Il 31 sui mesi corti diventa l’ultimo giorno che c’è.') }}</span>
       </div>
+      <div>
+        <label for="c-dal">{{ _('Primo mese') }}</label>
+        <input id="c-dal" type="month" name="dal" value="{{ mese_corrente }}">
+        <span class="muted" style="font-size:12px">{{ _('Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.') }}</span>
+      </div>
     </div>
-    <label for="c-dal">{{ _('Primo mese da fatturare') }}</label>
-    <input id="c-dal" type="month" name="dal" value="{{ mese_corrente }}">
-    <span class="muted" style="font-size:12px">{{ _('Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.') }}</span>
+    <p class="etichetta mt" style="margin-bottom:2px">{{ _('Periodo scritto come') }}</p>
+    <label style="font-weight:400"><input type="radio" name="stile" value="date" checked style="width:auto">
+      {{ _('con le date') }} <span class="muted">({{ esempio_date }})</span></label>
+    <label style="font-weight:400"><input type="radio" name="stile" value="mese" style="width:auto">
+      {{ _('con il nome del mese') }} <span class="muted">({{ esempio_mese }})</span></label>
+    <span class="muted" style="font-size:12px">{{ _('La riga è il nome del servizio seguito dal periodo, nella lingua del cliente. L’importo è quello dell’ultima fattura di quel servizio a quel cliente, o il prezzo del servizio.') }}</span>
     <button class="btn mt">{{ _('Salva abbonamento') }}</button>
   </form>
+  {% endif %}
 </div>
 {% endblock %}
