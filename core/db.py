@@ -803,27 +803,6 @@ def crediti_clienti(con, solo_attivi=False):
     return con.execute(sql + ' ORDER BY attivo DESC, pos, nome').fetchall()
 
 
-def crediti_cliente_salva(con, chiave, dati):
-    """Aggiunge o aggiorna un cliente a crediti. `chiave` e' la parola cercata
-    nei titoli del calendario e non cambia mai: e' quella che tiene insieme il
-    cliente e i pacchetti gia' registrati a suo nome."""
-    campi = ('nome', 'crediti', 'prefisso', 'prezzi', 'fattura_a', 'compagno',
-             'attivo', 'pos')
-    valori = [dati.get(c) for c in campi]
-    con.execute(
-        'INSERT INTO crediti_clienti(chiave, %s) VALUES(?, %s) '
-        'ON CONFLICT(chiave) DO UPDATE SET %s'
-        % (', '.join(campi), ', '.join('?' * len(campi)),
-           ', '.join(f'{c}=excluded.{c}' for c in campi)),
-        [chiave] + valori)
-    con.commit()
-
-
-def crediti_cliente_elimina(con, chiave):
-    con.execute('DELETE FROM crediti_clienti WHERE chiave = ?', (chiave,))
-    con.commit()
-
-
 def clienti_sedute(con):
     """I clienti che il registro delle sedute conosce: quelli con la chiave.
 
@@ -872,6 +851,37 @@ def assegna_chiave_sedute(con, client_id):
         chiave = f'{base}{n}'
     con.execute('UPDATE clients SET chiave_sedute=? WHERE id=?', (chiave, client_id))
     return chiave, doppione
+
+
+def compagni_possibili(con):
+    """Con chi si puo' allenare un cliente: i clienti attivi con le sedute."""
+    return con.execute(
+        "SELECT id, name FROM clients WHERE COALESCE(archived, 0) = 0 "
+        "AND COALESCE(chiave_sedute, '') <> '' ORDER BY name").fetchall()
+
+
+def nome_calendario_doppio(con, client_id, nome_calendario, name):
+    """Chi, fra gli altri clienti attivi con le sedute, compare nel calendario
+    con uno dei nomi di questo cliente.
+
+    Ritorna None se nessuno, altrimenti (nome dell'altro, proposta). Due clienti
+    con lo stesso nome nel calendario si scambierebbero le sedute, e la scheda
+    deve poter dire come distinguerli. La proposta e' il primo nome con
+    l'iniziale del cognome («Anna B.»); '' per chi ha un nome solo."""
+    from .sessions import nomi_calendario, normalizza
+    miei = {normalizza(n) for n in nomi_calendario(nome_calendario, name)}
+    if not miei:
+        return None
+    for altro in con.execute(
+            "SELECT name, nome_calendario FROM clients WHERE id <> ? "
+            "AND COALESCE(archived, 0) = 0 AND COALESCE(chiave_sedute, '') <> '' "
+            "ORDER BY name", (client_id,)):
+        suoi = {normalizza(n) for n in nomi_calendario(altro['nome_calendario'], altro['name'])}
+        if miei & suoi:
+            pezzi = (name or '').split()
+            proposta = '%s %s.' % (pezzi[0], pezzi[-1][:1].upper()) if len(pezzi) > 1 else ''
+            return altro['name'], proposta
+    return None
 
 
 def next_number(con):

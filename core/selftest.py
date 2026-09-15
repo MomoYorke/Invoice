@@ -777,12 +777,6 @@ def _test_clienti_crediti(r):
     from . import sessions as S
     cat = 'Clienti a crediti'
 
-    for testo, atteso in ((' Giulia Ferrari ', 'giuliaferrari'), ('ANNA', 'anna'),
-                          ('Jean-Luc', 'jeanluc'), ('', '')):
-        _check(r, cat, f'«{testo}» diventa la parola «{atteso}»', S.chiave_da_nome(testo), atteso)
-    for testo, atteso in (("1'800.00 CHF, 150.-", '180000,15000'), ('1800', '180000'),
-                          ('2000; 2050', '200000,205000'), ('', ''), ('boh', '')):
-        _check(r, cat, f'i prezzi «{testo}» diventano «{atteso}»', S.prezzi_da_testo(testo), atteso)
     for testo, nome, atteso in (('', 'Giulia Ferrari', ['Giulia']),
                                 ('Giuly, Giulia F.', 'Giulia Ferrari', ['Giuly', 'Giulia F.']),
                                 (' , ', 'Marco', ['Marco']), ('', '', [])):
@@ -925,6 +919,55 @@ def _test_clienti_crediti(r):
     _check(r, cat, 'una chiave che c’è già non cambia',
            _senza_scoppiare(D.assegna_chiave_sedute, con, 1), ('giulia', False))
     con.close()
+
+    # --- la scheda del cliente: come si chiama nel calendario, con chi si allena ---
+    con = _db_servizi()
+    for riga in ((1, 'anna-rossi', 'Anna Rossi', '', 'anna', 0),
+                 (2, 'anna-bianchi', 'Anna Bianchi', '', '', 0),
+                 (3, 'marco-neri', 'Marco Neri', 'Marco, Marco N.', 'marco', 0),
+                 (4, 'luca-verdi', 'Luca Verdi', '', 'luca', 1),
+                 (5, 'giulia', 'Giulia', '', '', 0)):
+        con.execute('INSERT INTO clients(id, key, name, nome_calendario, chiave_sedute, archived) '
+                    'VALUES(?,?,?,?,?,?)', riga)
+    _check(r, cat, 'si allena insieme a: si sceglie fra i clienti attivi con le sedute',
+           _senza_scoppiare(lambda: [(x['id'], x['name']) for x in D.compagni_possibili(con)]),
+           [(1, 'Anna Rossi'), (3, 'Marco Neri')])
+    for argomenti, atteso, perche in (
+            ((2, '', 'Anna Bianchi'), ('Anna Rossi', 'Anna B.'),
+             'lo stesso primo nome di un altro cliente con le sedute non si può, e si propone come distinguerli'),
+            ((2, 'Anna B.', 'Anna Bianchi'), None, 'con un nome che li distingue sì'),
+            ((2, 'Annina, marco  n.', 'Anna Bianchi'), ('Marco Neri', 'Anna B.'),
+             'basta uno dei nomi in comune, maiuscole e spazi a parte'),
+            ((2, 'Luca', 'Anna Bianchi'), None, 'un ex cliente non occupa il nome'),
+            ((1, '', 'Anna Rossi'), None, 'chi non ha ancora le sedute non occupa il nome'),
+            ((3, 'Marco', 'Marco Neri'), None, 'il proprio nome non è un doppione'),
+            ((5, 'Anna', 'Giulia'), ('Anna Rossi', ''), 'a chi ha un nome solo non si propone niente')):
+        _check(r, cat, perche, _senza_scoppiare(D.nome_calendario_doppio, con, *argomenti), atteso)
+    con.close()
+
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    with io.open(os.path.join(base, 'templates', 'clients.html'), encoding='utf-8') as f:
+        scheda = f.read()
+    with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
+        programma = f.read()
+    _check(r, cat, 'la scheda del cliente ha la parte «Sedute» e l’ordine permanente col suo nome',
+           ('name="nome_calendario"' in scheda, 'name="compagno_id"' in scheda,
+            "_('Paga con ordine permanente')" in scheda,
+            'Abbonamento mensile (ordine permanente)' in scheda), (True, True, True, False))
+    salva = programma[programma.index('def cliente_salva'):]
+    salva = salva[:salva.index('\n@app.route')]
+    _check(r, cat, 'salvando la scheda si controllano i doppioni e il motore se ne accorge',
+           ('nome_calendario_doppio' in salva, 'assegna_chiave_sedute' in salva,
+            'sess.ricarica()' in salva), (True, True, True))
+    rimando = programma[programma.index('def crediti_clienti'):]
+    rimando = rimando[:rimando.index('\n@app.route')]
+    _check(r, cat, '«Clienti a crediti» non c’è più: il vecchio indirizzo porta ai Clienti',
+           ("redirect(url_for('clienti'))" in rimando, 'def crediti_cliente_salva' in programma,
+            'def crediti_cliente_elimina' in programma,
+            os.path.exists(os.path.join(base, 'templates', 'credits_clients.html')),
+            hasattr(D, 'crediti_cliente_salva'), hasattr(S, 'prezzi_da_testo'),
+            hasattr(S, 'chiave_da_nome')),
+           (True, False, False, False, False, False, False))
 
     # un'app appena installata non ha nessuno storico da ricopiare
     seed = S.SEED
@@ -1509,7 +1552,7 @@ def _frasi_dei_primi_passi_senza_traduzione(L):
     con.executescript(
         'CREATE TABLE clients(id INTEGER PRIMARY KEY, archived INTEGER DEFAULT 0);'
         'CREATE TABLE invoices(id INTEGER PRIMARY KEY, deleted_at TEXT);'
-        'CREATE TABLE crediti_clienti(chiave TEXT PRIMARY KEY);')
+        'CREATE TABLE servizi(id INTEGER PRIMARY KEY, nome TEXT);')
     try:
         passi = B.passi(con, dict(DEFAULT_SETTINGS))
     finally:
@@ -3023,7 +3066,7 @@ def _test_primi_passi(r):
     con.executescript(
         'CREATE TABLE clients(id INTEGER PRIMARY KEY, archived INTEGER DEFAULT 0);'
         'CREATE TABLE invoices(id INTEGER PRIMARY KEY, deleted_at TEXT);'
-        'CREATE TABLE crediti_clienti(chiave TEXT PRIMARY KEY);')
+        'CREATE TABLE servizi(id INTEGER PRIMARY KEY, nome TEXT);')
 
     vuoto = B.passi(con, dict(DEFAULT_SETTINGS))
     # Appena installata, l'unica cosa gia' fatta e' quella che ha fatto l'app
@@ -3040,6 +3083,9 @@ def _test_primi_passi(r):
            B.manca_l_essenziale(vuoto), True)
     _check(r, 'Primi passi', 'ogni passo sa dove mandarti',
            [p['chiave'] for p in vuoto if not p['dove']], [])
+    _check(r, 'Primi passi', '«I tuoi servizi» porta a Servizi, e i pacchetti non sono più un passo a parte',
+           ({p['chiave']: p['dove'] for p in vuoto}.get('servizi'),
+            [p['chiave'] for p in vuoto if p['chiave'] == 'crediti']), ('servizi', []))
 
     # --- dove ti manda il primo passo ------------------------------------
     # Mandava in Impostazioni: 61 campi, sei schermate, cinque bottoni Salva,
@@ -3100,9 +3146,9 @@ def _test_primi_passi(r):
     # le cose non essenziali si spuntano da sole quando succedono
     con.execute('INSERT INTO clients(id, archived) VALUES(1, 0)')
     con.execute('INSERT INTO invoices(id, deleted_at) VALUES(1, NULL)')
-    con.execute("INSERT INTO crediti_clienti(chiave) VALUES('anna')")
+    con.execute("INSERT INTO servizi(nome) VALUES('Lezione privata')")
     dopo = {p['chiave']: p['fatto'] for p in B.passi(con, pieno)}
-    for chiave in ('clienti', 'fattura', 'crediti'):
+    for chiave in ('clienti', 'fattura', 'servizi'):
         _check(r, 'Primi passi', f'«{chiave}» si spunta da solo', dopo[chiave], True)
     # un cliente archiviato non conta come cliente
     con.execute('UPDATE clients SET archived = 1')
@@ -3242,8 +3288,8 @@ def _test_menu(r):
            acceso.get('email_letta'), 'email_inviate')
     _check(r, 'Menu', 'un pacchetto accende «Crediti»',
            acceso.get('crediti_pacchetto'), 'crediti')
-    _check(r, 'Menu', 'chi lavora a crediti accende «Crediti»',
-           acceso.get('crediti_clienti'), 'crediti')
+    _check(r, 'Menu', '«Clienti a crediti» non è più una pagina: non accende niente',
+           acceso.get('crediti_clienti'), None)
     _check(r, 'Menu', 'le righe senza servizio accendono «Servizi»',
            acceso.get('servizi_righe'), 'servizi')
 
@@ -3459,7 +3505,7 @@ def _cicli_di_tabella_scoperti():
 # assoluto, quindi ci vuole per forza una frase che dica cosa succedera'.
 PAGINE_DEL_PRIMO_GIORNO = ('invoices.html', 'clients.html', 'accountant.html',
                            'sessions.html', 'email_sent.html',
-                           'credits_clients.html', 'subscriptions.html')
+                           'services.html', 'subscriptions.html')
 
 
 def _test_qr_di_serie(r):

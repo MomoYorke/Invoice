@@ -1168,6 +1168,7 @@ def clienti():
                          'FROM invoices WHERE client_id IS NOT NULL AND deleted_at IS NULL GROUP BY client_id'):
         stats_c[r['client_id']] = r
     st = db.get_settings(con)
+    compagni = db.compagni_possibili(con)
     con.close()
     # come si chiudono le mail: si mostra il testo vero, non un esempio
     codice = lng.normalizza(st.get('lingua'))
@@ -1175,7 +1176,9 @@ def clienti():
                        or lng.t('(non ancora scritto)', codice)).strip()
                    for t in ('informale', 'formale')}
               for lg in db.LINGUE_MODELLI}
-    return render_template('clients.html', rows=rows, stats_c=stats_c, saluti=saluti)
+    return render_template('clients.html', rows=rows, stats_c=stats_c, saluti=saluti,
+                           compagni=compagni, compagni_id={x['id'] for x in compagni},
+                           nomi={x['id']: x['name'] for x in rows})
 
 
 @app.route('/cliente/<int:cid>', methods=['POST'])
@@ -1185,18 +1188,36 @@ def cliente_salva(cid):
     # Un compleanno che non si capisce non si salva, ma non si butta il resto
     # della scheda: si tiene quello di prima e lo si dice. E se il modulo quel
     # campo non ce l'ha proprio, il compleanno non si tocca.
-    vecchio = con.execute('SELECT compleanno FROM clients WHERE id=?', (cid,)).fetchone()
+    vecchio = con.execute('SELECT compleanno, nome_calendario, compagno_id, chiave_sedute '
+                          'FROM clients WHERE id=?', (cid,)).fetchone()
     compleanno = (vecchio['compleanno'] or '') if vecchio else ''
     perche = ''
     if 'compleanno' in f:
         letto, perche = birthdays.leggi_compleanno(f.get('compleanno'))
         if letto is not None:
             compleanno = letto
+    # La parte «Sedute» segue la stessa regola. Un nome che nel calendario e'
+    # gia' di un altro cliente farebbe scalare le sedute dell'uno all'altro:
+    # quello non si salva, e la parte resta com'era.
+    nome_cal = (vecchio['nome_calendario'] or '') if vecchio else ''
+    compagno_id = vecchio['compagno_id'] if vecchio else None
+    doppio = None
+    if 'nome_calendario' in f:
+        nuovo_cal = f.get('nome_calendario', '').strip()
+        nuovo_compagno = f.get('compagno_id', type=int)
+        ammessi = {x['id'] for x in db.compagni_possibili(con)} - {cid}
+        if nuovo_compagno not in ammessi and nuovo_compagno != compagno_id:
+            nuovo_compagno = None
+        con_sedute = bool(vecchio and vecchio['chiave_sedute']) or bool(nuovo_compagno)
+        if con_sedute and not f.get('archived'):
+            doppio = db.nome_calendario_doppio(con, cid, nuovo_cal, f.get('name', '').strip())
+        if doppio is None:
+            nome_cal, compagno_id = nuovo_cal, nuovo_compagno
     # 'tono' c'era nel modulo ma non qui: il menu «come ti firmi» si poteva
     # cambiare e non veniva mai salvato
     con.execute('UPDATE clients SET name=?, address1=?, address2=?, file_label=?, notes=?, '
                 'email=?, tono=?, lingua=?, paga_come=?, intestatario=?, abbonamento=?, '
-                'archived=?, compleanno=? WHERE id=?',
+                'archived=?, compleanno=?, nome_calendario=?, compagno_id=? WHERE id=?',
                 (f.get('name', '').strip(), f.get('address1', '').strip(),
                  f.get('address2', '').strip(), f.get('file_label', '').strip(),
                  f.get('notes', '').strip(), f.get('email', '').strip(),
@@ -1205,13 +1226,26 @@ def cliente_salva(cid):
                  f.get('paga_come', '').strip(),
                  f.get('intestatario', '').strip(),
                  1 if f.get('abbonamento') else 0,
-                 1 if f.get('archived') else 0, compleanno, cid))
+                 1 if f.get('archived') else 0, compleanno, nome_cal, compagno_id, cid))
+    if vecchio is not None and compagno_id and not vecchio['chiave_sedute']:
+        # chi si allena con un altro entra nel conto delle sedute anche senza
+        # fatture sue: il pacchetto lo paga l'altro
+        db.assegna_chiave_sedute(con, cid)
     con.commit()
     con.close()
+    sess.ricarica()             # il calendario si rilegge con i nomi nuovi
     if perche:
         avvisa('Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}',
                'error', motivo=lng.t(perche, _lingua_app()))
-    else:
+    if doppio and doppio[1]:
+        avvisa('Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario '
+               'avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua, per '
+               'esempio «{proposta}».', 'error', altro=doppio[0], proposta=doppio[1])
+    elif doppio:
+        avvisa('Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario '
+               'avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua.',
+               'error', altro=doppio[0])
+    if not perche and not doppio:
         avvisa('Cliente aggiornato.', 'ok')
     return redirect(url_for('clienti'))
 
@@ -1511,90 +1545,9 @@ def crediti():
 
 @app.route('/crediti/clienti')
 def crediti_clienti():
-    """Chi lavora a pacchetti di sessioni prepagate."""
-    con = get_con()
-    righe = [dict(r) for r in db.crediti_clienti(con)]
-    con.close()
-    reg = sess.carica()
-    for r in righe:
-        r['prezzi_leggibili'] = ', '.join(
-            fmt_chf(int(x), False) for x in r['prezzi'].split(',') if x.strip())
-        # quanti pacchetti porta gia' il suo nome: dice se si puo' cancellare
-        r['pacchetti'] = sum(1 for p in reg['pacchetti']
-                             if r['nome'].lower() in p['cliente'].lower())
-    return render_template('credits_clients.html', righe=righe,
-                           nomi={r['chiave']: r['nome'] for r in righe})
-
-
-@app.route('/crediti/clienti/salva', methods=['POST'])
-def crediti_cliente_salva():
-    f = request.form
-    chiave = sess.chiave_da_nome(f.get('chiave') or f.get('nome'))
-    nome = (f.get('nome') or '').strip()
-    if not chiave or not nome:
-        avvisa('Servono almeno il nome e la parola da cercare nel calendario.', 'error')
-        return redirect(url_for('crediti_clienti'))
-    try:
-        crediti = max(0, int(f.get('crediti') or 0))
-    except ValueError:
-        avvisa('I crediti devono essere un numero.', 'error')
-        return redirect(url_for('crediti_clienti'))
-    con = get_con()
-    esistenti = {r['chiave']: r for r in db.crediti_clienti(con)}
-    nuovo = chiave not in esistenti
-    compagno = sess.chiave_da_nome(f.get('compagno'))
-    if compagno == chiave:
-        compagno = ''                       # non puo' essere il supplemento di se stesso
-    if compagno and compagno not in esistenti:
-        con.close()
-        avvisa('«{chi}» non è fra i clienti a crediti: aggiungilo prima.', 'error',
-               chi=compagno)
-        return redirect(url_for('crediti_clienti'))
-    db.crediti_cliente_salva(con, chiave, {
-        'nome': nome,
-        'crediti': crediti,
-        'prefisso': (f.get('prefisso') or nome[:3]).strip().upper(),
-        'prezzi': sess.prezzi_da_testo(f.get('prezzi')),
-        'fattura_a': (f.get('fattura_a') or '').strip(),
-        'compagno': compagno,
-        'attivo': 0 if f.get('archiviato') else 1,
-        'pos': esistenti[chiave]['pos'] if not nuovo else len(esistenti),
-    })
-    con.close()
-    sess.ricarica()          # l'app deve accorgersene subito
-    avvisa('{nome} è ora fra i clienti a crediti.' if nuovo
-           else 'Modifiche salvate per {nome}.', 'ok', nome=nome)
-    return redirect(url_for('crediti_clienti'))
-
-
-@app.route('/crediti/clienti/<chiave>/elimina', methods=['POST'])
-def crediti_cliente_elimina(chiave):
-    con = get_con()
-    riga = next((r for r in db.crediti_clienti(con) if r['chiave'] == chiave), None)
-    if riga is None:
-        con.close()
-        abort(404)
-    # se ha gia' dei pacchetti nel registro, cancellarlo lascerebbe quei
-    # pacchetti senza padrone: si archivia e basta
-    reg = sess.carica()
-    quanti = sum(1 for p in reg['pacchetti'] if riga['nome'].lower() in p['cliente'].lower())
-    if quanti:
-        db.crediti_cliente_salva(con, chiave, dict(riga, attivo=0))
-        con.close()
-        sess.ricarica()
-        avvisa(('{nome} ha {quanti} pacchetto nel registro: cancellare la scheda '
-                "perderebbe quella storia. L'ho archiviata — il nome resta riconosciuto "
-                'nel calendario, ma non si aprono più pacchetti nuovi.') if quanti == 1
-               else ('{nome} ha {quanti} pacchetti nel registro: cancellare la scheda '
-                     "perderebbe quella storia. L'ho archiviata — il nome resta "
-                     'riconosciuto nel calendario, ma non si aprono più pacchetti nuovi.'),
-               'ok', nome=riga['nome'], quanti=quanti)
-        return redirect(url_for('crediti_clienti'))
-    db.crediti_cliente_elimina(con, chiave)
-    con.close()
-    sess.ricarica()
-    avvisa('{nome} non è più fra i clienti a crediti.', 'ok', nome=riga['nome'])
-    return redirect(url_for('crediti_clienti'))
+    """Chi fa le sedute si scrive ora nella scheda del cliente. Il vecchio
+    indirizzo, rimasto in un segnalibro, porta li'."""
+    return redirect(url_for('clienti'))
 
 
 # La finestra da cui si vanno a cercare gli orari mancanti. Un anno indietro

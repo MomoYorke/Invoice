@@ -1265,6 +1265,24 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        'Sedute': 'Sessions',
+        'Nel calendario si chiama': 'Name in the calendar',
+        'Come compare nei titoli del tuo calendario. Più nomi separati da virgola, se divide le sedute con un’altra persona.':
+            'How they appear in your calendar titles. Several names separated by commas, if they share sessions with someone else.',
+        'Si allena insieme a': 'Trains together with',
+        '— nessuno —': '— nobody —',
+        'Le sue sedute contano solo se c’è anche l’altra persona; se viene da sola, si scalano dalle sedute dell’altra.':
+            'Their sessions count only when the other person is there too; when they come alone, the session comes off the other person’s sessions.',
+        'Paga con ordine permanente': 'Pays by standing order',
+        'ordine permanente': 'standing order',
+        'Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua, per esempio «{proposta}».':
+            'Client updated, but the «Sessions» part stayed as it was: in the calendar they would have the same name as {altro}. Write a name that tells them apart, for example «{proposta}».',
+        'Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua.':
+            'Client updated, but the «Sessions» part stayed as it was: in the calendar they would have the same name as {altro}. Write a name that tells them apart.',
+        'I tuoi servizi': 'Your services',
+        'Nome, prezzo e sedute di quello che vendi. Diventano i pulsanti della nuova fattura, e da lì l’app conta le sedute e raggruppa il fatturato.':
+            'Name, price and sessions of what you sell. They become the buttons of the new invoice, and from there the app counts sessions and groups your revenue.',
+        'Aggiungi un servizio': 'Add a service',
         'Nessuna seduta da contare': 'No sessions to count',
         'Le sedute arrivano quando fatturi un servizio che le comprende.':
             'Sessions arrive when you invoice a service that includes them.',
@@ -2712,6 +2730,24 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        'Sedute': 'Sitzungen',
+        'Nel calendario si chiama': 'Name im Kalender',
+        'Come compare nei titoli del tuo calendario. Più nomi separati da virgola, se divide le sedute con un’altra persona.':
+            'Wie die Person in den Titeln deines Kalenders erscheint. Mehrere Namen mit Komma getrennt, wenn sie Sitzungen mit jemand anderem teilt.',
+        'Si allena insieme a': 'Trainiert zusammen mit',
+        '— nessuno —': '— niemand —',
+        'Le sue sedute contano solo se c’è anche l’altra persona; se viene da sola, si scalano dalle sedute dell’altra.':
+            'Die eigenen Sitzungen zählen nur, wenn die andere Person auch da ist; kommt sie allein, wird die Sitzung von den Sitzungen der anderen abgezogen.',
+        'Paga con ordine permanente': 'Zahlt per Dauerauftrag',
+        'ordine permanente': 'Dauerauftrag',
+        'Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua, per esempio «{proposta}».':
+            'Kunde aktualisiert, aber der Teil «Sitzungen» ist unverändert: Im Kalender hätte die Person denselben Namen wie {altro}. Schreib einen Namen, der sie unterscheidet, zum Beispiel «{proposta}».',
+        'Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua.':
+            'Kunde aktualisiert, aber der Teil «Sitzungen» ist unverändert: Im Kalender hätte die Person denselben Namen wie {altro}. Schreib einen Namen, der sie unterscheidet.',
+        'I tuoi servizi': 'Deine Leistungen',
+        'Nome, prezzo e sedute di quello che vendi. Diventano i pulsanti della nuova fattura, e da lì l’app conta le sedute e raggruppa il fatturato.':
+            'Name, Preis und Sitzungen von dem, was du verkaufst. Sie werden zu den Schaltflächen der neuen Rechnung, und von dort zählt die App die Sitzungen und gruppiert den Umsatz.',
+        'Aggiungi un servizio': 'Leistung hinzufügen',
         'Nessuna seduta da contare': 'Keine Sitzungen zu zählen',
         'Le sedute arrivano quando fatturi un servizio che le comprende.':
             'Sitzungen entstehen, wenn du eine Leistung verrechnest, die sie enthält.',

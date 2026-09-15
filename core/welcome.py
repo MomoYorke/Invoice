@@ -68,24 +68,17 @@ def passi(con, settings):
                    "dicano lo stesso importo, e la mette in archivio.",
          'dove': 'nuova', 'bottone': 'Fai la prima fattura'},
         {'chiave': 'servizi', 'obbligatorio': False,
-         'titolo': 'Come si chiamano i tuoi servizi',
-         'fatto': valorizzato('servizi_abbonamento') or valorizzato('servizi_pacchetto'),
-         'perche': 'Serve a due cose: la Dashboard raggruppa il fatturato per servizio, '
-                   "e l'email nomina il servizio giusto. Finché è vuoto l'app non prova "
-                   "a indovinare: mette tutto in «Altro» e nell'email non lo nomina.",
-         'dove': 'impostazioni', 'bottone': 'Scrivi i tuoi servizi'},
+         'titolo': 'I tuoi servizi',
+         'fatto': quante('SELECT COUNT(*) FROM servizi') > 0,
+         'perche': 'Nome, prezzo e sedute di quello che vendi. Diventano i pulsanti della '
+                   'nuova fattura, e da lì l’app conta le sedute e raggruppa il fatturato.',
+         'dove': 'servizi', 'bottone': 'Aggiungi un servizio'},
         {'chiave': 'posta', 'obbligatorio': False,
          'titolo': 'La posta',
          'fatto': valorizzato('smtp_host', 'smtp_user', 'smtp_pass'),
          'perche': "Serve solo se vuoi spedire le fatture dall'app invece di "
                    'allegarle a mano.',
          'dove': 'impostazioni', 'bottone': 'Collega la casella'},
-        {'chiave': 'crediti', 'obbligatorio': False,
-         'titolo': 'I pacchetti di sessioni',
-         'fatto': quante('SELECT COUNT(*) FROM crediti_clienti') > 0,
-         'perche': 'Se vendi pacchetti prepagati, l\'app tiene il conto delle sessioni '
-                   'leggendole dal tuo calendario.',
-         'dove': 'crediti_clienti', 'bottone': 'Chi lavora a crediti'},
     ]
     return elenco
 

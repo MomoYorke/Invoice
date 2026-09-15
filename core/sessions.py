@@ -129,27 +129,6 @@ def cliente(chiave):
     return next((c for c in _tutti() if c['chiave'] == chiave), None)
 
 
-def chiave_da_nome(testo):
-    """La parola cercata nei titoli del calendario: minuscola, senza spazi."""
-    return re.sub(r'[^a-z0-9]', '', (testo or '').strip().lower())
-
-
-def prezzi_da_testo(testo):
-    """«1'800.00 CHF, 150.-» -> «180000,150000».
-
-    Chi usa l'app scrive i prezzi come li ha in testa, non in centesimi, e li
-    separa con la virgola o col punto e virgola."""
-    from .money import parse_amount
-    fuori = []
-    for pezzo in re.split(r'[;,\n]', testo or ''):
-        if not pezzo.strip():
-            continue
-        c = parse_amount(pezzo)
-        if c is not None:
-            fuori.append(str(c))
-    return ','.join(fuori)
-
-
 # ------------------------------------------------------------------ utilita'
 def normalizza(titolo):
     """spec 5.2: trim + lowercase, spazi interni compattati."""
