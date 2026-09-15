@@ -854,11 +854,14 @@ def _test_clienti_crediti(r):
             try:
                 S.apri_pacchetto({'pacchetti': [], 'esclusi': []}, chi, '2026-08-23')
                 esito = 'non ha protestato'
-            except KeyError:
+            except S.SenzaPacchetto:
                 esito = 'protesta'
             _check(r, cat, f'non si apre un pacchetto {perche}', esito, 'protesta')
 
         # chi ha le sedute ma nessun pacchetto non deve fermare la lettura del calendario
+        # (Check 1, revisione I1: il motivo dello scarto resta questo, non un
+        # KeyError qualsiasi — vedi anche la prova sopra, che ora pretende
+        # proprio S.SenzaPacchetto e non un KeyError generico)
         S.configura([GIULIA, MARCO, LUCA])
         import sync_sessions as SY
         evento = {'id': 'e1', 'titolo': 'Giulia', 'data': '2026-09-01', 'ora': '07:00',
@@ -868,6 +871,25 @@ def _test_clienti_crediti(r):
         _check(r, cat, 'la seduta di chi non ha ancora un pacchetto si scarta, e la lettura va avanti',
                rap.get('scartati') if isinstance(rap, dict) else rap,
                [('Giulia', 'nessun pacchetto da cui scalare')])
+
+        # Check 2 (revisione I1): un guaio diverso da «nessun pacchetto» — qui
+        # un pacchetto aperto senza 'crediti', dati corrotti — non è una
+        # sottoclasse di SenzaPacchetto: non si scarta in silenzio, ferma la
+        # lettura come succedeva prima di questo scarto (spec 6.1 punto 7).
+        reg_rotto = {'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'],
+                                    'fine': None, 'sessioni': []}], 'esclusi': []}
+        evento_rotto = {'id': 'e2', 'titolo': 'Giulia', 'data': '2026-09-01', 'ora': '07:00',
+                        'stato_google': 'confirmed'}
+        try:
+            SY.sincronizza(reg_rotto, [evento_rotto], oggi=datetime.date(2026, 9, 2))
+            esito = 'non si è fermata'
+        except S.SenzaPacchetto:
+            esito = 'scartata per sbaglio'
+        except KeyError as guaio:
+            esito = ('si è fermata', str(guaio))
+        _check(r, cat, 'un pacchetto aperto senza «crediti» (dati corrotti) non si scarta: '
+                       'ferma la lettura',
+               esito, ('si è fermata', "'crediti'"))
 
         # elenco vuoto: l'app deve reggere, non spegnersi
         S.configura([])
@@ -2229,9 +2251,11 @@ def _test_migrazione_servizi(r):
            _senza_scoppiare(lambda: M.clienti_da_crediti(con, REG_CLIENTI)), (3, 1, 1))
     chi = {c['chiave_sedute']: c
            for c in con.execute("SELECT * FROM clients WHERE COALESCE(chiave_sedute, '') <> ''")}
-    _check(r, cat, 'chi ha lo stesso primo nome riceve la chiave; il nome nel calendario solo se è diverso',
+    _check(r, cat, 'chi ha lo stesso primo nome riceve la chiave; il nome nel calendario solo se è '
+                   'diverso — e con la vecchia chiave in coda se da sola non si riconoscerebbe più '
+                   '(revisione I2)',
            [(k, chi[k]['id'], chi[k]['nome_calendario']) for k in ('giulia', 'elena') if k in chi],
-           [('giulia', 1, ''), ('elena', 4, 'Elena R.')])
+           [('giulia', 1, ''), ('elena', 4, 'Elena R., elena')])
     _check(r, cat, 'fra due Sofia vince quella delle fatture dei suoi pacchetti',
            chi['sofia']['id'] if 'sofia' in chi else None, 3)
     marco = chi.get('marco')
@@ -2244,6 +2268,23 @@ def _test_migrazione_servizi(r):
     _check(r, cat, 'l’ex cliente nasce archiviato, con solo nome e chiave',
            (chi['luca']['name'], chi['luca']['archived'], chi['luca']['address1'])
            if 'luca' in chi else None, ('Luca', 1, ''))
+
+    # --- revisione I2: i vecchi titoli del calendario si riconoscono ancora ---
+    # «Elena R.» è il nome che finisce sulla scheda, ma i vecchi titoli
+    # usavano solo la chiave («Elena», «Elena pt»): la migrazione deve
+    # tenerli riconoscibili tutti, non solo chi ha gia' il nome giusto.
+    prima_config = S._CONFIG
+    try:
+        S.configura([dict(x) for x in D.clienti_sedute(con)])
+        for vecchia_chiave in ('giulia', 'marco', 'sofia', 'elena', 'luca'):
+            _check(r, cat, f'dopo la migrazione «{vecchia_chiave.capitalize()}» si riconosce '
+                           f'ancora come «{vecchia_chiave}»',
+                   S.classifica(vecchia_chiave.capitalize())[0], vecchia_chiave)
+        _check(r, cat, 'e anche un titolo come «Elena pt», non solo la chiave da sola',
+               S.classifica('Elena pt')[0], 'elena')
+    finally:
+        S._CONFIG = prima_config
+
     quanti = con.execute('SELECT COUNT(*) FROM clients').fetchone()[0]
     _check(r, cat, 'la seconda volta non cambia niente',
            (M.clienti_da_crediti(con, REG_CLIENTI),
@@ -2259,6 +2300,9 @@ def _test_migrazione_servizi(r):
              'sessioni': [{'n': 1, 'data': '2026-08-01', 'titolo': 'Giulia e Marco'}]},
             {'id': 'SOF-01', 'cliente': 'Sofia', 'chiavi': ['sofia'], 'crediti': 12, 'sessioni': []},
             {'id': 'XXX-01', 'cliente': 'Qualcuno', 'crediti': 10, 'sessioni': []},
+            # scritto col vecchio nome, non con «Elena R.» che finisce sulla scheda
+            # (revisione I2): deve prendere la chiave lo stesso.
+            {'id': 'ELE-01', 'cliente': 'Elena', 'crediti': 8, 'sessioni': []},
         ], 'esclusi': []}
         with open(percorso, 'w', encoding='utf-8') as f:
             json.dump(registro, f)
@@ -2266,7 +2310,7 @@ def _test_migrazione_servizi(r):
                (_senza_scoppiare(M.chiavi_nel_registro, _db_servizi(), percorso),
                 leggi_json(percorso)), (0, registro))
         _check(r, cat, 'le chiavi vanno sui pacchetti che non le hanno',
-               _senza_scoppiare(M.chiavi_nel_registro, con, percorso), 1)
+               _senza_scoppiare(M.chiavi_nel_registro, con, percorso), 2)
         dopo = leggi_json(percorso)
         _check(r, cat, 'un pacchetto diviso ne riceve due, e le sedute restano quelle',
                (dopo['pacchetti'][0].get('chiavi'), dopo['pacchetti'][0]['sessioni']),
@@ -2274,6 +2318,9 @@ def _test_migrazione_servizi(r):
         _check(r, cat, 'chi le aveva già e chi non si riconosce restano come prima',
                (dopo['pacchetti'][1], 'chiavi' in dopo['pacchetti'][2]),
                (registro['pacchetti'][1], False))
+        _check(r, cat, 'un pacchetto scritto col vecchio nome «Elena» prende comunque la sua '
+                       'chiave (revisione I2)',
+               dopo['pacchetti'][3].get('chiavi'), ['elena'])
         copie = os.path.join(tmp, 'data', 'backups')
         _check(r, cat, 'prima di riscrivere il registro se ne fa la copia',
                len(os.listdir(copie)) if os.path.isdir(copie) else 0, 1)

@@ -120,9 +120,11 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
             try:
                 p, nuovo = S.aggiungi_sessione(reg, addebito, ev['data'], ev['titolo'],
                                                ev['id'], nota=nota, ora=ev.get('ora'))
-            except KeyError:
+            except S.SenzaPacchetto:
                 # ha le sedute ma nessun pacchetto: finché una fattura non gliene
-                # apre uno non c'è niente da cui scalare, e la lettura va avanti
+                # apre uno non c'è niente da cui scalare, e la lettura va avanti.
+                # Un KeyError diverso (dati corrotti: non è questo il caso) non è
+                # una sottoclasse di SenzaPacchetto e continua a fermare la lettura.
                 rap['scartati'].append((ev['titolo'], 'nessun pacchetto da cui scalare'))
                 continue
             if nuovo:

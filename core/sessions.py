@@ -314,6 +314,21 @@ def prossimo_id_pacchetto(reg, chiave):
     return f'{pref}-{n + 1:02d}'
 
 
+class SenzaPacchetto(KeyError):
+    """`apri_pacchetto` la solleva quando non c'e' nessun pacchetto da aprire:
+    il cliente non e' (piu') fra quelli con le sedute, oppure non c'e' nessuna
+    misura da cui partire (spec 6.1 punto 7) — i due soli casi in cui una
+    seduta letta dal calendario va scartata invece di fermare la lettura.
+
+    E' una sottoclasse di KeyError apposta: chi la cattura ancora come
+    KeyError (le prove, per esempio) continua a funzionare senza cambiare
+    niente. `sync_sessions.sincronizza` la cattura per nome, cosi' un guaio
+    diverso dentro `aggiungi_sessione` — un pacchetto senza 'crediti', una
+    sessione senza 'data', un pacchetto senza 'id' — resta un KeyError
+    semplice: non si scambia per «nessun pacchetto» e ferma la lettura invece
+    di sparire in silenzio, come succedeva prima di questo scarto."""
+
+
 def apri_pacchetto(reg, chiave, data_inizio, crediti=None):
     """Apre il pacchetto successivo per quel cliente (spec 6.1 punto 7).
 
@@ -322,12 +337,12 @@ def apri_pacchetto(reg, chiave, data_inizio, crediti=None):
     niente: inventare quante sedute ha comprato qualcuno e' peggio che dirlo."""
     cfg = cliente(chiave)
     if cfg is None:
-        raise KeyError(f'{chiave} non è fra i clienti con le sedute')
+        raise SenzaPacchetto(f'{chiave} non è fra i clienti con le sedute')
     if crediti is None:
         suoi = [p for p in reg['pacchetti'] if chiave in _chiavi_di(p)]
         crediti = suoi[-1]['crediti'] if suoi else None
     if not crediti:
-        raise KeyError(f'{chiave}: nessun pacchetto da cui prendere la misura')
+        raise SenzaPacchetto(f'{chiave}: nessun pacchetto da cui prendere la misura')
     p = {
         'id': prossimo_id_pacchetto(reg, chiave),
         'cliente': cfg['nome'],

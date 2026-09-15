@@ -293,6 +293,35 @@ def _chiave_cliente_libera(con, nome):
     return chiave
 
 
+def _chiave_gia_riconosciuta(nome_calendario, nome_cliente, chiave):
+    """True se un titolo fatto solo della vecchia chiave di crediti_clienti
+    (es. «elena») verrebbe gia' riconosciuto con questi nomi nel calendario.
+
+    Stessa logica e stessa normalizzazione di sessions.classifica: la chiave
+    conta come riconosciuta solo se compare come parola intera fra i nomi che
+    nomi_calendario() ricaverebbe da (nome_calendario, nome_cliente) — non un
+    confronto letterale sulla sola stringa `nome_calendario`."""
+    titolo = sess.normalizza(chiave)
+    for nome in sess.nomi_calendario(nome_calendario, nome_cliente):
+        parola = sess.normalizza(nome)
+        if parola and re.search(r'(?<!\w)' + re.escape(parola) + r'(?!\w)', titolo):
+            return True
+    return False
+
+
+def _con_vecchia_chiave(nome_calendario, nome_cliente, chiave):
+    """Estende `nome_calendario` con la vecchia chiave di crediti_clienti, se
+    serve (spec §4, revisione I2): i vecchi titoli del calendario («Elena»,
+    «Elena pt») usavano quella parola, non per forza il nome per intero che
+    finisce sulla scheda cliente («Elena R.»). Se la chiave non si
+    riconoscerebbe piu' da sola, la aggiunge in coda — mai in testa: il nome
+    mostrato (il primo di `nomi_calendario`) non deve cambiare."""
+    if not chiave or _chiave_gia_riconosciuta(nome_calendario, nome_cliente, chiave):
+        return nome_calendario
+    nomi = sess.nomi_calendario(nome_calendario, nome_cliente)
+    return ', '.join(nomi + [chiave]) if nomi else chiave
+
+
 def clienti_da_crediti(con, registro):
     """I «clienti a crediti» diventano clienti con la chiave delle sedute.
 
@@ -312,23 +341,29 @@ def clienti_da_crediti(con, registro):
         c = _cliente_per_nome(con, nome, _numeri_dei_pacchetti(registro, nome))
         if c is not None:
             nome_cal = '' if _primo_nome(c['name']) == nome.lower() else nome
+            nome_cal = _con_vecchia_chiave(nome_cal, c['name'], chiave)
             con.execute('UPDATE clients SET chiave_sedute=?, nome_calendario=? WHERE id=?',
                         (chiave, nome_cal, c['id']))
             trovati += 1
         elif int(cc['attivo'] or 0):
             m = _cliente_da_copiare(con, cc, registro)
+            nome_cal = _con_vecchia_chiave('', nome, chiave)
             con.execute(
                 'INSERT INTO clients(key, name, file_label, address1, address2, email, lingua, '
-                'tono, intestatario, paga_come, chiave_sedute) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                'tono, intestatario, paga_come, chiave_sedute, nome_calendario) '
+                'VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                 (_chiave_cliente_libera(con, nome), nome, nome,
                  m['address1'] if m else '', m['address2'] if m else '',
                  m['email'] if m else '', (m['lingua'] if m else '') or 'en',
                  (m['tono'] if m else '') or 'informale',
-                 m['name'] if m else '', ((m['paga_come'] or m['name']) if m else ''), chiave))
+                 m['name'] if m else '', ((m['paga_come'] or m['name']) if m else ''), chiave,
+                 nome_cal))
             nuovi += 1
         else:
-            con.execute('INSERT INTO clients(key, name, file_label, archived, chiave_sedute) '
-                        'VALUES(?,?,?,1,?)', (_chiave_cliente_libera(con, nome), nome, nome, chiave))
+            nome_cal = _con_vecchia_chiave('', nome, chiave)
+            con.execute('INSERT INTO clients(key, name, file_label, archived, chiave_sedute, '
+                        'nome_calendario) VALUES(?,?,?,1,?,?)',
+                        (_chiave_cliente_libera(con, nome), nome, nome, chiave, nome_cal))
             archiviati += 1
     for cc in righe:
         compagno = (cc['compagno'] or '').strip().lower()
