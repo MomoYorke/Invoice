@@ -1843,6 +1843,7 @@ def _test_migrazione_servizi(r):
     dei servizi e collega le righe gia' fatturate. Le prove girano su database
     costruiti qui dentro: mai sui dati di chi usa l'app."""
     import json
+    import glob
     import inspect
     import logging
     import sqlite3
@@ -1853,8 +1854,7 @@ def _test_migrazione_servizi(r):
     from . import stats as ST
     cat = 'Migrazione dei servizi'
 
-    def con_righe(impostazioni, righe):
-        con = _db_servizi()
+    def popola(con, impostazioni, righe):
         for chiave, valore in impostazioni.items():
             con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?,?)',
                         (chiave, valore))
@@ -1867,6 +1867,10 @@ def _test_migrazione_servizi(r):
             con.execute('INSERT INTO items(invoice_id, pos, qty, description, unit_cents, '
                         'total_cents) VALUES(?,0,?,?,?,?)', (fid, '1', testo, cents, cents))
         con.commit()
+
+    def con_righe(impostazioni, righe):
+        con = _db_servizi()
+        popola(con, impostazioni, righe)
         return con
 
     def listino(con):
@@ -2024,6 +2028,47 @@ def _test_migrazione_servizi(r):
         _check(r, cat, 'un database in memoria non ha niente da copiare',
                M.copia_di_sicurezza(_db_servizi()), [])
 
+        # --- la copia si fa una volta sola, anche se il guaio si ripete ---
+        # Trovato dalla revisione: senza questo controllo, un guaio che si
+        # ripete a ogni avvio scrive una copia nuova ogni volta (mai piu'
+        # necessaria: un tentativo fallito non cambia il database), riempiendo
+        # il disco in una cartella che la pulizia delle copie non tocca.
+        percorso_db2 = os.path.join(tmp, 'due-tentativi', 'fatture.db')
+        os.makedirs(os.path.dirname(percorso_db2))
+        con = sqlite3.connect(percorso_db2)
+        con.row_factory = sqlite3.Row
+        con.executescript(D.SCHEMA)
+        D._migrate(con)
+        popola(con, IMPOSTAZIONI, RIGHE)
+        con.execute('DROP TABLE servizi_testi')
+        con.commit()
+        cartella2 = os.path.join(os.path.dirname(percorso_db2), 'backups', M.CARTELLA_COPIE)
+        tentativi = []
+
+        def copia_finta(con, registro_path=None):
+            # Una copia vera sul disco (cosi' il controllo di esegui() la
+            # trova per davvero), ma col nome deciso da qui, non dall'orologio:
+            # due chiamate ravvicinate avrebbero lo stesso secondo, e il
+            # guasto da vedere rosso non si vedrebbe.
+            tentativi.append(1)
+            os.makedirs(cartella2, exist_ok=True)
+            percorso = os.path.join(cartella2, f'fatture-{len(tentativi)}.db')
+            io.open(percorso, 'wb').close()
+            return [percorso]
+
+        vera_copia = M.copia_di_sicurezza
+        M.copia_di_sicurezza = copia_finta
+        errori.disabled = True
+        try:
+            M.esegui(con, percorso_registro)
+            M.esegui(con, percorso_registro)
+        finally:
+            M.copia_di_sicurezza = vera_copia
+            errori.disabled = False
+        con.close()
+        _check(r, cat, 'due tentativi falliti di fila lasciano una sola copia, non due',
+               len(glob.glob(os.path.join(cartella2, 'fatture-*.db'))), 1)
+
         # --- parte da sola all'avvio ---
         # Le regole vuote con fatture presenti fanno scrivere a _migrate le
         # regole di chi ha scritto l'app: qui si vede che non diventano servizi.
@@ -2056,6 +2101,31 @@ def _test_migrazione_servizi(r):
     _check(r, cat, 'dopo un Reimporta le righe ritrovano il loro servizio',
            _senza_scoppiare(lambda: 'srv.collega_righe(con)' in inspect.getsource(importer.import_all)),
            True)
+
+    # --- Controlli: «So già» non spegne un guaio che si ripara da solo ---
+    # Trovato dalla revisione: la chiave di quell'anomalia e' sempre la stessa
+    # (stats.py: 'servizi:migrazione'), quindi un solo clic su «So già» ne
+    # nasconderebbe ogni guaio futuro, non solo quello di oggi.
+    import jinja2
+    base_pagine = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                'templates')
+    with io.open(os.path.join(base_pagine, 'checks.html'), encoding='utf-8') as f:
+        sorgente_checks = f.read()
+    inizio_ciclo = sorgente_checks.index('{% for i in issues %}')
+    fine_ciclo = sorgente_checks.index('{% endfor %}', inizio_ciclo) + len('{% endfor %}')
+    ambiente = jinja2.Environment()
+    ambiente.globals.update(pallino=lambda *a, **k: '', icona=lambda *a, **k: '',
+                             url_for=lambda *a, **k: '#', _=lambda s: s)
+    reso = ambiente.from_string(sorgente_checks[inizio_ciclo:fine_ciclo]).render(issues=[
+        {'kind': 'servizi', 'key': 'servizi:migrazione',
+         'msg': 'Aggiornamento dei servizi non riuscito', 'fixable': False, 'inv_id': None},
+        {'kind': 'dati', 'key': 'dati:1', 'msg': 'manca la data', 'detail': '',
+         'fixable': True, 'inv_id': 1},
+    ])
+    blocchi = reso.split('<div class="issue ')[1:]
+    _check(r, cat, 'niente pulsante «So già» per l’anomalia dei servizi (si ripara da sola), '
+                   'ma per le altre anomalie resta',
+           [('So già' in b) for b in blocchi], [False, True])
 
     # --- chi chiama init() nelle prove non deve leggere il registro vero ---
     # init() fa girare la migrazione da solo (Passo 4): una prova che scambia

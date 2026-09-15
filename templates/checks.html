@@ -34,11 +34,13 @@
             {{ icona('matita', 'ic-mini') }}{{ _('Correggi') }}
           </button>
         {% endif %}
+        {% if i.kind != 'servizi' %}
         <button class="btn small secondary" type="button"
                 onclick="document.getElementById('ack-{{ loop.index }}').style.display =
                          (document.getElementById('ack-{{ loop.index }}').style.display === 'block' ? 'none' : 'block')">
           {{ _('So già') }}
         </button>
+        {% endif %}
       </div>
     </div>
 
@@ -71,6 +73,7 @@
     </div>
     {% endif %}
 
+    {% if i.kind != 'servizi' %}
     <div id="ack-{{ loop.index }}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,0,0,.08)">
       <form method="post" action="{{ url_for('controlli_archivia') }}"
             style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
@@ -84,6 +87,7 @@
         <button class="btn small secondary">{{ _('Archivia anomalia') }}</button>
       </form>
     </div>
+    {% endif %}
   </div>
   {% endfor %}
 {% else %}

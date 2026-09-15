@@ -19,6 +19,7 @@ Le regole del gioco:
 import os
 import re
 import json
+import glob
 import shutil
 import sqlite3
 import logging
@@ -42,7 +43,7 @@ def esegui(con, registro_path=None, fai_copia=True):
     if fatta(con):
         return False
     try:
-        if fai_copia:
+        if fai_copia and not _copia_gia_fatta(con):
             copia_di_sicurezza(con, registro_path)
         registro = _leggi_registro(registro_path)
         crea_servizi(con, D.get_settings(con), registro)
@@ -72,6 +73,19 @@ def _leggi_registro(path=None):
             return json.load(f)
     except (OSError, ValueError):
         return {}
+
+
+def _copia_gia_fatta(con):
+    """True se in backups/prima-dei-servizi/ c'e' gia' una copia di un
+    tentativo precedente: un guaio che si ripete a ogni avvio non deve
+    scriverne una nuova ogni volta. Un tentativo fallito fa rollback e non
+    cambia il database, quindi la prima copia resta buona per il prossimo."""
+    riga = next((x for x in con.execute('PRAGMA database_list') if x[1] == 'main'), None)
+    percorso = riga[2] if riga else ''
+    if not percorso:
+        return False
+    cartella = os.path.join(os.path.dirname(percorso), 'backups', CARTELLA_COPIE)
+    return bool(glob.glob(os.path.join(cartella, 'fatture-*.db')))
 
 
 def copia_di_sicurezza(con, registro_path=None):
