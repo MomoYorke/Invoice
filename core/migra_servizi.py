@@ -39,29 +39,36 @@ def fatta(con):
 
 
 def esegui(con, registro_path=None, fai_copia=True):
-    """Fa la migrazione, se non e' ancora fatta. True se l'ha fatta adesso."""
-    if fatta(con):
-        return False
-    try:
-        if fai_copia and not _copia_gia_fatta(con):
-            copia_di_sicurezza(con, registro_path)
-        registro = _leggi_registro(registro_path)
-        crea_servizi(con, D.get_settings(con), registro)
-        srv.collega_righe(con)
-        con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?, ?)', (MARCATORE, '1'))
-        con.execute('DELETE FROM settings WHERE key=?', (ERRORE,))
-        con.commit()
-    except Exception as guaio:
-        con.rollback()
-        logging.getLogger('fatture.errori').exception('Aggiornamento dei servizi non riuscito')
+    """Fa la migrazione, se non e' ancora fatta. True se l'ha fatta adesso.
+
+    Il registro viene dopo il database, e ci si riprova a ogni avvio finche'
+    tutti i pacchetti hanno le loro chiavi."""
+    adesso = False
+    if not fatta(con):
         try:
+            if fai_copia and not _copia_gia_fatta(con):
+                copia_di_sicurezza(con, registro_path)
+            registro = _leggi_registro(registro_path)
+            crea_servizi(con, D.get_settings(con), registro)
+            srv.collega_righe(con)
+            clienti_da_crediti(con, registro)
             con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?, ?)',
-                        (ERRORE, '%s: %s' % (type(guaio).__name__, guaio)))
+                        (MARCATORE, '1'))
+            con.execute('DELETE FROM settings WHERE key=?', (ERRORE,))
             con.commit()
-        except sqlite3.Error:
-            pass            # database bloccato: resta il registro degli errori
-        return False
-    return True
+            adesso = True
+        except Exception as guaio:
+            con.rollback()
+            logging.getLogger('fatture.errori').exception('Aggiornamento dei servizi non riuscito')
+            try:
+                con.execute('INSERT OR REPLACE INTO settings(key, value) VALUES(?, ?)',
+                            (ERRORE, '%s: %s' % (type(guaio).__name__, guaio)))
+                con.commit()
+            except sqlite3.Error:
+                pass        # database bloccato: resta il registro degli errori
+            return False
+    chiavi_nel_registro(con, registro_path)
+    return adesso
 
 
 def _leggi_registro(path=None):
@@ -210,3 +217,153 @@ def crea_servizi(con, settings, registro):
              pos, adesso))
         creati += 1
     return creati
+
+
+# --- Clienti a crediti -> clienti con le sedute ---------------------------------
+
+def _primo_nome(nome):
+    pezzi = (nome or '').strip().split()
+    return pezzi[0].lower() if pezzi else ''
+
+
+def _numeri_dei_pacchetti(registro, nome):
+    """I numeri delle fatture dei pacchetti che portano quel nome."""
+    parola = sess.normalizza(nome)
+    numeri = set()
+    for p in (registro or {}).get('pacchetti') or []:
+        if (parola and p.get('fattura_numero') not in (None, '')
+                and re.search(r'(?<!\w)' + re.escape(parola) + r'(?!\w)',
+                              sess.normalizza(p.get('cliente')))):
+            numeri.add(str(p['fattura_numero']))
+    return numeri
+
+
+def _clienti_delle_fatture(con, numeri):
+    ids = []
+    for numero in sorted(numeri):
+        riga = con.execute(
+            'SELECT client_id FROM invoices WHERE CAST(number AS TEXT) = ? '
+            'AND client_id IS NOT NULL AND deleted_at IS NULL ORDER BY id DESC LIMIT 1',
+            (numero,)).fetchone()
+        if riga and riga['client_id'] not in ids:
+            ids.append(riga['client_id'])
+    return ids
+
+
+def _cliente_per_nome(con, nome, numeri, liberi=True):
+    """Il cliente con quel primo nome.
+
+    Se sono piu' d'uno, quello a cui sono intestate le fatture dei suoi
+    pacchetti; se non si capisce, il primo attivo. Mai un doppione.
+    liberi=True guarda solo i clienti che una chiave non ce l'hanno ancora."""
+    primo = _primo_nome(nome)
+    sql = 'SELECT * FROM clients'
+    if liberi:
+        sql += " WHERE COALESCE(chiave_sedute, '') = ''"
+    candidati = [c for c in con.execute(sql + ' ORDER BY archived, id')
+                 if primo and _primo_nome(c['name']) == primo]
+    if len(candidati) <= 1:
+        return candidati[0] if candidati else None
+    delle_fatture = _clienti_delle_fatture(con, numeri)
+    giusti = [c for c in candidati if c['id'] in delle_fatture]
+    return giusti[0] if giusti else candidati[0]
+
+
+def _cliente_da_copiare(con, cc, registro):
+    """Da chi prendere indirizzo, email, lingua e tono per un supplemento: il
+    cliente di «fattura a», o quello delle fatture dei suoi pacchetti."""
+    fattura_a = (cc['fattura_a'] or '').strip()
+    if fattura_a:
+        c = con.execute('SELECT * FROM clients WHERE lower(name) = lower(?) '
+                        'ORDER BY archived, id LIMIT 1', (fattura_a,)).fetchone()
+        c = c or _cliente_per_nome(con, fattura_a, set(), liberi=False)
+        if c is not None:
+            return c
+    ids = _clienti_delle_fatture(con, _numeri_dei_pacchetti(registro, cc['nome']))
+    return con.execute('SELECT * FROM clients WHERE id=?', (ids[0],)).fetchone() if ids else None
+
+
+def _chiave_cliente_libera(con, nome):
+    """La chiave di clients (unica), fatta come la fa la nuova fattura."""
+    base = re.sub(r'[^a-z0-9]+', '-', (nome or '').lower()).strip('-') or 'cliente'
+    chiave, n = base, 1
+    while con.execute('SELECT 1 FROM clients WHERE key=?', (chiave,)).fetchone():
+        n += 1
+        chiave = f'{base}-{n}'
+    return chiave
+
+
+def clienti_da_crediti(con, registro):
+    """I «clienti a crediti» diventano clienti con la chiave delle sedute.
+
+    Ritorna (trovati, nuovi, archiviati). La tabella vecchia resta com'e'.
+    Il commit lo fa chi chiama."""
+    if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                       "AND name='crediti_clienti'").fetchone():
+        return (0, 0, 0)
+    righe = con.execute('SELECT * FROM crediti_clienti ORDER BY pos, chiave').fetchall()
+    trovati = nuovi = archiviati = 0
+    for cc in righe:
+        chiave = (cc['chiave'] or '').strip().lower()
+        nome = (cc['nome'] or '').strip()
+        if not chiave or con.execute('SELECT 1 FROM clients WHERE chiave_sedute=?',
+                                     (chiave,)).fetchone():
+            continue                                    # gia' fatto
+        c = _cliente_per_nome(con, nome, _numeri_dei_pacchetti(registro, nome))
+        if c is not None:
+            nome_cal = '' if _primo_nome(c['name']) == nome.lower() else nome
+            con.execute('UPDATE clients SET chiave_sedute=?, nome_calendario=? WHERE id=?',
+                        (chiave, nome_cal, c['id']))
+            trovati += 1
+        elif int(cc['attivo'] or 0):
+            m = _cliente_da_copiare(con, cc, registro)
+            con.execute(
+                'INSERT INTO clients(key, name, file_label, address1, address2, email, lingua, '
+                'tono, intestatario, paga_come, chiave_sedute) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                (_chiave_cliente_libera(con, nome), nome, nome,
+                 m['address1'] if m else '', m['address2'] if m else '',
+                 m['email'] if m else '', (m['lingua'] if m else '') or 'en',
+                 (m['tono'] if m else '') or 'informale',
+                 m['name'] if m else '', ((m['paga_come'] or m['name']) if m else ''), chiave))
+            nuovi += 1
+        else:
+            con.execute('INSERT INTO clients(key, name, file_label, archived, chiave_sedute) '
+                        'VALUES(?,?,?,1,?)', (_chiave_cliente_libera(con, nome), nome, nome, chiave))
+            archiviati += 1
+    for cc in righe:
+        compagno = (cc['compagno'] or '').strip().lower()
+        if compagno:
+            con.execute('UPDATE clients SET compagno_id = '
+                        '(SELECT id FROM clients WHERE chiave_sedute = ?) '
+                        'WHERE chiave_sedute = ? AND compagno_id IS NULL',
+                        (compagno, (cc['chiave'] or '').strip().lower()))
+    return trovati, nuovi, archiviati
+
+
+def chiavi_nel_registro(con, registro_path=None):
+    """Scrive `chiavi` sui pacchetti che non l'hanno. Ritorna quanti ne ha toccati.
+
+    Tocca solo quel campo: le sedute restano intatte, e sessions.salva() copia il
+    registro prima di riscriverlo. Un database senza clienti con le sedute non
+    tocca nessun registro. Se non riesce, i pacchetti si trovano ancora per
+    nome, e si riprova al prossimo avvio."""
+    path = registro_path or sess.REGISTRY
+    righe = D.clienti_sedute(con)
+    if not righe or not os.path.exists(path):
+        return 0
+    try:
+        reg = _leggi_registro(path)
+        config = [sess._normalizza(dict(x)) for x in righe]
+        toccati = 0
+        for p in reg.get('pacchetti') or []:
+            if not p.get('chiavi'):
+                chiavi = sess._chiavi_di(p, config)
+                if chiavi:
+                    p['chiavi'] = chiavi
+                    toccati += 1
+        if toccati:
+            sess.salva(reg, path)
+        return toccati
+    except Exception:
+        logging.getLogger('fatture.errori').exception('Chiavi dei pacchetti non scritte nel registro')
+        return 0

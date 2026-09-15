@@ -765,89 +765,141 @@ def _test_marchio(r):
 
 
 def _test_clienti_crediti(r):
-    """Chi lavora a pacchetti si aggiunge dalla pagina Crediti, non nel codice.
+    """Chi fa le sedute è un cliente come gli altri: la scheda comanda tutto.
 
-    Qui si verifica che l'elenco scritto dall'utente comandi davvero tutto:
-    quali nomi si riconoscono nel calendario, come si chiamano i pacchetti, a
-    che prezzo una fattura viene riconosciuta, e la regola della coppia."""
+    Qui si verifica che la scheda cliente comandi davvero: quali nomi si
+    riconoscono nel calendario, come si chiamano i pacchetti, la regola della
+    coppia, e che un pacchetto si ritrovi dalla chiave anche se il nome cambia."""
+    import datetime
     import tempfile
+    from . import db as D
     from . import sessions as S
+    cat = 'Clienti a crediti'
 
     for testo, atteso in ((' Giulia Ferrari ', 'giuliaferrari'), ('ANNA', 'anna'),
                           ('Jean-Luc', 'jeanluc'), ('', '')):
-        _check(r, 'Clienti a crediti', f'«{testo}» diventa la parola «{atteso}»',
-               S.chiave_da_nome(testo), atteso)
+        _check(r, cat, f'«{testo}» diventa la parola «{atteso}»', S.chiave_da_nome(testo), atteso)
     for testo, atteso in (("1'800.00 CHF, 150.-", '180000,15000'), ('1800', '180000'),
                           ('2000; 2050', '200000,205000'), ('', ''), ('boh', '')):
-        _check(r, 'Clienti a crediti', f'i prezzi «{testo}» diventano «{atteso}»',
-               S.prezzi_da_testo(testo), atteso)
+        _check(r, cat, f'i prezzi «{testo}» diventano «{atteso}»', S.prezzi_da_testo(testo), atteso)
+    for testo, nome, atteso in (('', 'Giulia Ferrari', ['Giulia']),
+                                ('Giuly, Giulia F.', 'Giulia Ferrari', ['Giuly', 'Giulia F.']),
+                                (' , ', 'Marco', ['Marco']), ('', '', [])):
+        _check(r, cat, f'nel calendario «{testo}» per «{nome}» vuol dire {atteso}',
+               _senza_scoppiare(S.nomi_calendario, testo, nome), atteso)
 
+    GIULIA = {'id': 1, 'name': 'Giulia Ferrari', 'nome_calendario': '', 'chiave_sedute': 'giulia',
+              'archived': 0, 'intestatario': '', 'compagno': None}
+    MARCO = {'id': 2, 'name': 'Marco Bianchi', 'nome_calendario': 'Marco, Marco B.',
+             'chiave_sedute': 'marco', 'archived': 0, 'intestatario': 'Giulia Ferrari',
+             'compagno': 'giulia'}
+    LUCA = {'id': 3, 'name': 'Luca Neri', 'nome_calendario': '', 'chiave_sedute': 'luca',
+            'archived': 1, 'intestatario': '', 'compagno': None}
     prima = S._CONFIG
     try:
-        S.configura([
-            {'chiave': 'giulia', 'nome': 'Giulia', 'crediti': 10, 'prefisso': 'GIU',
-             'prezzi': '150000', 'fattura_a': '', 'compagno': '', 'attivo': 1},
-            {'chiave': 'marco', 'nome': 'Marco', 'crediti': 10, 'prefisso': '',
-             'prezzi': '90000', 'fattura_a': 'Giulia', 'compagno': 'giulia', 'attivo': 1},
-            {'chiave': 'luca', 'nome': 'Luca', 'crediti': 12, 'prefisso': 'LUC',
-             'prezzi': '', 'fattura_a': '', 'compagno': '', 'attivo': 0},
-        ])
-        _check(r, 'Clienti a crediti', 'gli attivi sono due', sorted(S.clienti()), ['giulia', 'marco'])
-        _check(r, 'Clienti a crediti', 'chi è archiviato sta a parte', S.ex_clienti(), {'luca': 'Luca'})
-        _check(r, 'Clienti a crediti', 'il prezzo si legge come sulla fattura',
-               S.prezzo_atteso('giulia'), "1'500.00 CHF")
-        _check(r, 'Clienti a crediti', 'senza prezzo non si inventa niente',
-               S.prezzo_atteso('luca'), None)
+        S.configura([GIULIA, MARCO, LUCA])
+        _check(r, cat, 'gli attivi sono i clienti non archiviati', sorted(S.clienti()),
+               ['giulia', 'marco'])
+        _check(r, cat, 'chi è archiviato è un ex cliente', S.ex_clienti(), {'luca': 'Luca'})
+        _check(r, cat, 'il nome è il primo nome nel calendario',
+               [S.nome_cliente(k) for k in ('giulia', 'marco')], ['Giulia', 'Marco'])
+        _check(r, cat, 'la fattura va a chi è scritto come intestatario',
+               S.cliente('marco')['fattura_a'], 'Giulia Ferrari')
 
-        _check(r, 'Clienti a crediti', 'nel calendario si riconosce chi è in elenco',
-               S.classifica('Giulia')[0], 'giulia')
-        _check(r, 'Clienti a crediti', 'si riconosce anche chi è archiviato',
-               S.classifica('Luca')[0], 'luca')
-        _check(r, 'Clienti a crediti', 'chi non è in elenco non conta',
-               S.classifica('Federico')[0], None)
-        _check(r, 'Clienti a crediti', 'il compleanno non è una sessione',
-               S.classifica('Giulia birthday')[0], None)
+        for titolo, atteso in (('Giulia', 'giulia'), ('Marco B. pt Bike', 'marco'),
+                               ('Luca', 'luca'), ('Federico', None), ('Giulia birthday', None),
+                               ('Giuliana', None), ('Marco con Giulia', 'marco')):
+            _check(r, cat, f'nel calendario «{titolo}» è {atteso}', S.classifica(titolo)[0], atteso)
 
         vuoto = {'pacchetti': [], 'esclusi': []}
-        _check(r, 'Clienti a crediti', 'i pacchetti prendono la sigla scritta',
-               S.prossimo_id_pacchetto(vuoto, 'giulia'), 'GIU-01')
-        _check(r, 'Clienti a crediti', 'senza sigla se ne ricava una dal nome',
-               S.prossimo_id_pacchetto(vuoto, 'marco'), 'MAR-01')
+        _check(r, cat, 'la sigla dei pacchetti viene dalla chiave',
+               (S.prossimo_id_pacchetto(vuoto, 'giulia'), S.prossimo_id_pacchetto(vuoto, 'marco')),
+               ('GIU-01', 'MAR-01'))
 
         # la regola della coppia: il supplemento vale solo se ci sono tutti e due
-        _check(r, 'Clienti a crediti', 'in coppia il supplemento resta suo',
+        _check(r, cat, 'in coppia il supplemento resta suo',
                S.attribuisci('marco', ['giulia', 'marco'])[0], 'marco')
-        _check(r, 'Clienti a crediti', 'da solo consuma un credito del compagno',
+        _check(r, cat, 'da solo consuma un credito del compagno',
                S.attribuisci('marco', ['marco'])[0], 'giulia')
-        _check(r, 'Clienti a crediti', 'chi non è un supplemento non cambia mai',
+        _check(r, cat, 'chi non è un supplemento non cambia mai',
                S.attribuisci('giulia', ['giulia'])[0], 'giulia')
 
-        _check(r, 'Clienti a crediti', 'una fattura del prezzo giusto è un pacchetto',
-               S.riconosci_pacchetto('Giulia Ferrari', 150000), 'giulia')
-        _check(r, 'Clienti a crediti', 'un importo diverso non lo è',
-               S.riconosci_pacchetto('Giulia Ferrari', 149900), None)
-        # Marco e' fatturato a Giulia: senza «add-on» la fattura e' di Giulia
-        _check(r, 'Clienti a crediti', 'un «add-on» va al supplemento',
-               S.analizza_fattura('Giulia', 99900, ['Add-on 10 credits'])['chiave'], 'marco')
-        _check(r, 'Clienti a crediti', 'un pacchetto normale va al cliente pieno',
-               S.analizza_fattura('Giulia', 99900, ['10 Sessions Pack'])['chiave'], 'giulia')
+        # i pacchetti si ritrovano dalla chiave; quelli scritti prima, dal nome
+        reg = {'pacchetti': [
+            {'id': 'GIU-01', 'cliente': 'Giulia + Marco', 'crediti': 10, 'fine': '2026-07-30',
+             'sessioni': []},
+            {'id': 'GIU-02', 'cliente': 'Giulia', 'chiavi': ['giulia'], 'crediti': 12,
+             'fine': None, 'sessioni': []},
+            {'id': 'MAR-01', 'cliente': 'Marco', 'crediti': 10, 'fine': None, 'sessioni': []},
+        ], 'esclusi': []}
+        _check(r, cat, 'un pacchetto diviso scritto prima ha due chiavi',
+               _senza_scoppiare(S._chiavi_di, reg['pacchetti'][0]), ['giulia', 'marco'])
+        _check(r, cat, 'il pacchetto aperto si trova dalla chiave',
+               (S.pacchetto_aperto_di(reg, 'giulia') or {}).get('id'), 'GIU-02')
+        _check(r, cat, 'e quello senza chiave dal nome',
+               (S.pacchetto_aperto_di(reg, 'marco') or {}).get('id'), 'MAR-01')
+        S.configura([dict(GIULIA, nome_calendario='Giuly'), MARCO, LUCA])
+        _check(r, cat, 'se cambia il nome nel calendario il pacchetto con la chiave resta suo',
+               (S.pacchetto_aperto_di(reg, 'giulia') or {}).get('id'), 'GIU-02')
 
-        try:
-            S.apri_pacchetto({'pacchetti': []}, 'federico', '2026-08-23')
-            aperto = 'non ha protestato'
-        except KeyError:
-            aperto = 'protesta'
-        _check(r, 'Clienti a crediti', 'non si apre un pacchetto a uno sconosciuto',
-               aperto, 'protesta')
+        nuovo = _senza_scoppiare(S.apri_pacchetto, reg, 'giulia', '2026-09-01')
+        _check(r, cat, 'un pacchetto nuovo prende la misura dell’ultimo e porta la chiave',
+               (nuovo['id'], nuovo['crediti'], nuovo['chiavi']) if isinstance(nuovo, dict) else nuovo,
+               ('GIU-03', 12, ['giulia']))
+        _check(r, cat, 'oppure la misura detta dalla fattura',
+               _senza_scoppiare(lambda: S.apri_pacchetto(reg, 'marco', '2026-09-01', crediti=8)['crediti']),
+               8)
+        for chi, perche in (('federico', 'a uno sconosciuto'),
+                            ('luca', 'senza nessuna misura da cui partire')):
+            try:
+                S.apri_pacchetto({'pacchetti': [], 'esclusi': []}, chi, '2026-08-23')
+                esito = 'non ha protestato'
+            except KeyError:
+                esito = 'protesta'
+            _check(r, cat, f'non si apre un pacchetto {perche}', esito, 'protesta')
+
+        # chi ha le sedute ma nessun pacchetto non deve fermare la lettura del calendario
+        S.configura([GIULIA, MARCO, LUCA])
+        import sync_sessions as SY
+        evento = {'id': 'e1', 'titolo': 'Giulia', 'data': '2026-09-01', 'ora': '07:00',
+                  'stato_google': 'confirmed'}
+        rap = _senza_scoppiare(lambda: SY.sincronizza({'pacchetti': [], 'esclusi': []}, [evento],
+                                                      oggi=datetime.date(2026, 9, 2)))
+        _check(r, cat, 'la seduta di chi non ha ancora un pacchetto si scarta, e la lettura va avanti',
+               rap.get('scartati') if isinstance(rap, dict) else rap,
+               [('Giulia', 'nessun pacchetto da cui scalare')])
 
         # elenco vuoto: l'app deve reggere, non spegnersi
         S.configura([])
-        _check(r, 'Clienti a crediti', 'senza nessun cliente la vista è vuota',
+        _check(r, cat, 'senza nessun cliente la vista è vuota',
                S.vista_crediti({'pacchetti': []}), [])
-        _check(r, 'Clienti a crediti', 'senza nessun cliente non si riconosce nulla',
+        _check(r, cat, 'senza nessun cliente non si riconosce nulla',
                S.classifica('Giulia')[0], None)
     finally:
         S._CONFIG = prima
+
+    # --- dal database: i clienti con la chiave, e la chiave che nasce ---
+    con = _db_servizi()
+    for riga in ((1, 'giulia-ferrari', 'Giulia Ferrari', '', 'giulia', None),
+                 (2, 'marco-bianchi', 'Marco Bianchi', 'Marco B.', 'marco', 1),
+                 (3, 'sofia-verdi', 'Sofia Verdi', '', '', None),
+                 (4, 'sofia-neri', 'Sofia Neri', '', '', None),
+                 (5, 'zoe-muller', 'Zoë Müller', '', '', None)):
+        con.execute('INSERT INTO clients(id, key, name, nome_calendario, chiave_sedute, '
+                    'compagno_id) VALUES(?,?,?,?,?,?)', riga)
+    _check(r, cat, 'nel motore entrano solo i clienti con la chiave, col compagno per chiave',
+           _senza_scoppiare(lambda: [(x['name'], x['chiave_sedute'], x['compagno'])
+                                     for x in D.clienti_sedute(con)]),
+           [('Giulia Ferrari', 'giulia', None), ('Marco Bianchi', 'marco', 'giulia')])
+    _check(r, cat, 'la chiave nasce dal primo nome, senza accenti',
+           _senza_scoppiare(D.assegna_chiave_sedute, con, 5), ('zoe', False))
+    _check(r, cat, 'la prima Sofia prende «sofia»',
+           _senza_scoppiare(D.assegna_chiave_sedute, con, 3), ('sofia', False))
+    _check(r, cat, 'la seconda prende «sofia2», e l’app sa che nel calendario si confondono',
+           _senza_scoppiare(D.assegna_chiave_sedute, con, 4), ('sofia2', True))
+    _check(r, cat, 'una chiave che c’è già non cambia',
+           _senza_scoppiare(D.assegna_chiave_sedute, con, 1), ('giulia', False))
+    con.close()
 
     # un'app appena installata non ha nessuno storico da ricopiare
     seed = S.SEED
@@ -855,7 +907,7 @@ def _test_clienti_crediti(r):
         S.SEED = os.path.join(tempfile.gettempdir(), 'seed-che-non-esiste.json')
         with tempfile.TemporaryDirectory() as tmp:
             reg = S.carica(os.path.join(tmp, 'r.json'))
-            _check(r, 'Clienti a crediti', 'senza storico il registro nasce vuoto',
+            _check(r, cat, 'senza storico il registro nasce vuoto',
                    (reg['pacchetti'], reg['esclusi']), ([], []))
     finally:
         S.SEED = seed
@@ -2147,6 +2199,100 @@ def _test_migrazione_servizi(r):
             con.close()
         finally:
             D.DB_PATH, S.REGISTRY = vero_db, vero_registro
+
+    # --- i «clienti a crediti» diventano clienti (spec §4) ---
+    con = _db_servizi()
+    for riga in (
+            (1, 'giulia-ferrari', 'Giulia Ferrari', 'Via Roma 1', '8001 Zürich',
+             'giulia@example.com', 'it', 'formale', 'G. Ferrari'),
+            (2, 'sofia-verdi', 'Sofia Verdi', '', '', '', 'en', 'informale', ''),
+            (3, 'sofia-neri', 'Sofia Neri', '', '', '', 'en', 'informale', ''),
+            (4, 'elena-rossi', 'Elena Rossi', '', '', '', 'de', 'informale', '')):
+        con.execute('INSERT INTO clients(id, key, name, address1, address2, email, lingua, tono, '
+                    'paga_come) VALUES(?,?,?,?,?,?,?,?,?)', riga)
+    for numero, cliente in ((4, 1), (5, 3)):
+        con.execute("INSERT INTO invoices(number, client_id, client_name, date) "
+                    "VALUES(?, ?, 'x', '2026-05-01')", (numero, cliente))
+    for riga in (('giulia', 'Giulia', '', '', 1, 0),
+                 ('marco', 'Marco', 'Giulia Ferrari', 'giulia', 1, 1),
+                 ('sofia', 'Sofia', '', '', 1, 2),
+                 ('elena', 'Elena R.', '', '', 1, 3),
+                 ('luca', 'Luca', '', '', 0, 4)):
+        con.execute('INSERT INTO crediti_clienti(chiave, nome, fattura_a, compagno, attivo, pos) '
+                    'VALUES(?,?,?,?,?,?)', riga)
+    con.commit()
+    REG_CLIENTI = {'pacchetti': [
+        {'id': 'GIU-01', 'cliente': 'Giulia + Marco', 'fattura_numero': 4, 'crediti': 10},
+        {'id': 'SOF-01', 'cliente': 'Sofia', 'fattura_numero': 5, 'crediti': 12},
+    ]}
+    _check(r, cat, 'cinque clienti a crediti: tre trovati, un supplemento nuovo, un ex cliente archiviato',
+           _senza_scoppiare(lambda: M.clienti_da_crediti(con, REG_CLIENTI)), (3, 1, 1))
+    chi = {c['chiave_sedute']: c
+           for c in con.execute("SELECT * FROM clients WHERE COALESCE(chiave_sedute, '') <> ''")}
+    _check(r, cat, 'chi ha lo stesso primo nome riceve la chiave; il nome nel calendario solo se è diverso',
+           [(k, chi[k]['id'], chi[k]['nome_calendario']) for k in ('giulia', 'elena') if k in chi],
+           [('giulia', 1, ''), ('elena', 4, 'Elena R.')])
+    _check(r, cat, 'fra due Sofia vince quella delle fatture dei suoi pacchetti',
+           chi['sofia']['id'] if 'sofia' in chi else None, 3)
+    marco = chi.get('marco')
+    _check(r, cat, 'il supplemento nasce con indirizzo, email, lingua e tono di chi paga',
+           tuple(marco[k] for k in ('name', 'address1', 'address2', 'email', 'lingua', 'tono',
+                                    'intestatario', 'paga_come', 'archived')) if marco else None,
+           ('Marco', 'Via Roma 1', '8001 Zürich', 'giulia@example.com', 'it', 'formale',
+            'Giulia Ferrari', 'G. Ferrari', 0))
+    _check(r, cat, 'e si allena con lei', marco['compagno_id'] if marco else None, 1)
+    _check(r, cat, 'l’ex cliente nasce archiviato, con solo nome e chiave',
+           (chi['luca']['name'], chi['luca']['archived'], chi['luca']['address1'])
+           if 'luca' in chi else None, ('Luca', 1, ''))
+    quanti = con.execute('SELECT COUNT(*) FROM clients').fetchone()[0]
+    _check(r, cat, 'la seconda volta non cambia niente',
+           (M.clienti_da_crediti(con, REG_CLIENTI),
+            con.execute('SELECT COUNT(*) FROM clients').fetchone()[0]), ((0, 0, 0), quanti))
+    _check(r, cat, 'la tabella vecchia resta com’era',
+           con.execute('SELECT COUNT(*) FROM crediti_clienti').fetchone()[0], 5)
+
+    # --- le chiavi sui pacchetti del registro, dopo il database ---
+    with tempfile.TemporaryDirectory() as tmp:
+        percorso = os.path.join(tmp, 'sessions.json')
+        registro = {'pacchetti': [
+            {'id': 'GIU-01', 'cliente': 'Giulia + Marco', 'crediti': 10,
+             'sessioni': [{'n': 1, 'data': '2026-08-01', 'titolo': 'Giulia e Marco'}]},
+            {'id': 'SOF-01', 'cliente': 'Sofia', 'chiavi': ['sofia'], 'crediti': 12, 'sessioni': []},
+            {'id': 'XXX-01', 'cliente': 'Qualcuno', 'crediti': 10, 'sessioni': []},
+        ], 'esclusi': []}
+        with open(percorso, 'w', encoding='utf-8') as f:
+            json.dump(registro, f)
+        _check(r, cat, 'un database senza clienti con le sedute non tocca il registro',
+               (_senza_scoppiare(M.chiavi_nel_registro, _db_servizi(), percorso),
+                leggi_json(percorso)), (0, registro))
+        _check(r, cat, 'le chiavi vanno sui pacchetti che non le hanno',
+               _senza_scoppiare(M.chiavi_nel_registro, con, percorso), 1)
+        dopo = leggi_json(percorso)
+        _check(r, cat, 'un pacchetto diviso ne riceve due, e le sedute restano quelle',
+               (dopo['pacchetti'][0].get('chiavi'), dopo['pacchetti'][0]['sessioni']),
+               (['giulia', 'marco'], registro['pacchetti'][0]['sessioni']))
+        _check(r, cat, 'chi le aveva già e chi non si riconosce restano come prima',
+               (dopo['pacchetti'][1], 'chiavi' in dopo['pacchetti'][2]),
+               (registro['pacchetti'][1], False))
+        copie = os.path.join(tmp, 'data', 'backups')
+        _check(r, cat, 'prima di riscrivere il registro se ne fa la copia',
+               len(os.listdir(copie)) if os.path.isdir(copie) else 0, 1)
+
+        # tutto in fila, dalla migrazione: prima il cliente, poi il registro
+        con2 = _db_servizi()
+        con2.execute("INSERT INTO clients(id, key, name) VALUES(1, 'giulia-ferrari', 'Giulia Ferrari')")
+        con2.execute("INSERT INTO crediti_clienti(chiave, nome) VALUES('giulia', 'Giulia')")
+        con2.commit()
+        percorso2 = os.path.join(tmp, 'altro.json')
+        with open(percorso2, 'w', encoding='utf-8') as f:
+            json.dump({'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia', 'crediti': 10,
+                                      'sessioni': []}], 'esclusi': []}, f)
+        _senza_scoppiare(M.esegui, con2, percorso2, False)
+        _check(r, cat, 'la migrazione dà la chiave al cliente e poi la scrive sui suoi pacchetti',
+               (con2.execute('SELECT chiave_sedute FROM clients WHERE id=1').fetchone()[0],
+                leggi_json(percorso2)['pacchetti'][0].get('chiavi')), ('giulia', ['giulia']))
+        con2.close()
+    con.close()
 
     from . import importer
     _check(r, cat, 'dopo un Reimporta le righe ritrovano il loro servizio',
@@ -5876,6 +6022,7 @@ GENTE_FINTA = {
     '12 Sessions Pack', 'Monthly abo: running coaching',  # servizi finti (Compito 4)
     '10 Sessions Pack', 'Running Coaching', 'Fisioterapia',  # servizi finti (Compito 5)
     '10 Sessions Pack – Personal Training',  # servizio finto (Compito 6)
+    'Giulia + Marco', 'Sofia', 'Qualcuno', 'giulia-ferrari',  # clienti finti (Compito 8)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio

@@ -824,6 +824,56 @@ def crediti_cliente_elimina(con, chiave):
     con.commit()
 
 
+def clienti_sedute(con):
+    """I clienti che il registro delle sedute conosce: quelli con la chiave.
+
+    La chiave nasce una volta (con la migrazione, o alla prima fattura con
+    sedute) e poi non cambia: tiene insieme il cliente e i suoi pacchetti anche
+    se cambia il nome con cui compare nel calendario."""
+    return con.execute(
+        'SELECT c.id, c.name, c.nome_calendario, c.chiave_sedute, c.archived, '
+        'c.intestatario, k.chiave_sedute AS compagno '
+        'FROM clients c LEFT JOIN clients k ON k.id = c.compagno_id '
+        "WHERE COALESCE(c.chiave_sedute, '') <> '' ORDER BY c.archived, c.name").fetchall()
+
+
+def _parola_calendario(testo):
+    """«Zoë Müller» -> «zoe»: il primo nome, minuscolo, senza accenti."""
+    from .bank import _senza_accenti
+    pezzi = (testo or '').split(',')[0].split()
+    if not pezzi:
+        return ''
+    return ''.join(ch for ch in _senza_accenti(pezzi[0]).lower() if ch.isascii() and ch.isalnum())
+
+
+def assegna_chiave_sedute(con, client_id):
+    """La chiave delle sedute di un cliente, creata se non c'e'.
+
+    Ritorna (chiave, doppione): doppione e' True se un altro cliente con le
+    sedute ha lo stesso primo nome nel calendario, e allora i titoli da soli
+    non bastano a distinguerli. Il commit lo fa chi chiama."""
+    c = con.execute('SELECT name, nome_calendario, chiave_sedute FROM clients WHERE id=?',
+                    (client_id,)).fetchone()
+    if c is None:
+        raise KeyError(client_id)
+    parola = _parola_calendario(c['nome_calendario'] or c['name'])
+    altri = con.execute("SELECT name, nome_calendario, chiave_sedute FROM clients "
+                        "WHERE id <> ? AND COALESCE(chiave_sedute, '') <> ''",
+                        (client_id,)).fetchall()
+    doppione = bool(parola) and any(
+        _parola_calendario(a['nome_calendario'] or a['name']) == parola for a in altri)
+    if c['chiave_sedute']:
+        return c['chiave_sedute'], doppione
+    base = parola or 'cliente'
+    prese = {a['chiave_sedute'] for a in altri}
+    chiave, n = base, 1
+    while chiave in prese:
+        n += 1
+        chiave = f'{base}{n}'
+    con.execute('UPDATE clients SET chiave_sedute=? WHERE id=?', (chiave, client_id))
+    return chiave, doppione
+
+
 def next_number(con):
     """Prossimo numero libero.
 

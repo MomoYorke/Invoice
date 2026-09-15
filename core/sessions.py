@@ -40,11 +40,11 @@ STATO_ESAURIMENTO = 'In esaurimento'
 STATO_CORSO = 'In corso'
 
 
-# ------------------------------------------------------- chi lavora a crediti
-# Chi sono i clienti a pacchetto, quanti crediti vale un pacchetto, a quale
-# prezzo lo si riconosce su una fattura: prima stava scritto qui dentro, un
-# nome per riga. Adesso sta nel database e si cambia dalla pagina Crediti;
-# qui resta solo il modo di leggerlo.
+# ------------------------------------------------------- chi fa le sedute
+# I clienti con le sedute sono clienti come gli altri: la scheda cliente dice
+# come si chiamano nel calendario e con chi si allenano. Qui resta solo il
+# modo di leggerli. La misura dei pacchetti e i prezzi arrivano dal servizio
+# venduto in fattura.
 #
 # Il caso "marito e moglie" e' quello che ha fatto nascere il campo `compagno`:
 # chi fa le sedute in coppia paga un pacchetto pieno piu' un supplemento, ma il
@@ -54,16 +54,16 @@ _CONFIG = None
 
 
 def configura(righe=None):
-    """Carica in memoria l'elenco dei clienti a crediti.
+    """Carica in memoria i clienti con le sedute.
 
-    Senza argomenti lo legge dal database. Passandogli una lista di dizionari
-    si usa nelle prove, senza database."""
+    Senza argomenti li legge dal database. Passandogli una lista di dizionari
+    (le colonne di db.clienti_sedute) si usa nelle prove, senza database."""
     global _CONFIG
     if righe is None:
         from . import db
         con = db.connect()
         try:
-            righe = [dict(r) for r in db.crediti_clienti(con)]
+            righe = [dict(r) for r in db.clienti_sedute(con)]
         finally:
             con.close()
     _CONFIG = [_normalizza(r) for r in righe]
@@ -76,19 +76,30 @@ def ricarica():
     _CONFIG = None
 
 
+def nomi_calendario(testo, nome_cliente=''):
+    """I nomi con cui il cliente compare nei titoli del calendario.
+
+    «Giuly, Giulia F.» -> ['Giuly', 'Giulia F.']; vuoto -> il primo nome."""
+    nomi = [n.strip() for n in (testo or '').split(',') if n.strip()]
+    return nomi or (nome_cliente or '').strip().split()[:1]
+
+
 def _normalizza(r):
-    prezzi = r.get('prezzi')
-    if isinstance(prezzi, str):
-        prezzi = [int(x) for x in re.findall(r'\d+', prezzi)]
+    chiave = (r.get('chiave_sedute') or '').strip().lower()
+    nomi = nomi_calendario(r.get('nome_calendario'), r.get('name'))
     return {
-        'chiave': (r.get('chiave') or '').strip().lower(),
-        'nome': (r.get('nome') or '').strip(),
-        'crediti': int(r.get('crediti') or 0),
-        'prefisso': (r.get('prefisso') or '').strip().upper(),
-        'prezzi': [int(x) for x in (prezzi or [])],
-        'fattura_a': (r.get('fattura_a') or '').strip(),
+        'chiave': chiave,
+        'client_id': r.get('id'),
+        'nome': nomi[0] if nomi else chiave.title(),
+        'nomi': nomi,
+        'parole': [normalizza(n) for n in nomi],
+        'prefisso': chiave[:3].upper(),
+        'fattura_a': (r.get('intestatario') or '').strip(),
         'compagno': (r.get('compagno') or '').strip().lower(),
-        'attivo': bool(int(r.get('attivo', 1) or 0)),
+        'attivo': not int(r.get('archived') or 0),
+        # vuoti: misura e prezzi arrivano dal servizio in fattura
+        'crediti': 0,
+        'prezzi': [],
     }
 
 
@@ -175,14 +186,16 @@ def classifica(titolo):
     # il cliente e' quello nominato per PRIMO: e' il soggetto della sessione,
     # e il credito va scalato a lui.
     trovati = []
-    for chiave in (c['chiave'] for c in _tutti()):
-        # match sul nome come parola (copre "Anna pt Bike", "ANNA", "Anna ")
-        m = re.search(rf'\b{re.escape(chiave)}\b', t)
-        if m:
-            trovati.append((m.start(), chiave))
+    for c in _tutti():
+        for parola in c['parole']:
+            # il nome come parola intera: «Giulia pt Bike» sì, «Giuliana» no.
+            # A pari posizione vince il nome più lungo («Marco B.» su «Marco»)
+            m = re.search(r'(?<!\w)' + re.escape(parola) + r'(?!\w)', t) if parola else None
+            if m:
+                trovati.append((m.start(), -len(parola), c['chiave']))
     if trovati:
         trovati.sort()
-        return trovati[0][1], e_cancellata(titolo), None
+        return trovati[0][2], e_cancellata(titolo), None
     return None, False, 'nessun cliente riconosciuto'
 
 
@@ -250,11 +263,23 @@ def pacchetti_aperti(reg):
     return [p for p in reg['pacchetti'] if not p.get('fine')]
 
 
+def _chiavi_di(p, config=None):
+    """Le chiavi dei clienti di un pacchetto (uno diviso ne ha due).
+
+    I pacchetti scritti prima delle chiavi si riconoscono dal nome, come si
+    faceva prima: un nome del calendario, come parola intera, in «cliente»."""
+    if p.get('chiavi'):
+        return list(p['chiavi'])
+    testo = normalizza(p.get('cliente'))
+    return [c['chiave'] for c in (_tutti() if config is None else config)
+            if any(re.search(r'(?<!\w)' + re.escape(parola) + r'(?!\w)', testo)
+                   for parola in c['parole'] if parola)]
+
+
 def pacchetto_aperto_di(reg, chiave):
     """Pacchetto aperto che copre quel cliente (gestisce i pacchetti condivisi)."""
-    nome = nome_cliente(chiave).lower()
     for p in pacchetti_aperti(reg):
-        if nome in p['cliente'].lower():
+        if chiave in _chiavi_di(p):
             return p
     return None
 
@@ -289,20 +314,30 @@ def prossimo_id_pacchetto(reg, chiave):
     return f'{pref}-{n + 1:02d}'
 
 
-def apri_pacchetto(reg, chiave, data_inizio):
-    """Apre il pacchetto successivo per quel cliente (spec 6.1 punto 7)."""
+def apri_pacchetto(reg, chiave, data_inizio, crediti=None):
+    """Apre il pacchetto successivo per quel cliente (spec 6.1 punto 7).
+
+    La misura e' quella detta (dal servizio in fattura) o, senza, quella
+    dell'ultimo pacchetto del cliente. Senza nessuna delle due non si apre
+    niente: inventare quante sedute ha comprato qualcuno e' peggio che dirlo."""
     cfg = cliente(chiave)
     if cfg is None:
-        raise KeyError(f'{chiave} non è fra i clienti a crediti')
+        raise KeyError(f'{chiave} non è fra i clienti con le sedute')
+    if crediti is None:
+        suoi = [p for p in reg['pacchetti'] if chiave in _chiavi_di(p)]
+        crediti = suoi[-1]['crediti'] if suoi else None
+    if not crediti:
+        raise KeyError(f'{chiave}: nessun pacchetto da cui prendere la misura')
     p = {
         'id': prossimo_id_pacchetto(reg, chiave),
         'cliente': cfg['nome'],
-        'crediti': cfg['crediti'],
+        'chiavi': [chiave],
+        'crediti': crediti,
         'inizio': data_inizio,
         'fine': None,
         'fatturato': 'no',
         'usati': 0,
-        'rimasti': cfg['crediti'],
+        'rimasti': crediti,
         'sessioni': [],
         'nota': 'Aperto automaticamente dalla sincronizzazione calendario',
     }
@@ -371,7 +406,7 @@ def vista_crediti(reg):
             rif = p
         else:
             chiusi = [q for q in reg['pacchetti']
-                      if cfg['nome'].lower() in q['cliente'].lower() and q.get('fine')]
+                      if chiave in _chiavi_di(q) and q.get('fine')]
             rif = max(chiusi, key=lambda q: q['fine']) if chiusi else None
             stato = STATO_TERMINATI
             rimasti = 0
@@ -417,8 +452,7 @@ def collega_fattura(reg, pacchetto_id, numero_fattura, chiudi=True):
     if chiudi and esaurito and not p.get('fine'):
         p['fine'] = max((s['data'] for s in p.get('sessioni', [])), default=None) or p['inizio']
         ricalcola(p)
-        chiave = next((k for k, c in clienti().items()
-                       if c['nome'].lower() in p['cliente'].lower()), None)
+        chiave = next((k for k in _chiavi_di(p) if k in clienti()), None)
         # il pacchetto successivo si apre alla prima sessione utile, non subito:
         # qui lo segnaliamo soltanto
         nuovo = chiave

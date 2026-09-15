@@ -117,8 +117,14 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
         if nota:
             rap.setdefault('addebiti_speciali', []).append((ev['data'], ev['titolo'], nota))
         if not prova:
-            p, nuovo = S.aggiungi_sessione(reg, addebito, ev['data'], ev['titolo'],
-                                           ev['id'], nota=nota, ora=ev.get('ora'))
+            try:
+                p, nuovo = S.aggiungi_sessione(reg, addebito, ev['data'], ev['titolo'],
+                                               ev['id'], nota=nota, ora=ev.get('ora'))
+            except KeyError:
+                # ha le sedute ma nessun pacchetto: finché una fattura non gliene
+                # apre uno non c'è niente da cui scalare, e la lettura va avanti
+                rap['scartati'].append((ev['titolo'], 'nessun pacchetto da cui scalare'))
+                continue
             if nuovo:
                 rap['nuovi_pacchetti'].append(p['id'])
         else:
