@@ -215,3 +215,18 @@ def aggiungi(reg, m, seduta):
     m.setdefault('sessioni', []).append(dict(seduta))
     ricalcola_tutti(reg)
     return m
+
+
+def in_piu_recenti(reg, oggi=None):
+    """I mesi con sedute in piu': quello in corso e quelli chiusi da non piu' di
+    un mese. Dopo, l'avviso non serve piu' a nessuno."""
+    oggi = oggi or datetime.date.today()
+    fuori = []
+    for m in reg.get('mensili') or []:
+        if not m.get('in_piu'):
+            continue
+        dal, al = _giorno(m['dal']), _giorno(m['al'])
+        if dal <= oggi <= al or 0 < (oggi - al).days <= 31:
+            fuori.append({'cliente': m.get('cliente') or '', 'id': m['id'],
+                          'dal': m['dal'], 'al': m['al'], 'in_piu': m['in_piu']})
+    return sorted(fuori, key=lambda x: (x['cliente'], x['dal']))

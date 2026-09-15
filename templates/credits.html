@@ -3,8 +3,7 @@
 {% block content %}
 <h1>{{ _('Crediti sessioni') }}</h1>
 <p class="sub">{{ _('Ogni sessione svolta consuma un credito. Quando il pacchetto finisce, si rifattura.') }}
-   {% if aggiornato %}<span class="muted">{{ _('Registro dal {data}.').format(data=aggiornato | dateit) }}</span>{% endif %}
-   <a href="{{ url_for('crediti_clienti') }}">{{ _('Chi lavora a crediti') }}</a></p>
+   {% if aggiornato %}<span class="muted">{{ _('Registro dal {data}.').format(data=aggiornato | dateit) }}</span>{% endif %}</p>
 
 <div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
   {% if not sync_attivo %}
@@ -37,10 +36,9 @@
 
 {% if not righe %}
 <div class="panel">
-  <h2 style="margin-top:0">{{ _('Nessun cliente a crediti') }}</h2>
-  <p>{{ _('I crediti servono a chi vende pacchetti di sessioni prepagate: il cliente compra dieci sedute, ogni incontro ne consuma una, quando finiscono si rifattura.') }}</p>
-  <p>{{ _("Perché l'app possa contarle, deve sapere chi sono e quale nome cercare nei titoli del tuo calendario.") }}</p>
-  <a class="btn" href="{{ url_for('crediti_clienti') }}">{{ _('Aggiungi il primo') }}</a>
+  <h2 style="margin-top:0">{{ _('Nessuna seduta da contare') }}</h2>
+  <p>{{ _('Le sedute arrivano quando fatturi un servizio che le comprende.') }}</p>
+  <a class="btn" href="{{ url_for('servizi') }}">{{ _('Vai ai servizi') }}</a>
 </div>
 {% else %}
 <div class="panel">
@@ -52,11 +50,22 @@
     {% set pieno = r.terminati %}
     <tr>
       <td><strong>{{ r.cliente }}</strong>
-        {% if r.intestato_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('pacchetto {chi}').format(chi=r.intestato_a) }}</div>{% endif %}
-        {% if r.fattura_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('fattura a {chi}').format(chi=r.fattura_a) }}{% if r.importo_atteso %} · <span class="money">{{ r.importo_atteso }}</span>{% endif %}</div>
-        {% elif r.importo_atteso %}<div class="muted" style="font-size:12px">{{ _('pacchetto') }} <span class="money">{{ r.importo_atteso }}</span></div>{% endif %}
+        {% if r.pacchetto and r.intestato_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('pacchetto {chi}').format(chi=r.intestato_a) }}</div>{% endif %}
+        {% if r.fattura_a != r.cliente %}<div class="muted" style="font-size:12px">{{ _('fattura a {chi}').format(chi=r.fattura_a) }}</div>{% endif %}
+        {% if r.mensile %}{% set m = r.mensile %}
+        <div class="muted" style="font-size:12px">
+          <a href="{{ url_for('crediti_pacchetto', pid=m.id) }}">{{ m.dal | dateit }} – {{ m.al | dateit }}</a> ·
+          {{ _('{usate} di {disponibili} usate').format(usate=m.usate, disponibili=m.disponibili) }}
+          {%- if m.riportate %} · {{ _('{nuove} del mese + {riportate} dal mese prima').format(nuove=m.nuove, riportate=m.riportate) }}{% endif %}
+          {%- if m.in_piu %} · <strong>{{ _('{n} in più').format(n=m.in_piu) }}</strong>{% endif %}
+          {%- if not m.fatturato %} · {{ _('mese senza fattura') }}{% endif %}
+        </div>
+        {% endif %}
       </td>
-      <td><a href="{{ url_for('crediti_pacchetto', pid=r.pacchetto) }}">{{ r.pacchetto }}</a></td>
+      {% if r.pacchetto %}
+      <td><a href="{{ url_for('crediti_pacchetto', pid=r.pacchetto) }}">{{ r.pacchetto }}</a>
+        {% if r.scade %}<div class="muted" style="font-size:12px">{{ _('scade il {data}').format(data=r.scade | dateit) }}</div>
+        {% elif r.scaduto %}<div class="muted" style="font-size:12px">{{ _('scaduto il {data}, {n} non usate').format(data=r.fine | dateit, n=r.non_usate) }}</div>{% endif %}</td>
       <td class="num no-blur">{{ r.usati }}/{{ r.crediti }}</td>
       <td class="num no-blur"><strong>{{ r.rimasti }}</strong></td>
       <td class="muted">{{ r.inizio | dateit if r.inizio else '—' }}</td>
@@ -68,6 +77,9 @@
           {% if r.fattura_stato == 'pagata' %}
             <div style="font-size:12px;color:#065f46;margin-top:3px">
               {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('✓ incassata') }}</div>
+          {% elif r.fattura_stato == 'cestinata' %}
+            <div style="font-size:12px;color:#b91c1c;margin-top:3px">
+              {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('nel Cestino') }}</div>
           {% elif r.fattura_stato %}
             <div style="font-size:12px;color:#92400e;margin-top:3px">
               {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('da incassare') }}</div>
@@ -85,15 +97,19 @@
           {{ _('Cambia fattura') if r.fattura_numero else _('Collega fattura') }}
         </button>
       </td>
+      {% else %}
+      <td class="muted">—</td><td class="num muted">—</td><td class="num muted">—</td>
+      <td></td><td></td><td></td><td></td>
+      {% endif %}
     </tr>
+    {% if r.pacchetto %}
     <tr id="lk-{{ loop.index }}" style="display:none">
       <td colspan="8" style="background:#f8fafc">
         <form method="post" action="{{ url_for('crediti_collega') }}"
               style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
           <input type="hidden" name="pacchetto" value="{{ r.pacchetto }}">
           <div>
-            <label style="margin-top:0" for="lk-numero-{{ loop.index }}">{{ _('Numero della fattura che copre {pacchetto}').format(pacchetto=r.pacchetto) }}
-              {% if r.importo_atteso %}<span class="muted">({{ _('intestata a {chi}').format(chi=r.fattura_a) }}, <span class="money">{{ r.importo_atteso }}</span>)</span>{% endif %}</label>
+            <label style="margin-top:0" for="lk-numero-{{ loop.index }}">{{ _('Numero della fattura che copre {pacchetto}').format(pacchetto=r.pacchetto) }}</label>
             <input type="number" name="numero" id="lk-numero-{{ loop.index }}" placeholder="{{ _('es. 84') }}" style="width:140px" required>
           </div>
           <button class="btn small">{{ _('Collega e chiudi pacchetto') }}</button>
@@ -102,6 +118,7 @@
         </form>
       </td>
     </tr>
+    {% endif %}
     {% endfor %}
   </table>
 </div>

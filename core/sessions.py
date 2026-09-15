@@ -19,8 +19,6 @@ import datetime
 
 from dateutil.relativedelta import relativedelta
 
-from .money import fmt_chf
-
 from . import mensili
 
 from . import db as _db
@@ -101,9 +99,6 @@ def _normalizza(r):
         'fattura_a': (r.get('intestatario') or '').strip(),
         'compagno': (r.get('compagno') or '').strip().lower(),
         'attivo': not int(r.get('archived') or 0),
-        # vuoti: misura e prezzi arrivano dal servizio in fattura
-        'crediti': 0,
-        'prezzi': [],
     }
 
 
@@ -153,12 +148,6 @@ def prezzi_da_testo(testo):
         if c is not None:
             fuori.append(str(c))
     return ','.join(fuori)
-
-
-def prezzo_atteso(chiave):
-    """Quanto costa di solito il pacchetto, scritto per essere letto."""
-    c = cliente(chiave)
-    return fmt_chf(c['prezzi'][0]) if c and c['prezzi'] else None
 
 
 # ------------------------------------------------------------------ utilita'
@@ -463,17 +452,41 @@ def aggiungi_sessione(reg, chiave, data, titolo, event_id=None, nota=None, ora=N
 
 
 # ------------------------------------------------------------------ vista
-def vista_crediti(reg):
-    """spec 6.2 — per ogni cliente attivo: totali, usati, rimasti, inizio, stato.
+def _mese_in_vista(reg, mesi, oggi):
+    """Il mese di abbonamento da mostrare: quello in corso, o l'ultimo iniziato."""
+    iniziati = sorted((m for m in mesi if m['dal'] <= oggi), key=lambda m: (m['dal'], m['al']))
+    if not iniziati:
+        return None
+    in_corso = [m for m in iniziati if m['al'] >= oggi]
+    m = in_corso[0] if in_corso else iniziati[-1]
+    disponibili = mensili.disponibili(reg, m)
+    return {'id': m['id'], 'dal': m['dal'], 'al': m['al'],
+            'usate': mensili.usate(reg, m), 'disponibili': disponibili,
+            'nuove': int(m.get('sedute') or 0) if m.get('fattura_numero') else 0,
+            'riportate': mensili.riportate(reg, m),
+            'in_piu': max(0, len(m.get('sessioni') or []) - disponibili),
+            'in_corso': bool(in_corso), 'fatturato': bool(m.get('fattura_numero'))}
+
+
+def vista_crediti(reg, oggi=None):
+    """spec 6.2 — per ogni cliente con pacchetti o abbonamenti con sedute: il
+    pacchetto (totali, usati, rimasti, inizio, stato) e il mese in corso.
 
     "Crediti terminati" vuol dire che il pacchetto e' finito e servono crediti
     nuovi, quindi va emessa la PROSSIMA fattura. NON significa che il pacchetto
     sia rimasto da pagare: i pacchetti si pagano in anticipo (la fattura li apre),
     percio' lo stato non si spegne collegando la fattura che lo aveva pagato.
+    Chi ha solo un abbonamento non ha pacchetti da finire: niente stato.
     """
+    oggi = (oggi or datetime.date.today()).isoformat()
     righe = []
     for chiave, cfg in clienti().items():
+        suoi = [q for q in reg['pacchetti'] if chiave in _chiavi_di(q)]
+        mensile = _mese_in_vista(reg, mensili.di(reg, chiave), oggi)
+        if not suoi and mensile is None:
+            continue
         p = pacchetto_aperto_di(reg, chiave)
+        rif, stato, rimasti = None, '', 0
         if p:
             ricalcola(p)
             rimasti = p['rimasti']
@@ -484,22 +497,25 @@ def vista_crediti(reg):
             else:
                 stato = STATO_CORSO
             rif = p
-        else:
-            chiusi = [q for q in reg['pacchetti']
-                      if chiave in _chiavi_di(q) and q.get('fine')]
+        elif suoi:
+            chiusi = [q for q in suoi if q.get('fine')]
             rif = max(chiusi, key=lambda q: q['fine']) if chiusi else None
             stato = STATO_TERMINATI
-            rimasti = 0
+        usati = len(rif.get('sessioni', [])) if rif else 0
+        scaduto = bool(rif and rif.get('scaduto'))
         righe.append({
             'cliente': cfg['nome'], 'chiave': chiave,
-            'pacchetto': rif['id'] if rif else '—',
+            'pacchetto': rif['id'] if rif else None,
             'intestato_a': rif['cliente'] if rif else cfg['nome'],
             'fattura_a': cfg['fattura_a'] or cfg['nome'],
-            'importo_atteso': prezzo_atteso(chiave),
-            'crediti': rif['crediti'] if rif else cfg['crediti'],
-            'usati': len(rif.get('sessioni', [])) if rif else 0,
+            'crediti': rif['crediti'] if rif else 0,
+            'usati': usati,
             'rimasti': rimasti,
             'inizio': rif['inizio'] if rif else None,
+            'fine': rif.get('fine') if rif else None,
+            'scade': rif.get('scade') if rif and not scaduto else None,
+            'scaduto': scaduto,
+            'non_usate': max(0, rif['crediti'] - usati) if scaduto else 0,
             'stato': stato,
             'terminati': stato == STATO_TERMINATI,
             'in_esaurimento': stato == STATO_ESAURIMENTO,
@@ -509,6 +525,7 @@ def vista_crediti(reg):
             'fattura_numero': rif.get('fattura_numero') if rif else None,
             'nota': rif.get('nota', '') if rif else '',
             'ultima_sessione': max((s['data'] for s in rif.get('sessioni', [])), default=None) if rif else None,
+            'mensile': mensile,
         })
     ordine = {STATO_TERMINATI: 0, STATO_ESAURIMENTO: 1, STATO_CORSO: 2}
     righe.sort(key=lambda r: (ordine.get(r['stato'], 9), r['cliente']))

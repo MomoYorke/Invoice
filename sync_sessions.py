@@ -164,7 +164,7 @@ def stampa_vista(reg):
     print('  ' + '-' * 74)
     for r in S.vista_crediti(reg):
         segno = '!!' if r['terminati'] else ('! ' if r['in_esaurimento'] else '  ')
-        print(f"  {r['cliente']:<12}{r['pacchetto']:<10}"
+        print(f"  {r['cliente']:<12}{r['pacchetto'] or '—':<10}"
               f"{str(r['usati']) + '/' + str(r['crediti']):>7}{r['rimasti']:>9}  "
               f"{str(r['inizio'] or '—'):<12}{segno}{r['stato']}")
     print('  ' + '-' * 74)

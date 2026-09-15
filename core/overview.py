@@ -427,6 +427,22 @@ def da_fare(con, settings, registro=None, cartella_backup=None):
             'link': ('crediti', {}),
         })
 
+    in_piu = _sedute_in_piu(registro)
+    if in_piu:
+        quante = sum(n for _chi, n in in_piu)
+        nomi = [chi for chi, _n in in_piu]
+        voci.append({
+            'chiave': 'in_piu', 'icona': 'crediti',
+            'titolo': L.t('Sedute in più', lg),
+            'quante': quante,
+            'unita': L.t('sedute' if quante != 1 else 'seduta', lg),
+            'importo': None,
+            'dettaglio': L.t('{chi} — oltre quelle del mese', lg).format(
+                chi=', '.join(nomi[:4]) + (L.t(' e altri', lg) if len(nomi) > 4 else '')),
+            'urgenza': ATTESA,
+            'link': ('crediti', {}),
+        })
+
     # La copia fuori dal Mac. Sta qui, e non solo nella pagina dei Controlli,
     # perche' e' l'unica cosa dell'app che chieda davvero attenzione — e i
     # Controlli si aprono quando uno ci pensa, cioe' mai. Una rete di sicurezza
@@ -493,6 +509,17 @@ def _crediti_finiti(registro):
         from . import sessions
         return [r.get('cliente') or r.get('chiave')
                 for r in sessions.vista_crediti(registro) if r.get('terminati')]
+    except Exception:
+        return []          # i crediti non devono poter spegnere la Dashboard
+
+
+def _sedute_in_piu(registro, oggi=None):
+    """[(cliente, quante)]: le sedute in piu' del mese in corso o appena chiuso."""
+    if registro is None:
+        return []
+    try:
+        from . import mensili
+        return [(v['cliente'], v['in_piu']) for v in mensili.in_piu_recenti(registro, oggi)]
     except Exception:
         return []          # i crediti non devono poter spegnere la Dashboard
 

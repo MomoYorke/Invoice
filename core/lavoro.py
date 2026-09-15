@@ -91,6 +91,18 @@ def prezzo_del_pacchetto(pacchetto, config):
     return prezzi.pop() if len(prezzi) == 1 else None
 
 
+def valore_del_pacchetto(pacchetto, config):
+    """Quanto vale una seduta del pacchetto.
+
+    Un pacchetto nato da una fattura porta scritto il prezzo a seduta di quel
+    giorno (anche «niente», se il servizio non aveva prezzo). Quelli di prima
+    si valutano col listino di chi li ha comprati, come sempre: i mesi passati
+    non cambiano valore."""
+    if 'prezzo_seduta_cents' in pacchetto:
+        return pacchetto['prezzo_seduta_cents']
+    return prezzo_del_pacchetto(pacchetto, config)
+
+
 def _indice_mese(data, anno):
     """Da «2026-07-14» all'indice 6, ma solo se l'anno e' quello chiesto.
 
@@ -116,9 +128,10 @@ def per_mese(reg, config, anno):
     """
     mesi = [{'sedute': 0, 'cancellate': 0, 'esclusi': 0, 'cents': 0}
             for _ in range(12)]
-    for p in (reg or {}).get('pacchetti') or []:
-        unitario = prezzo_del_pacchetto(p, config)
-        for s in p.get('sessioni') or []:
+    gruppi = [(p, valore_del_pacchetto(p, config)) for p in (reg or {}).get('pacchetti') or []]
+    gruppi += [(m, m.get('prezzo_seduta_cents')) for m in (reg or {}).get('mensili') or []]
+    for gruppo, unitario in gruppi:
+        for s in gruppo.get('sessioni') or []:
             i = _indice_mese(s.get('data'), anno)
             if i is None:
                 continue
@@ -126,7 +139,8 @@ def per_mese(reg, config, anno):
                 mesi[i]['cancellate'] += 1
             else:
                 mesi[i]['sedute'] += 1
-            if unitario:
+            # una seduta in piu' e' lavorata, ma nessuno l'ha pagata
+            if unitario and not s.get('in_piu'):
                 mesi[i]['cents'] += unitario
     for e in (reg or {}).get('esclusi') or []:
         i = _indice_mese(e.get('data'), anno)
@@ -159,8 +173,9 @@ def primo_anno(reg):
     da zero senza spiegare perche' e' un grafico che mente: prima di quella
     data non e' che non si lavorasse, e' che il registro non c'era.
     """
-    date = [s.get('data') for p in (reg or {}).get('pacchetti') or []
-            for s in p.get('sessioni') or [] if s.get('data')]
+    date = [s.get('data') for gruppo in list((reg or {}).get('pacchetti') or [])
+            + list((reg or {}).get('mensili') or [])
+            for s in gruppo.get('sessioni') or [] if s.get('data')]
     date += [e.get('data') for e in (reg or {}).get('esclusi') or [] if e.get('data')]
     if not date:
         return None

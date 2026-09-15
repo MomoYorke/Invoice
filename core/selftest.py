@@ -1910,6 +1910,17 @@ def _test_da_fare(r):
     _check(r, 'Da fare', 'un registro incomprensibile non fa saltare niente',
            C._crediti_finiti('non-un-registro'), [])
 
+    _check(r, 'Da fare', 'senza registro, nessuna seduta in più e nessun errore',
+           (_senza_scoppiare(C._sedute_in_piu, None),
+            _senza_scoppiare(C._sedute_in_piu, 'non-un-registro')), ([], []))
+    reg_piu = {'pacchetti': [], 'esclusi': [], 'mensili': [
+        {'id': 'SOF-M01', 'chiavi': ['sofia'], 'cliente': 'Sofia', 'dal': ieri,
+         'al': oggi.isoformat(), 'in_piu': 2, 'sessioni': []}]}
+    cose = C.da_fare(_db_fatture_finto([]), {'banca_ultimo_estratto': oggi.isoformat()}, reg_piu)
+    _check(r, 'Da fare', 'le sedute in più del mese si fanno notare, senza urgenza',
+           ((voce(cose, 'in_piu') or {}).get('quante'), (voce(cose, 'in_piu') or {}).get('urgenza')),
+           (2, C.ATTESA))
+
 
 def _test_sedute_dai_servizi(r):
     """Le sedute arrivano dalla riga del servizio venduto, non dall'importo.
@@ -1918,6 +1929,7 @@ def _test_sedute_dai_servizi(r):
     scritti a mano per quel cliente: bastava uno sconto per perdere le sedute.
     Adesso le porta il servizio: quante sedute, a che prezzo, fino a quando."""
     from decimal import Decimal
+    import datetime
     from . import language as L
     from . import services as SR
     from . import sessions as S
@@ -2351,6 +2363,90 @@ def _test_sedute_dai_servizi(r):
                    'e i numeri dell’ultimo mese sono giusti',
            (numeri, _ContaLetture._letture[0] <= _ContaLetture._tetto),
            ((5, 6, 1, 0), True))
+
+    # --- la pagina Crediti e l'avviso della Dashboard ---
+    SOFIA = dict(GIULIA, id=3, name='Sofia Verdi', chiave_sedute='sofia')
+    ELENA = dict(GIULIA, id=4, name='Elena Rossi', chiave_sedute='elena')
+    prima = S._CONFIG
+    try:
+        S.configura([GIULIA, SOFIA, ELENA, MARCO])
+        reg = {'pacchetti': [
+            {'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'], 'crediti': 10,
+             'inizio': '2026-09-01', 'fine': None, 'fatturato': 'si - #301', 'fattura_numero': 301,
+             'scade': '2027-03-01', 'sessioni': [seduta(1, '2026-09-02')]},
+            {'id': 'SOF-01', 'cliente': 'Sofia', 'chiavi': ['sofia'], 'crediti': 10,
+             'inizio': '2026-01-01', 'fine': '2026-07-01', 'scade': '2026-07-01', 'scaduto': True,
+             'fatturato': 'si - #302', 'fattura_numero': 302,
+             'sessioni': [seduta(1, '2026-02-01'), seduta(2, '2026-03-01'), seduta(3, '2026-04-01')]},
+        ], 'esclusi': [], 'mensili': []}
+        M.da_fattura(reg, 'giulia', 'Giulia', 303, '2026-09-13', ABO, '2026-09', 13)
+        S.aggiungi_sessione(reg, 'giulia', '2026-09-20', 'Giulia', 'ev-v1')
+        M.da_fattura(reg, 'elena', 'Elena', 304, '2026-09-01', ABO_PERSE)
+        for i in range(5):
+            S.aggiungi_sessione(reg, 'elena', '2026-09-%02d' % (2 + i), 'Elena', f'ev-e{i}')
+        righe = _senza_scoppiare(lambda: S.vista_crediti(reg, datetime.date(2026, 9, 25)))
+        vista = {v['chiave']: v for v in righe} if isinstance(righe, list) else {}
+        _check(r, cat, 'Crediti mostra solo chi ha pacchetti o abbonamenti con sedute',
+               sorted(vista) if vista else righe, ['elena', 'giulia', 'sofia'])
+        g, s, e = vista.get('giulia', {}), vista.get('sofia', {}), vista.get('elena', {})
+        _check(r, cat, 'accanto al pacchetto, il mese di abbonamento in corso',
+               {k: (g.get('mensile') or {}).get(k) for k in (
+                   'dal', 'al', 'usate', 'disponibili', 'nuove', 'riportate', 'in_piu',
+                   'in_corso', 'fatturato')},
+               {'dal': '2026-09-13', 'al': '2026-10-12', 'usate': 1, 'disponibili': 4, 'nuove': 4,
+                'riportate': 0, 'in_piu': 0, 'in_corso': True, 'fatturato': True})
+        _check(r, cat, 'il pacchetto dice quando scade',
+               (g.get('pacchetto'), g.get('scade')), ('GIU-01', '2027-03-01'))
+        _check(r, cat, 'uno scaduto dice quante sedute non sono state usate',
+               (s.get('scaduto'), s.get('non_usate'), s.get('terminati')), (True, 7, True))
+        _check(r, cat, 'chi ha solo l’abbonamento non risulta senza crediti',
+               (e.get('pacchetto'), e.get('terminati'), (e.get('mensile') or {}).get('in_piu')),
+               (None, False, 1))
+        _check(r, cat, 'la vista non porta più l’importo atteso', 'importo_atteso' in g, False)
+
+        _check(r, cat, 'la Dashboard sa delle sedute in più del mese in corso',
+               [(v['cliente'], v['in_piu'])
+                for v in _senza_scoppiare(lambda: M.in_piu_recenti(reg, datetime.date(2026, 9, 25)))],
+               [('Elena', 1)])
+        _check(r, cat, 'e dopo due mesi non le ripete più',
+               _senza_scoppiare(lambda: M.in_piu_recenti(reg, datetime.date(2026, 12, 20))), [])
+    finally:
+        S._CONFIG = prima
+
+    # --- la fattura di un pacchetto finita nel Cestino si vede (spec §7) ---
+    import app as APP
+    con = _db_servizi()
+    for numero, stato, cestino in ((301, 'pagata', None), (302, 'emessa', '2026-09-01 10:00:00'),
+                                   (303, 'emessa', '2026-09-01 10:00:00'), (303, 'pagata', None)):
+        con.execute("INSERT INTO invoices(number, client_name, date, year, status, deleted_at) "
+                    "VALUES(?, 'x', '2026-09-01', 2026, ?, ?)", (numero, stato, cestino))
+    _check(r, cat, 'Crediti dice se la fattura di un pacchetto è nel Cestino, '
+                   'e un numero riusato vale per la fattura nuova',
+           _senza_scoppiare(APP._stati_delle_fatture, con),
+           {301: 'pagata', 302: 'cestinata', 303: 'pagata'})
+    con.close()
+
+    # --- l'Agenda linka anche i mesi (id tipo GIU-M01) a crediti_pacchetto:
+    # oggi darebbe 404, perché la pagina cerca solo fra i pacchetti ---
+    import json
+    import tempfile
+    prima_registry = S.REGISTRY
+    cartella = tempfile.mkdtemp()
+    try:
+        S.REGISTRY = os.path.join(cartella, 'sessions.json')
+        with open(S.REGISTRY, 'w', encoding='utf-8') as f:
+            json.dump({'pacchetti': [], 'esclusi': [], 'mensili': [
+                {'id': 'GIU-M01', 'chiavi': ['giulia'], 'cliente': 'Giulia', 'servizio_id': None,
+                 'fattura_numero': None, 'dal': '2026-09-13', 'al': '2026-10-12', 'sedute': 4,
+                 'passano': 0, 'massimo': 0, 'prezzo_seduta_cents': None,
+                 'sessioni': [seduta(1, '2026-09-20')]}]}, f)
+        risposta = _senza_scoppiare(lambda: APP.app.test_client().get('/crediti/pacchetto/GIU-M01'))
+        corpo = risposta.get_data(as_text=True) if hasattr(risposta, 'get_data') else ''
+        _check(r, cat, 'la pagina del pacchetto si apre anche per un mese di abbonamento '
+                       '(il link dell’Agenda su un id di mese)',
+               (getattr(risposta, 'status_code', None), 'GIU-M01' in corpo), (200, True))
+    finally:
+        S.REGISTRY = prima_registry
 
 
 def _test_migrazione_servizi(r):
@@ -6441,6 +6537,27 @@ def _test_lavoro(r):
            L.primo_anno(reg), 2025)
     _check(r, 'Lavoro', 'un registro vuoto non finge di sapere da quando',
            L.primo_anno({'pacchetti': [], 'esclusi': []}), None)
+
+    # --- i pacchetti nati da una fattura, e i mesi di abbonamento ----------
+    nuovi = {'pacchetti': [
+        {'cliente': 'Ivan', 'prezzo_seduta_cents': 16000,
+         'sessioni': [{'data': '2026-04-02', 'titolo': 'Ivan'}]},
+        {'cliente': 'Elena', 'prezzo_seduta_cents': None,
+         'sessioni': [{'data': '2026-04-03', 'titolo': 'Elena'}]},
+    ], 'mensili': [
+        {'cliente': 'Sofia', 'prezzo_seduta_cents': 5500, 'sessioni': [
+            {'data': '2026-04-04', 'titolo': 'Sofia'},
+            {'data': '2026-04-05', 'titolo': 'Sofia', 'in_piu': True}]},
+    ], 'esclusi': []}
+    aprile = L.per_mese(nuovi, listino, 2026)[3]
+    _check(r, 'Lavoro', 'le sedute dei mesi di abbonamento contano, anche quelle in più',
+           aprile['sedute'], 4)
+    _check(r, 'Lavoro', 'un pacchetto nato da una fattura vale il prezzo scritto sul pacchetto '
+                        '(niente, se non ce l’ha); una seduta in più non vale niente',
+           aprile['cents'], 16000 + 5500)
+    _check(r, 'Lavoro', 'il registro sa da quando ci sono i mesi di abbonamento',
+           L.primo_anno({'pacchetti': [], 'esclusi': [], 'mensili': [
+               {'sessioni': [{'data': '2024-05-01', 'titolo': 'Sofia'}]}]}), 2024)
 
 
 def _test_nomi_accentati(r):

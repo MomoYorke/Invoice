@@ -30,6 +30,7 @@ from core import qrbill
 from core import recurring as ric
 from core import sessions as sess
 from core import lavoro
+from core import mensili
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
 from core import branding
@@ -1459,6 +1460,19 @@ def crediti_sincronizza():
     return redirect(url_for('crediti'))
 
 
+def _stati_delle_fatture(con):
+    """{numero: stato} per la pagina Crediti.
+
+    Una fattura nel Cestino e' «cestinata»: le sedute che ha dato restano, e
+    chi guarda il pacchetto deve saperlo. Se il suo numero e' stato riusato da
+    una fattura nuova, vale quella."""
+    stati = {}
+    for r in con.execute('SELECT number, status, deleted_at FROM invoices '
+                         'WHERE number IS NOT NULL ORDER BY deleted_at IS NULL, id'):
+        stati[r['number']] = 'cestinata' if r['deleted_at'] else r['status']
+    return stati
+
+
 @app.route('/crediti')
 def crediti():
     """Vista crediti per cliente (SPEC-crediti.md 6.2)."""
@@ -1479,9 +1493,7 @@ def crediti():
         'ORDER BY number DESC LIMIT 25').fetchall()
     # il registro sa solo QUALE fattura copre il pacchetto, non se e' stata
     # incassata: lo stato di pagamento sta nel database e si legge ogni volta.
-    stati = {r['number']: r['status'] for r in con.execute(
-        'SELECT number, status FROM invoices '
-        'WHERE deleted_at IS NULL AND number IS NOT NULL')}
+    stati = _stati_delle_fatture(con)
     con.close()
     for r in righe:
         r['fattura_stato'] = stati.get(r.get('fattura_numero'))
@@ -1843,8 +1855,15 @@ def agenda_orari():
 def crediti_pacchetto(pid):
     reg = sess.carica()
     p = next((q for q in reg['pacchetti'] if q['id'] == pid), None)
+    mese = None
     if not p:
-        abort(404)
+        mese = next((m for m in reg.get('mensili') or [] if m['id'] == pid), None)
+        if not mese:
+            abort(404)
+        mensili.ricalcola(reg, mese)       # usate e disponibili di oggi, non dell'ultimo salvataggio
+        # un mese di abbonamento si mostra con la stessa pagina del pacchetto
+        p = dict(mese, crediti=mese.get('disponibili', 0), inizio=mese['dal'], fine=mese['al'],
+                 fatturato=('si - #%s' % mese['fattura_numero']) if mese.get('fattura_numero') else 'no')
     stato = None
     if p.get('fattura_numero'):
         con = get_con()
@@ -1852,7 +1871,7 @@ def crediti_pacchetto(pid):
                           (p['fattura_numero'],)).fetchone()
         con.close()
         stato = row['status'] if row else None
-    return render_template('pack.html', p=p, fattura_stato=stato)
+    return render_template('pack.html', p=p, fattura_stato=stato, mese=bool(mese))
 
 
 @app.route('/crediti/collega', methods=['POST'])
