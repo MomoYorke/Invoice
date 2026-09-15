@@ -3,6 +3,7 @@
    script in fondo a services.html. #}
 <form method="post" action="{{ url_for('servizi_salva') }}" class="scheda-servizio">
   {% if s.id %}<input type="hidden" name="id" value="{{ s.id }}">{% endif %}
+  {% if s.da_riga %}<input type="hidden" name="da_riga" value="{{ s.da_riga }}">{% endif %}
   <label for="sv-nome-{{ k }}">{{ _('Come si chiama?') }}</label>
   <input type="text" name="nome" id="sv-nome-{{ k }}" value="{{ s.nome or '' }}" required>
   <label for="sv-prezzo-{{ k }}">{{ _('Quanto costa?') }}</label>

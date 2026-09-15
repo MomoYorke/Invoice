@@ -1161,6 +1161,51 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'Performance manda a Servizi per nomi e prezzi',
            (pagina.count("url_for('servizi')"), 'crediti_clienti' in pagina), (2, False))
 
+    # --- «Righe senza servizio» ------------------------------------------------
+    from . import righe_servizio as RS
+    con = _db_servizi()
+    p12 = SR.salva(con, SR.dal_modulo({'nome': '12 Sessions Pack – Personal Training',
+                                       'prezzo': "1'800", 'ogni_mese': '0',
+                                       'con_sedute': '1', 'sedute': '12'}))
+    SR.salva(con, SR.dal_modulo({'nome': '10 Sessions Pack – Personal Training',
+                                 'prezzo': "2'000", 'ogni_mese': '0',
+                                 'con_sedute': '1', 'sedute': '10'}))
+    for n, (data, qty, desc, tot) in enumerate((
+            ('2026-01-10', '12', 'Personal Training Pack', 180000),
+            ('2026-02-10', '12', 'Personal Training Pack', 180000),
+            ('2026-03-10', '1', 'Loyalty discount', 5000),
+            ('2026-03-11', '1', 'Consulenza nutrizionale 11.03.26', 9000),
+            ('2026-04-11', '1', 'Consulenza nutrizionale 11.04.26', 9500)), 1):
+        con.execute('INSERT INTO invoices(id, number, client_name, date, year, total_cents) '
+                    "VALUES(?,?,'x',?,2026,?)", (n, n, data, tot))
+        con.execute('INSERT INTO items(invoice_id, pos, qty, description, total_cents) '
+                    'VALUES(?,0,?,?,?)', (n, qty, desc, tot))
+    elementi = RS.da_decidere(con)
+    _check(r, 'Servizi', 'un elemento per testo, senza date e senza sconti',
+           [(e['testo'], e['righe']) for e in elementi],
+           [('Consulenza nutrizionale', 2), ('Personal Training Pack', 2)])
+    servizi_tutti = SR.tutti(con)
+    pack = next(e for e in elementi if e['chiave'] == 'personal training pack')
+    consulenza = next(e for e in elementi if e['chiave'] == 'consulenza nutrizionale')
+    _check(r, 'Servizi', 'a parità di parole vince il servizio con le sedute della quantità',
+           RS.ipotesi(pack, servizi_tutti), p12)
+    _check(r, 'Servizi', 'se nessuna ipotesi convince resta «Scegli…»',
+           RS.ipotesi(consulenza, servizi_tutti), None)
+    _check(r, 'Servizi', 'il nuovo servizio prende il nome dal testo e il prezzo dall’ultima riga',
+           (RS.per_nuovo_servizio(consulenza)['nome'],
+            RS.per_nuovo_servizio(consulenza)['prezzo_testo']),
+           ('Consulenza nutrizionale', '95.-'))
+    _check(r, 'Servizi', 'e le sedute dal pacchetto collegato a quella fattura',
+           RS.per_nuovo_servizio(pack, {'pacchetti': [{'fattura_numero': 2, 'crediti': 12}]})['sedute'],
+           12)
+    _check(r, 'Servizi', '«Fatto» scrive il servizio su tutte le righe di quel testo',
+           RS.decidi(con, 'personal training pack', p12), 2)
+    RS.decidi(con, 'consulenza nutrizionale', 0)
+    _check(r, 'Servizi', 'e poi non resta niente da decidere', RS.quante(con), 0)
+    _check(r, 'Servizi', 'la decisione vale anche per le righe future',
+           SR.di_testo(con, 'Consulenza nutrizionale 01.10.26'), 0)
+    con.close()
+
 
 def _db_servizi():
     """Un database in memoria con lo schema vero, colonne nuove comprese.
@@ -2101,6 +2146,8 @@ def _test_menu(r):
            acceso.get('crediti_pacchetto'), 'crediti')
     _check(r, 'Menu', 'chi lavora a crediti accende «Crediti»',
            acceso.get('crediti_clienti'), 'crediti')
+    _check(r, 'Menu', 'le righe senza servizio accendono «Servizi»',
+           acceso.get('servizi_righe'), 'servizi')
 
     _check(r, 'Menu', 'le voci stanno in gruppi con un titolo',
            [t for t, _ in M.GRUPPI if t], ['Fatturare', 'Chi segui', 'Incassi e fisco', "L'app"])
@@ -5455,6 +5502,7 @@ GENTE_FINTA = {
     '12 Sessions Pack – Personal Training',  # non persone: servizi finti (Compito 2)
     '12 Sessions Pack', 'Monthly abo: running coaching',  # servizi finti (Compito 4)
     '10 Sessions Pack', 'Running Coaching', 'Fisioterapia',  # servizi finti (Compito 5)
+    '10 Sessions Pack – Personal Training',  # servizio finto (Compito 6)
 }
 CONTI_FINTI = {
     'CH5800791123000889012',      # IBAN normale d'esempio

@@ -15,6 +15,15 @@
 <h1>{{ _('Servizi') }}</h1>
 <p class="sub">{{ _('Quello che vendi. Il nome di un servizio è anche il testo della sua riga in fattura.') }}</p>
 
+{% if righe_da_decidere %}
+<div class="panel" style="max-width:720px;padding:10px 14px">
+  {{ icona('avviso', 'ic-mini') }}
+  {% if righe_da_decidere == 1 %}{{ _('Un testo di righe vecchie non ha ancora un servizio.') }}
+  {%- else %}{{ _('{n} testi di righe vecchie non hanno ancora un servizio.').format(n=righe_da_decidere) }}{% endif %}
+  <a href="{{ url_for('servizi_righe') }}">{{ _('Sistemali') }}</a>
+</div>
+{% endif %}
+
 <div class="panel" style="max-width:720px">
   {% for voce in attivi %}
   <details class="servizio" {{ 'open' if bozza_id == voce.id }}>

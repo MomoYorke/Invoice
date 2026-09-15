@@ -219,6 +219,12 @@
         <td></td>
       </tr>
     </table>
+    {% if righe_da_decidere %}
+    <p class="muted" style="font-size:12.5px">
+      {% if righe_da_decidere == 1 %}{{ _('Un testo di righe vecchie non ha ancora un servizio.') }}
+      {%- else %}{{ _('{n} testi di righe vecchie non hanno ancora un servizio.').format(n=righe_da_decidere) }}{% endif %}
+      <a href="{{ url_for('servizi_righe') }}">{{ _('Sistemali') }}</a></p>
+    {% endif %}
     {% else %}
     <p class="muted">{{ _("Nessun dettaglio servizi per quest'anno. I servizi si scrivono in") }}
       <a href="{{ url_for('servizi') }}">{{ _('Servizi') }}</a>.</p>

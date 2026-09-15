@@ -35,6 +35,7 @@ from core import docgen, pdfgen
 from core import branding
 from core import desktop
 from core import services as srv
+from core import righe_servizio
 from core import welcome as ben
 from core import icons
 from core import menu
@@ -283,6 +284,7 @@ def performance():
     max_year_v = max([v['invoiced'] for v in yearly.values()] + [1])
     max_client = max([c[1] for c in clients] + [1])
     max_service = max([s[1] for s in services] + [1])
+    righe_da_decidere = righe_servizio.quante(con)
     con.close()
 
     # Quanto si e' LAVORATO, che non e' quanto si e' fatturato: un pacchetto si
@@ -308,7 +310,8 @@ def performance():
                            legacy_years=stats.LEGACY_YEARS,
                            lav=lav, lav_prec=lav_prec, lav_tot=lav_tot,
                            lav_primo_anno=lav_primo_anno,
-                           max_sedute=max_sedute, max_lav=max_lav)
+                           max_sedute=max_sedute, max_lav=max_lav,
+                           righe_da_decidere=righe_da_decidere)
 
 
 @app.route('/benvenuto')
@@ -1249,7 +1252,8 @@ def _pagina_servizi(con, bozza=None, bozza_id=None):
     return render_template('services.html',
                            attivi=[s for s in servizi_pagina if s['attivo']],
                            vecchi=[s for s in servizi_pagina if not s['attivo']],
-                           bozza=bozza, bozza_id=bozza_id)
+                           bozza=bozza, bozza_id=bozza_id,
+                           righe_da_decidere=righe_servizio.quante(con))
 
 
 @app.route('/servizi')
@@ -1257,7 +1261,16 @@ def servizi():
     """Quello che vendi: nome, prezzo, e se comprende sedute."""
     con = get_con()
     try:
-        return _pagina_servizi(con)
+        bozza = None
+        da_riga = request.args.get('da_riga')
+        if da_riga:
+            # «Nuovo servizio con questo nome…» dalla pagina delle righe
+            elemento = next((e for e in righe_servizio.da_decidere(con)
+                             if e['chiave'] == da_riga), None)
+            if elemento:
+                registro = sess.carica() if os.path.exists(sess.REGISTRY) else None
+                bozza = righe_servizio.per_nuovo_servizio(elemento, registro)
+        return _pagina_servizi(con, bozza=bozza)
     finally:
         con.close()
 
@@ -1266,6 +1279,7 @@ def servizi():
 def servizi_salva():
     sid = request.form.get('id', type=int)
     dati = srv.dal_modulo(request.form)
+    dati['da_riga'] = request.form.get('da_riga', '')
     con = get_con()
     try:
         errori = srv.controlla(con, dati, sid)
@@ -1275,9 +1289,15 @@ def servizi_salva():
             if sid:
                 dati['id'] = sid
             return _pagina_servizi(con, bozza=dati, bozza_id=sid)
-        srv.salva(con, dati, sid)
+        nuovo_id = srv.salva(con, dati, sid)
+        if dati['da_riga']:
+            righe_servizio.decidi(con, dati['da_riga'], nuovo_id)
+            con.commit()
     finally:
         con.close()
+    if dati['da_riga']:
+        avvisa('«{nome}» salvato e collegato alle sue righe.', 'ok', nome=dati['nome'])
+        return redirect(url_for('servizi_righe'))
     avvisa('«{nome}» salvato.', 'ok', nome=dati['nome'])
     return redirect(url_for('servizi'))
 
@@ -1297,6 +1317,36 @@ def servizi_vendita(sid):
     else:
         avvisa('Tolto dai pulsanti della fattura. Le fatture già fatte non cambiano.', 'ok')
     return redirect(url_for('servizi'))
+
+
+@app.route('/servizi/righe', methods=['GET', 'POST'])
+def servizi_righe():
+    """Le righe vecchie che l'app non ha saputo collegare a un servizio."""
+    con = get_con()
+    if request.method == 'POST':
+        decise, nuovo, n = 0, None, 0
+        # si decide per testo, non per posizione: se l'elenco e' cambiato nel
+        # frattempo, una posizione sbagliata darebbe il servizio alle righe altrui
+        while f'chiave_{n}' in request.form and n < 1000:
+            chiave = request.form[f'chiave_{n}']
+            scelta = request.form.get(f'scelta_{n}', '')
+            if scelta == 'nuovo':
+                nuovo = nuovo or chiave
+            elif scelta.isdigit():
+                decise += righe_servizio.decidi(con, chiave, int(scelta))
+            n += 1
+        con.commit()
+        con.close()
+        if nuovo:
+            return redirect(url_for('servizi', da_riga=nuovo))
+        avvisa('Righe sistemate: {n}.', 'ok', n=decise)
+        return redirect(url_for('servizi_righe'))
+    elementi = righe_servizio.da_decidere(con)
+    listino = srv.tutti(con)
+    for el in elementi:
+        el['ipotesi'] = righe_servizio.ipotesi(el, listino)
+    con.close()
+    return render_template('service_lines.html', elementi=elementi, servizi=listino)
 
 
 # ---------------------------------------------------------------- commercialista
