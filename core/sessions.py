@@ -601,14 +601,33 @@ def _paga(p, numero, sedute, dati, nota=None):
     ricalcola(p)
 
 
+def _accoda_prepagata(reg, chiave, numero, sedute, dati):
+    """Mette una fattura in fondo a `prepagate`: chi c'era prima resta il
+    primo a essere servito quando un pacchetto si libera (spec: la piu'
+    vecchia prima, come gia' fa `_apri_successivo` con le sedute lette dal
+    calendario)."""
+    prepagate = reg.setdefault('prepagate', {})
+    attese = prepagate.get(chiave)
+    if not isinstance(attese, list):
+        attese = [] if attese in (None, '') else [attese]
+    attese.append(dict(numero=numero, sedute=int(sedute), **dati))
+    prepagate[chiave] = attese
+
+
 def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
     """Le sedute di una riga «una volta» entrano nel registro. Tre casi:
 
-      - pacchetto aperto non ancora pagato -> la fattura lo paga, con le sedute della riga
-      - pacchetto aperto gia' pagato       -> la fattura aspetta in `prepagate`
-      - nessun pacchetto, o finito         -> ne nasce uno nuovo, gia' pagato
+      - pacchetto aperto e non ancora fatturato (pieno o no) -> la fattura lo
+        paga, con le sedute della riga («Paga quello finito»: un pacchetto
+        finito ma da fatturare si comporta come uno quasi finito, non come
+        uno gia' incassato)
+      - pacchetto aperto e gia' fatturato, non ancora finito -> la fattura
+        aspetta in `prepagate`
+      - nessun pacchetto aperto, o finito e gia' fatturato -> ne nasce uno
+        nuovo; se pero' c'e' gia' una fattura piu' vecchia in coda, tocca a
+        lei aprirlo (la piu' vecchia prima) e questa fattura si accoda dietro
 
-    Se il pacchetto aperto aveva gia' piu' sedute fatte di quante ne paga la
+    Se il pacchetto che paga aveva gia' piu' sedute fatte di quante ne paga la
     riga, tiene le piu' vecchie (per data, poi per numero) e chiude su quelle;
     le sedute in piu' escono e vanno a `aggiungi_sessione`, che le tratta come
     sedute lette adesso dal calendario: scadenza, fattura in attesa, o un
@@ -621,53 +640,48 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
     if p is not None and p.get('scade') and data > p['scade']:
         chiudi_scaduto(p)
         p = None
-    if p is not None and p['crediti'] - len(p.get('sessioni', [])) > 0:
-        if not e_saldato(p):
-            sessioni = p.get('sessioni', [])
-            paga_n = int(sedute) if sedute else 0
-            if paga_n and len(sessioni) > paga_n:
-                ordinate = sorted(sessioni, key=lambda s: (s['data'], s['n']))
-                tenute, eccesso = ordinate[:paga_n], ordinate[paga_n:]
-                for i, s in enumerate(tenute, 1):
-                    s['n'] = i
-                _paga(p, numero, sedute, dati)
-                # si chiude PRIMA di piazzare l'eccesso, sennò aggiungi_sessione
-                # lo ritroverebbe ancora aperto e ci rimetterebbe dentro le sedute
-                p['sessioni'] = tenute
-                p['fine'] = tenute[-1]['data']
-                ricalcola(p)
-                nuovo_id = None
-                for s in eccesso:
-                    piazzata, _aperto = aggiungi_sessione(
-                        reg, chiave, s['data'], s['titolo'],
-                        s.get('event_id'), s.get('nota'), s.get('ora'))
-                    # piazzata puo' essere un mese: mensili.aggiungi riordina le
-                    # sessioni per data, quindi quella appena messa non e'
-                    # detto che sia l'ultima della lista. E' pero' l'ultima con
-                    # la sua stessa data e titolo, perche' un pacchetto la
-                    # accoda in fondo e l'ordinamento di un mese e' stabile.
-                    ultima = next(x for x in reversed(piazzata['sessioni'])
-                                  if x['data'] == s['data'] and x['titolo'] == s['titolo'])
-                    for k, v in s.items():
-                        if k != 'n' and k not in ultima:
-                            ultima[k] = v
-                    if nuovo_id is None:
-                        nuovo_id = piazzata['id']
-                return 'collegato', (
-                    'Collegata al pacchetto {pid} di {nome}: paga {sedute} sedute, e quelle '
-                    'già fatte in più ({extra}) passano al pacchetto {nuovo}.',
-                    {'pid': p['id'], 'nome': nome, 'sedute': paga_n,
-                     'extra': len(eccesso), 'nuovo': nuovo_id})
+    if p is not None and not e_saldato(p):
+        sessioni = p.get('sessioni', [])
+        paga_n = int(sedute) if sedute else 0
+        if paga_n and len(sessioni) > paga_n:
+            ordinate = sorted(sessioni, key=lambda s: (s['data'], s['n']))
+            tenute, eccesso = ordinate[:paga_n], ordinate[paga_n:]
+            for i, s in enumerate(tenute, 1):
+                s['n'] = i
             _paga(p, numero, sedute, dati)
+            # si chiude PRIMA di piazzare l'eccesso, sennò aggiungi_sessione
+            # lo ritroverebbe ancora aperto e ci rimetterebbe dentro le sedute
+            p['sessioni'] = tenute
+            p['fine'] = tenute[-1]['data']
+            ricalcola(p)
+            nuovo_id = None
+            for s in eccesso:
+                piazzata, _aperto = aggiungi_sessione(
+                    reg, chiave, s['data'], s['titolo'],
+                    s.get('event_id'), s.get('nota'), s.get('ora'))
+                # piazzata puo' essere un mese: mensili.aggiungi riordina le
+                # sessioni per data, quindi quella appena messa non e'
+                # detto che sia l'ultima della lista. E' pero' l'ultima con
+                # la sua stessa data e titolo, perche' un pacchetto la
+                # accoda in fondo e l'ordinamento di un mese e' stabile.
+                ultima = next(x for x in reversed(piazzata['sessioni'])
+                              if x['data'] == s['data'] and x['titolo'] == s['titolo'])
+                for k, v in s.items():
+                    if k != 'n' and k not in ultima:
+                        ultima[k] = v
+                if nuovo_id is None:
+                    nuovo_id = piazzata['id']
             return 'collegato', (
-                'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.',
-                {'pid': p['id'], 'nome': nome, 'rimasti': p['rimasti']})
-        prepagate = reg.setdefault('prepagate', {})
-        attese = prepagate.get(chiave)
-        if not isinstance(attese, list):
-            attese = [] if attese in (None, '') else [attese]
-        attese.append(dict(numero=numero, sedute=int(sedute), **dati))
-        prepagate[chiave] = attese
+                'Collegata al pacchetto {pid} di {nome}: paga {sedute} sedute, e quelle '
+                'già fatte in più ({extra}) passano al pacchetto {nuovo}.',
+                {'pid': p['id'], 'nome': nome, 'sedute': paga_n,
+                 'extra': len(eccesso), 'nuovo': nuovo_id})
+        _paga(p, numero, sedute, dati)
+        return 'collegato', (
+            'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.',
+            {'pid': p['id'], 'nome': nome, 'rimasti': p['rimasti']})
+    if p is not None and p['crediti'] - len(p.get('sessioni', [])) > 0:
+        _accoda_prepagata(reg, chiave, numero, sedute, dati)
         return 'in_attesa', (
             '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa '
             'e aprirà il pacchetto successivo alla prima seduta utile.',
@@ -675,6 +689,19 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
     if p is not None:
         p['fine'] = max((x['data'] for x in p.get('sessioni', [])), default=None) or p['inizio']
         ricalcola(p)
+    if _prima_prepagata(reg, chiave) is not None:
+        # una fattura piu' vecchia sta gia' aspettando il turno: tocca a lei
+        # aprire il pacchetto dopo (spec: la piu' vecchia prima), non a questa
+        # che arriva ora — si accoda anche lei, dietro chi aspettava gia'
+        _accoda_prepagata(reg, chiave, numero, sedute, dati)
+        nuovo = _apri_successivo(reg, chiave, data)
+        if nuovo.get('fattura_numero') == numero:
+            return 'nuovo', ('Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.',
+                             {'pid': nuovo['id'], 'nome': nome, 'crediti': nuovo['crediti']})
+        return 'in_attesa', (
+            '{nome} ha altre fatture più vecchie in attesa: questa aprirà il pacchetto '
+            'successivo al suo turno.',
+            {'nome': nome})
     nuovo = apri_pacchetto(reg, chiave, data, crediti=int(sedute))
     _paga(nuovo, numero, sedute, dati, nota=f'Aperto dalla fattura #{numero}')
     return 'nuovo', ('Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.',

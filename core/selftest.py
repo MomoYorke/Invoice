@@ -2082,12 +2082,41 @@ def _test_sedute_dai_servizi(r):
                (reg['pacchetti'][-1].get('fattura_numero'), reg['pacchetti'][-1]['crediti'],
                 'giulia' in reg['prepagate']), (90, 1, False))
 
-        # --- 4. pacchetto finito: si chiude, e la fattura ne apre uno nuovo ---
+        # --- 4. pacchetto finito ma non ancora fatturato: lo paga la fattura
+        # in arrivo, come uno quasi finito (Emanuele: «Paga quello finito»,
+        # Fix Finale C — prima restava com'era e la fattura ne apriva uno
+        # nuovo, lasciando le sedute già fatte senza essere mai pagate) ---
         reg = {'pacchetti': [aperto(2, ['2026-08-02', '2026-08-09'])], 'esclusi': []}
-        esito, _detto = S.aggancia_pacchetto(reg, 'giulia', 104, '2026-08-10', 12, PACCHETTO)
-        _check(r, cat, 'un pacchetto finito si chiude, e la fattura ne apre uno nuovo',
-               (esito, reg['pacchetti'][0]['fine'], reg['pacchetti'][-1]['crediti']),
-               ('nuovo', '2026-08-09', 12))
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 104, '2026-08-10', 12, PACCHETTO)
+        frasi.append(frase)
+        _check(r, cat, 'un pacchetto finito ma da fatturare lo paga la stessa fattura, '
+                       'non resta com\'era',
+               (esito, len(reg['pacchetti']), reg['pacchetti'][0].get('fine'),
+                reg['pacchetti'][0]['crediti'], reg['pacchetti'][0].get('fattura_numero')),
+               ('collegato', 1, None, 12, 104))
+
+        # --- 5. due fatture d'anticipo già in coda: quando il pacchetto
+        # aperto si esaurisce, tocca alla più vecchia in coda aprire quello
+        # dopo — non a una fattura che arriva ora e lo chiederebbe per sé
+        # (Fix Finale B: prima aggancia_pacchetto apriva un pacchetto nuovo
+        # con i dati della fattura in arrivo, scavalcando chi aspettava già) ---
+        reg = {'pacchetti': [aperto(10, ['2026-09-01', '2026-09-02', '2026-09-03'],
+                                    fatturato='si - #200', fattura_numero=200)],
+               'esclusi': []}
+        esito, _ = S.aggancia_pacchetto(reg, 'giulia', 201, '2026-09-05', 12, PACCHETTO)
+        _check(r, cat, 'la prima fattura d’anticipo si accoda',
+               (esito, [a['numero'] for a in reg['prepagate']['giulia']]), ('in_attesa', [201]))
+        esito, _ = S.aggancia_pacchetto(reg, 'giulia', 202, '2026-09-06', 12, PACCHETTO)
+        _check(r, cat, 'la seconda si accoda dietro la prima',
+               (esito, [a['numero'] for a in reg['prepagate']['giulia']]), ('in_attesa', [201, 202]))
+        reg['pacchetti'][0]['crediti'] = 3     # tre sedute già fatte: il pacchetto è pieno
+        esito, (frase, valori) = S.aggancia_pacchetto(reg, 'giulia', 203, '2026-09-10', 12, PACCHETTO)
+        frasi.append(frase)
+        _check(r, cat, 'la fattura più vecchia in coda apre il pacchetto dopo, non quella di adesso',
+               (esito, reg['pacchetti'][-1].get('fattura_numero'), reg['pacchetti'][-1]['crediti']),
+               ('in_attesa', 201, 12))
+        _check(r, cat, 'e la fattura di adesso resta in coda dietro chi aspettava già',
+               [a['numero'] for a in reg['prepagate']['giulia']], [202, 203])
 
         # --- la scadenza ---
         reg = {'pacchetti': [aperto(12, ['2026-09-30'], fatturato='si - #105', fattura_numero=105,

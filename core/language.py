@@ -1321,6 +1321,8 @@ TESTI = {
             'Linked to pack {pid} of {nome}, which still has {rimasti} sessions.',
         '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima seduta utile.':
             '{nome} still has sessions on pack {pid}: this invoice waits and will open the next pack at the first session that comes.',
+        '{nome} ha altre fatture più vecchie in attesa: questa aprirà il pacchetto successivo al suo turno.':
+            '{nome} has older invoices still waiting: this one will open the next pack once it is their turn.',
         'Nel calendario «{nome}» è anche il nome di un altro cliente: scrivi nella scheda del cliente come compare nel calendario, per esempio «{nome} R.».':
             'In the calendar «{nome}» is also the name of another client: write in the client card how they appear in the calendar, for example «{nome} R.».',
         'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
@@ -2799,6 +2801,8 @@ TESTI = {
             'Mit Paket {pid} von {nome} verknüpft, das noch {rimasti} Sitzungen hat.',
         '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa e aprirà il pacchetto successivo alla prima seduta utile.':
             '{nome} hat noch Sitzungen auf Paket {pid}: diese Rechnung wartet und öffnet das nächste Paket bei der ersten passenden Sitzung.',
+        '{nome} ha altre fatture più vecchie in attesa: questa aprirà il pacchetto successivo al suo turno.':
+            '{nome} hat noch ältere Rechnungen in Warteschlange: diese eröffnet das nächste Paket, wenn sie an der Reihe ist.',
         'Nel calendario «{nome}» è anche il nome di un altro cliente: scrivi nella scheda del cliente come compare nel calendario, per esempio «{nome} R.».':
             'Im Kalender ist «{nome}» auch der Name einer anderen Person: schreib in der Kundenkarte, wie sie im Kalender heisst, zum Beispiel «{nome} R.».',
         'Non sono riuscito ad aggiornare le sedute per questa fattura: controlla la pagina Crediti.':
