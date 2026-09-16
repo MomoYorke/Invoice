@@ -2641,6 +2641,64 @@ def _test_conferme(r):
     _check(r, cat, 'e non vale franchi',
            settembre['cents'], 20000)
 
+    import datetime
+    from . import conferme as CF
+
+    OGGI = datetime.date(2026, 9, 16)
+
+    def pacchetto(sessioni, **altro):
+        return dict({'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'],
+                     'crediti': 10, 'inizio': '2026-09-01', 'fine': None,
+                     'sessioni': sessioni}, **altro)
+
+    def voce(uid, data):
+        return {'id': '%s::%s' % (uid, data), 'titolo': 'Giulia', 'data': data,
+                'ora': '07:30', 'stato_google': 'confirmed'}
+
+    dal_calendario = seduta(1, '2026-09-10', event_id='ev1@g::2026-09-10')
+    altra = seduta(2, '2026-09-14', event_id='ev2@g::2026-09-14')
+
+    _check(r, cat, 'la finestra guarda indietro 14 giorni',
+           CF.finestra(OGGI), (datetime.date(2026, 9, 2), OGGI))
+
+    reg1 = {'pacchetti': [pacchetto([dict(dal_calendario), dict(altra)])],
+            'mensili': [], 'esclusi': []}
+    esiti = CF.confronta(reg1, [voce('ev2@g', '2026-09-14')], OGGI)
+    _check(r, cat, 'la seduta che il calendario non ha più diventa una domanda',
+           ([x['event_id'] for x in esiti['sparite']], esiti['spostate']),
+           (['ev1@g::2026-09-10'], []))
+
+    reg2 = {'pacchetti': [pacchetto([dict(dal_calendario)])], 'mensili': [], 'esclusi': []}
+    esiti = CF.confronta(reg2, [voce('ev1@g', '2026-09-11')], OGGI)
+    _check(r, cat, 'lo stesso evento in un altro giorno è uno spostamento, non una disdetta',
+           (esiti['sparite'],
+            [(x['event_id'], x['data_nuova'], x['id_nuovo']) for x in esiti['spostate']]),
+           ([], [('ev1@g::2026-09-10', '2026-09-11', 'ev1@g::2026-09-11')]))
+
+    vecchia = seduta(1, '2026-08-20', event_id='ev9@g::2026-08-20')
+    reg3 = {'pacchetti': [pacchetto([vecchia])], 'mensili': [], 'esclusi': []}
+    _check(r, cat, 'più vecchia della finestra: non si chiede niente',
+           CF.confronta(reg3, [], OGGI)['sparite'], [])
+
+    reg4 = {'pacchetti': [pacchetto([seduta(1, '2026-09-10')])], 'mensili': [], 'esclusi': []}
+    _check(r, cat, 'una seduta nata dalla fattura (senza evento) non si tocca',
+           CF.confronta(reg4, [], OGGI)['sparite'], [])
+
+    reg5 = {'pacchetti': [pacchetto([dict(dal_calendario)], fattura_numero=77, fine='2026-09-12')],
+            'mensili': [], 'esclusi': []}
+    _check(r, cat, 'un pacchetto chiuso e fatturato non genera domande',
+           CF.confronta(reg5, [], OGGI)['sparite'], [])
+
+    reg6 = {'pacchetti': [pacchetto([dict(dal_calendario, non_fatta='2026-09-15')])],
+            'mensili': [], 'esclusi': []}
+    _check(r, cat, 'una seduta già decisa non si richiede',
+           CF.confronta(reg6, [], OGGI)['sparite'], [])
+
+    reg7 = {'pacchetti': [pacchetto([dict(dal_calendario)])], 'mensili': [], 'esclusi': [],
+            'da_confermare': [{'event_id': 'ev1@g::2026-09-10'}]}
+    _check(r, cat, 'una domanda già in lista non si duplica',
+           CF.confronta(reg7, [], OGGI)['sparite'], [])
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
