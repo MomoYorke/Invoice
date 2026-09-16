@@ -22,6 +22,27 @@
   {% endif %}
 </div>
 
+{% if domande %}
+<div class="panel" style="border-color:#f59e0b;background:#fffbeb">
+  {% for d in domande %}
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0">
+    <span>
+      {% if d.insieme %}{{ _('Sono sparite {quante} sedute di {cliente}: le hai disdette tutte?').format(quante=d.quante, cliente=d.cliente) }}
+      {% else %}{{ _("La seduta di {giorno} di {cliente} non è più sul calendario. L'hai disdetta?").format(giorno=d.date[0] | dateit, cliente=d.cliente) }}{% endif %}
+    </span>
+    <form method="post" action="{{ url_for('seduta_non_fatta') }}" style="display:inline">
+      {% for e in d.event_ids %}<input type="hidden" name="event_id" value="{{ e }}">{% endfor %}
+      <button class="btn small">{{ _("Non l'ho fatta") }}</button>
+    </form>
+    <form method="post" action="{{ url_for('seduta_tienila') }}" style="display:inline">
+      {% for e in d.event_ids %}<input type="hidden" name="event_id" value="{{ e }}">{% endfor %}
+      <button class="btn small secondary">{{ _('Tienila') }}</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% set esauriti = righe | selectattr('terminati') | list %}
 
 {% if esauriti %}

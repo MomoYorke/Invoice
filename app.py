@@ -1561,6 +1561,29 @@ def crediti_sincronizza():
     return redirect(url_for('crediti'))
 
 
+def _risposta_sulle_sedute(come, messaggio):
+    """Le due risposte alle domande del calendario: cambia solo il segno."""
+    ids = request.form.getlist('event_id')
+    reg = sess.carica()
+    quante = conferme.segna(reg, ids, come, datetime.date.today())
+    sess.salva(reg)
+    if quante:
+        avvisa(messaggio, 'ok', quante=quante)
+    # si torna da dove si e' premuto: la domanda sta su Crediti, il pulsante
+    # anche in Agenda
+    return redirect(request.referrer or url_for('crediti'))
+
+
+@app.route('/crediti/seduta/non-fatta', methods=['POST'])
+def seduta_non_fatta():
+    return _risposta_sulle_sedute('non_fatta', 'Credito restituito: {quante} seduta/e.')
+
+
+@app.route('/crediti/seduta/tienila', methods=['POST'])
+def seduta_tienila():
+    return _risposta_sulle_sedute('confermata', 'Seduta confermata.')
+
+
 def _stati_delle_fatture(con):
     """{numero: stato} per la pagina Crediti.
 
@@ -1580,6 +1603,7 @@ def crediti():
     esito_sync, dettaglio_sync = _sincronizza_calendario()
     reg = sess.carica()
     righe = sess.vista_crediti(reg)
+    domande = conferme.in_attesa(reg)
     da, a = None, datetime.date.today()
     try:
         import sync_sessions
@@ -1603,7 +1627,7 @@ def crediti():
     impostazioni_cal = db.get_settings(con2)
     con2.close()
     return render_template('credits.html', righe=righe, pacchetti=pacchetti,
-                           recenti=recenti, finestra=(da, a),
+                           recenti=recenti, finestra=(da, a), domande=domande,
                            aggiornato=reg.get('generato'),
                            sync_esito=esito_sync, sync_dettaglio=dettaglio_sync,
                            sync_quando=impostazioni_cal.get('calendario_ultimo'),

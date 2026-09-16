@@ -1267,6 +1267,15 @@ TESTI = {
         'Batteria dei collaudi': 'Test battery',
         'Collaudi interrotti': 'Interrupted tests',
         'Registro d’avvio': 'Startup log',
+        "La seduta di {giorno} di {cliente} non è più sul calendario. L'hai disdetta?":
+            'The session on {giorno} with {cliente} is no longer in the calendar. Did you cancel it?',
+        'Sono sparite {quante} sedute di {cliente}: le hai disdette tutte?':
+            '{quante} sessions with {cliente} are gone from the calendar: did you cancel them all?',
+        "Non l'ho fatta": 'It did not happen',
+        'Tienila': 'Keep it',
+        'Credito restituito: {quante} seduta/e.': 'Credit returned: {quante} session(s).',
+        'Seduta confermata.': 'Session confirmed.',
+        'non fatta': 'not done',
         'Per un abbonamento servono il cliente e un servizio «ogni mese».':
             'A subscription needs a client and an «every month» service.',
         'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':
@@ -2748,6 +2757,15 @@ TESTI = {
         'Batteria dei collaudi': 'Prüfreihe',
         'Collaudi interrotti': 'Abgebrochene Prüfungen',
         'Registro d’avvio': 'Startprotokoll',
+        "La seduta di {giorno} di {cliente} non è più sul calendario. L'hai disdetta?":
+            'Die Einheit am {giorno} mit {cliente} steht nicht mehr im Kalender. Hast du sie abgesagt?',
+        'Sono sparite {quante} sedute di {cliente}: le hai disdette tutte?':
+            '{quante} Einheiten mit {cliente} fehlen im Kalender: hast du alle abgesagt?',
+        "Non l'ho fatta": 'Hat nicht stattgefunden',
+        'Tienila': 'Behalten',
+        'Credito restituito: {quante} seduta/e.': 'Guthaben zurückgegeben: {quante} Einheit(en).',
+        'Seduta confermata.': 'Einheit bestätigt.',
+        'non fatta': 'nicht stattgefunden',
         'Per un abbonamento servono il cliente e un servizio «ogni mese».':
             'Für ein Abo braucht es eine Kundin oder einen Kunden und eine Leistung «jeden Monat».',
         'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':

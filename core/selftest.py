@@ -2764,6 +2764,20 @@ def _test_conferme(r):
     _check(r, cat, 'e legge anche la finestra indietro di 14 giorni',
            'conferme.finestra(' in _app, True)
 
+    _check(r, cat, 'Crediti passa le domande alla pagina',
+           'conferme.in_attesa(' in _app, True)
+    _check(r, cat, 'ci sono le due rotte per rispondere',
+           ("/crediti/seduta/non-fatta" in _app and "/crediti/seduta/tienila" in _app), True)
+
+    from . import language as L
+    for frase in ("La seduta di {giorno} di {cliente} non è più sul calendario. L'hai disdetta?",
+                  'Sono sparite {quante} sedute di {cliente}: le hai disdette tutte?',
+                  "Non l'ho fatta", 'Tienila', 'Credito restituito: {quante} seduta/e.',
+                  'Seduta confermata.'):
+        for lingua in ('en', 'de'):
+            _check(r, cat, 'tradotta in %s: «%s»' % (lingua, frase[:28]),
+                   frase in L.TESTI[lingua], True)
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
