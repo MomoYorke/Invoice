@@ -2604,6 +2604,28 @@ def _test_conferme(r):
     _check(r, cat, 'un gruppo senza sedute non fa esplodere niente',
            S.contate({}), [])
 
+    from . import mensili as M
+
+    mese = {'id': 'GIU-2026-09', 'cliente': 'Giulia', 'chiave': 'giulia',
+            'dal': '2026-09-01', 'al': '2026-09-30', 'sedute': 2, 'passano': 0,
+            'massimo': 0, 'fattura_numero': 201, 'prezzo_seduta_cents': 5000,
+            'sessioni': [seduta(1, '2026-09-02'), seduta(2, '2026-09-09'),
+                         seduta(3, '2026-09-16')]}
+    reg_m = {'pacchetti': [], 'mensili': [mese], 'esclusi': []}
+
+    M.ricalcola(reg_m, mese)
+    _check(r, cat, 'con tre sedute su due disponibili, una è in più',
+           (mese['usate'], mese['in_piu']), (2, 1))
+
+    mese['sessioni'][0]['non_fatta'] = '2026-09-16'
+    M.ricalcola(reg_m, mese)
+    _check(r, cat, 'una seduta non fatta libera un posto e quella in più rientra',
+           (mese['usate'], mese['in_piu'],
+            [s.get('in_piu', False) for s in mese['sessioni']]),
+           (2, 0, [False, False, False]))
+    _check(r, cat, 'e il mese torna ad avere posto',
+           M.ha_posto(reg_m, mese), False)
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.

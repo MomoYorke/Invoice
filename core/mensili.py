@@ -76,6 +76,16 @@ def precedente(reg, m):
                  and x['al'] == prima), None)
 
 
+def contate(m):
+    """Le sedute del mese che consumano: la regola sta in sessions, qui si usa.
+
+    L'import e' dentro la funzione perche' sessions importa mensili: in cima
+    al file sarebbe un giro chiuso.
+    """
+    from .sessions import contate as _contate
+    return _contate(m)
+
+
 def riportate(reg, m):
     """Le sedute che arrivano dal mese prima. Mai meno di zero.
 
@@ -89,7 +99,7 @@ def riportate(reg, m):
     if p is None or not p.get('fattura_numero'):
         return 0            # un mese senza fattura non riporta niente
     d = disponibili(reg, p)
-    return max(0, d - min(len(p.get('sessioni') or []), d))
+    return max(0, d - min(len(contate(p)), d))
 
 
 def disponibili(reg, m):
@@ -101,28 +111,33 @@ def disponibili(reg, m):
 
 def usate(reg, m):
     """Le sedute scalate davvero: quelle in piu' non contano."""
-    return min(len(m.get('sessioni') or []), disponibili(reg, m))
+    return min(len(contate(m)), disponibili(reg, m))
 
 
 def ha_posto(reg, m):
-    return len(m.get('sessioni') or []) < disponibili(reg, m)
+    return len(contate(m)) < disponibili(reg, m)
 
 
 def ricalcola(reg, m):
     """Numeri e sedute in piu' di un mese, nell'ordine delle date."""
     disp = disponibili(reg, m)
     sessioni = sorted(m.get('sessioni') or [], key=lambda s: s.get('data') or '')
+    occupati = 0
     for i, s in enumerate(sessioni):
         s['n'] = i + 1
-        if i < disp:
+        if s.get('non_fatta'):
+            s.pop('in_piu', None)       # non occupa un posto: non e' ne' usata ne' in piu'
+            continue
+        if occupati < disp:
             s.pop('in_piu', None)
         else:
             s['in_piu'] = True
+        occupati += 1
     m['sessioni'] = sessioni
     m['riportate'] = riportate(reg, m)
     m['disponibili'] = disp
-    m['usate'] = min(len(sessioni), disp)
-    m['in_piu'] = max(0, len(sessioni) - disp)
+    m['usate'] = min(occupati, disp)
+    m['in_piu'] = max(0, occupati - disp)
     return m
 
 
