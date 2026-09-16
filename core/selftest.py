@@ -2597,6 +2597,10 @@ def _test_conferme(r):
            (S.ricalcola(p)['usati'], p['rimasti']), (2, 8))
     _check(r, cat, 'le sedute che contano sono quelle senza il segno',
            [s['n'] for s in S.contate(p)], [1, 2])
+    _check(r, cat, 'una seduta cancellata (ma non marcata non_fatta) consuma il credito',
+           [s['n'] for s in S.contate({'sessioni': [seduta(1, '2026-09-01'),
+                                                      seduta(2, '2026-09-03', cancellata=True)]})],
+           [1, 2])
     _check(r, cat, 'un gruppo senza sedute non fa esplodere niente',
            S.contate({}), [])
 

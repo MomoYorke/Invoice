@@ -381,7 +381,7 @@ def _scade_prima(p, data, mese):
     """Vero se il pacchetto aperto va usato prima del mese: scade prima che il
     mese finisca, e ha ancora sedute."""
     return (p is not None and bool(p.get('scade')) and data <= p['scade'] < mese['al']
-            and len(p.get('sessioni', [])) < p['crediti'])
+            and len(contate(p)) < p['crediti'])
 
 
 def _nel_pacchetto(reg, chiave, seduta):
@@ -533,7 +533,7 @@ def collega_fattura(reg, pacchetto_id, numero_fattura, chiudi=True):
     nuovo = None
     # Si chiude SOLO se i crediti sono finiti davvero: collegare la fattura a un
     # pacchetto ancora in corso non deve mai bruciare i crediti residui.
-    esaurito = len(p.get('sessioni', [])) >= p['crediti']
+    esaurito = len(contate(p)) >= p['crediti']
     if chiudi and esaurito and not p.get('fine'):
         p['fine'] = max((s['data'] for s in p.get('sessioni', [])), default=None) or p['inizio']
         ricalcola(p)
@@ -689,7 +689,7 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
         return 'collegato', (
             'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.',
             {'pid': p['id'], 'nome': nome, 'rimasti': p['rimasti']})
-    if p is not None and p['crediti'] - len(p.get('sessioni', [])) > 0:
+    if p is not None and p['crediti'] - len(contate(p)) > 0:
         _accoda_prepagata(reg, chiave, numero, sedute, dati)
         return 'in_attesa', (
             '{nome} ha ancora sedute sul pacchetto {pid}: questa fattura resta in attesa '
