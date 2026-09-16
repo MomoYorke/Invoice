@@ -32,12 +32,20 @@ def _uid(event_id):
 
 
 def _aperto(gruppo, oggi):
-    """Un gruppo ancora in ballo: pacchetto non chiuso e non fatturato, oppure
-    mese di abbonamento che comprende oggi (un mese porta sempre il numero
-    della fattura che lo ha aperto: li' non vuol dire «conto chiuso»)."""
+    """Un gruppo ancora in ballo: un pacchetto senza data di fine, oppure un
+    mese di abbonamento che comprende oggi.
+
+    Il numero della fattura NON dice mai «conto chiuso»: pacchetti e mesi
+    nascono tutti e due dalla fattura che li apre, quindi quel numero ce l'hanno
+    dal primo giorno. Cio' che chiude un pacchetto e' `fine`, che
+    `collega_fattura` mette solo quando i crediti sono finiti davvero.
+    Al collaudo del 16.09.2026 la regola vecchia («senza fine E senza
+    fattura_numero») rendeva la funzione inerte: sei pacchetti in corso sui dati
+    veri, tutti e sei con la loro fattura, e nessuna domanda sarebbe mai nata.
+    """
     if gruppo.get('dal'):
         return gruppo['dal'] <= oggi <= gruppo.get('al', gruppo['dal'])
-    return not gruppo.get('fine') and not gruppo.get('fattura_numero')
+    return not gruppo.get('fine')
 
 
 def _gruppi(reg):

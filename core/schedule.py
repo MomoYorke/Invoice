@@ -106,7 +106,9 @@ def elenco(reg, orari=None, cliente=None, anno=None):
             'cancellata': bool(s.get('cancellata')),
             'non_fatta': s.get('non_fatta'),
             'event_id': s.get('event_id'),
-            'aperto': not p.get('fine') and not p.get('fattura_numero'),
+            # il numero della fattura non chiude niente: il pacchetto nasce da
+            # una fattura. Cio' che lo chiude e' `fine`.
+            'aperto': not p.get('fine'),
             'nota': s.get('nota') or '',
             'fattura': p.get('fattura_numero'),
         })

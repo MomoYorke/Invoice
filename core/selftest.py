@@ -2792,6 +2792,25 @@ def _test_conferme(r):
     _check(r, cat, 'il riepilogo le conta a parte',
            A.riepilogo(righe_a)['non_fatte'], 1)
 
+    # Un pacchetto NASCE da una fattura: il numero ce l'ha dal primo giorno, e
+    # cio' che lo chiude e' `fine`. Se bastasse il numero a dirlo chiuso, non si
+    # potrebbe chiedere niente su nessun pacchetto vero, e la funzione sarebbe
+    # inerte. Trovato al collaudo del 16.09.2026 sui dati veri: sei pacchetti in
+    # corso, tutti e sei con la loro fattura.
+    reg13 = {'pacchetti': [pacchetto([dict(dal_calendario)], fattura_numero=74)],
+             'mensili': [], 'esclusi': []}
+    _check(r, cat, 'un pacchetto in corso con la sua fattura genera lo stesso la domanda',
+           [x['event_id'] for x in CF.confronta(reg13, [], OGGI)['sparite']],
+           ['ev1@g::2026-09-10'])
+
+    reg_b = {'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia', 'crediti': 10,
+                            'fine': None, 'fattura_numero': 74,
+                            'sessioni': [seduta(1, '2026-09-01',
+                                                event_id='ev6@g::2026-09-01')]}],
+             'mensili': []}
+    _check(r, cat, "e in Agenda quella riga offre il pulsante",
+           [x['aperto'] for x in A.elenco(reg_b, {})], [True])
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
