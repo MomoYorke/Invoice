@@ -9,6 +9,7 @@
        <span class="muted">{{ _('sessioni nel {anno}').format(anno=anno) if anno else _('sessioni') }}</span></div>
   <div class="muted">{{ _('di cui con orario:') }} <strong>{{ r.con_ora }}</strong></div>
   {% if r.cancellate %}<div class="muted">{{ _('annullate (credito consumato):') }} <strong>{{ r.cancellate }}</strong></div>{% endif %}
+  {% if r.non_fatte %}<div class="muted">{{ _('non fatte (credito restituito):') }} <strong>{{ r.non_fatte }}</strong></div>{% endif %}
   <form method="post" action="{{ url_for('agenda_orari') }}" style="margin-left:auto">
     <button class="btn small secondary">{{ _('Aggiorna gli orari dal calendario') }}</button>
   </form>
@@ -50,15 +51,22 @@
   <tr><th>{{ _('Giorno') }}</th><th>{{ _('Ora') }}</th><th>{{ _('Cliente') }}</th><th>{{ _('Sul calendario') }}</th>
       <th>{{ _('Pacchetto') }}</th><th>{{ _('Credito') }}</th><th>{{ _('Fattura') }}</th></tr>
   {% for s in righe %}
-  <tr {{ 'style=opacity:.55' if s.cancellata }}>
+  <tr {{ 'style=opacity:.55' if s.cancellata or s.non_fatta }}>
     <td><strong>{{ s.data | dateit }}</strong>
         <span class="muted" style="font-size:11px">{{ _(s.data | giorno_settimana) }}</span></td>
     <td class="muted">{{ s.ora or '—' }}</td>
-    <td>{{ s.cliente }}{% if s.cancellata %} <span class="badge">{{ _('annullata') }}</span>{% endif %}</td>
+    <td>{{ s.cliente }}{% if s.cancellata %} <span class="badge">{{ _('annullata') }}</span>{% endif %}
+        {%- if s.non_fatta %} <span class="badge">{{ _('non fatta') }}</span>{% endif %}</td>
     <td class="muted">{{ s.titolo }}</td>
     <td><a href="{{ url_for('crediti_pacchetto', pid=s.pacchetto) }}">{{ s.pacchetto }}</a></td>
     <td class="muted">{{ s.n }}/{{ s.crediti }}</td>
-    <td class="muted">{% if s.fattura %}#{{ s.fattura }}{% else %}—{% endif %}</td>
+    <td class="muted">{% if s.fattura %}#{{ s.fattura }}{% else %}—{% endif %}
+      {%- if not s.non_fatta and s.aperto and s.event_id %}
+      <form method="post" action="{{ url_for('seduta_non_fatta') }}" style="display:inline">
+        <input type="hidden" name="event_id" value="{{ s.event_id }}">
+        <button class="btn small secondary">{{ _("Non l'ho fatta") }}</button>
+      </form>
+      {%- endif %}</td>
   </tr>
   {% if s.nota %}
   <tr><td></td><td colspan="6" class="muted" style="font-size:12px;padding-top:0">↳ {{ s.nota }}</td></tr>

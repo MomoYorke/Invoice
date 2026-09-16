@@ -104,6 +104,9 @@ def elenco(reg, orari=None, cliente=None, anno=None):
             'n': s.get('n'),
             'crediti': p.get('crediti', p.get('disponibili')),
             'cancellata': bool(s.get('cancellata')),
+            'non_fatta': s.get('non_fatta'),
+            'event_id': s.get('event_id'),
+            'aperto': not p.get('fine') and not p.get('fattura_numero'),
             'nota': s.get('nota') or '',
             'fattura': p.get('fattura_numero'),
         })
@@ -135,4 +138,5 @@ def riepilogo(righe):
         'totale': len(righe),
         'con_ora': sum(1 for r in righe if r['ora']),
         'cancellate': sum(1 for r in righe if r['cancellata']),
+        'non_fatte': sum(1 for r in righe if r['non_fatta']),
     }

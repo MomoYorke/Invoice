@@ -2778,6 +2778,20 @@ def _test_conferme(r):
             _check(r, cat, 'tradotta in %s: «%s»' % (lingua, frase[:28]),
                    frase in L.TESTI[lingua], True)
 
+    from . import schedule as A
+
+    reg_a = {'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia', 'crediti': 10, 'fine': None,
+                            'sessioni': [seduta(1, '2026-09-01'),
+                                         seduta(2, '2026-09-03', non_fatta='2026-09-16',
+                                                event_id='ev5@g::2026-09-03')]}],
+             'mensili': []}
+    righe_a = A.elenco(reg_a, {})
+    _check(r, cat, "l'agenda mostra anche la seduta non fatta, col suo segno",
+           (len(righe_a), [x['non_fatta'] for x in righe_a]),
+           (2, ['2026-09-16', None]))
+    _check(r, cat, 'il riepilogo le conta a parte',
+           A.riepilogo(righe_a)['non_fatte'], 1)
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.

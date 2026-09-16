@@ -1276,6 +1276,7 @@ TESTI = {
         'Credito restituito: {quante} seduta/e.': 'Credit returned: {quante} session(s).',
         'Seduta confermata.': 'Session confirmed.',
         'non fatta': 'not done',
+        'non fatte (credito restituito):': 'not done (credit returned):',
         'Per un abbonamento servono il cliente e un servizio «ogni mese».':
             'A subscription needs a client and an «every month» service.',
         'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':
@@ -2766,6 +2767,7 @@ TESTI = {
         'Credito restituito: {quante} seduta/e.': 'Guthaben zurückgegeben: {quante} Einheit(en).',
         'Seduta confermata.': 'Einheit bestätigt.',
         'non fatta': 'nicht stattgefunden',
+        'non fatte (credito restituito):': 'nicht stattgefunden (Guthaben zurück):',
         'Per un abbonamento servono il cliente e un servizio «ogni mese».':
             'Für ein Abo braucht es eine Kundin oder einen Kunden und eine Leistung «jeden Monat».',
         'Un abbonamento parte da un servizio «ogni mese»: il nome e il prezzo li prende da lì.':
