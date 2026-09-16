@@ -132,6 +132,8 @@ def per_mese(reg, config, anno):
     gruppi += [(m, m.get('prezzo_seduta_cents')) for m in (reg or {}).get('mensili') or []]
     for gruppo, unitario in gruppi:
         for s in gruppo.get('sessioni') or []:
+            if s.get('non_fatta'):
+                continue          # non e' stata svolta: non e' lavoro e non vale niente
             i = _indice_mese(s.get('data'), anno)
             if i is None:
                 continue

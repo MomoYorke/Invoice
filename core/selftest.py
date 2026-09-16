@@ -2626,6 +2626,21 @@ def _test_conferme(r):
     _check(r, cat, 'e il mese torna ad avere posto',
            M.ha_posto(reg_m, mese), False)
 
+    from . import lavoro as LV
+
+    reg_l = {'pacchetti': [{'id': 'GIU-01', 'cliente': 'Giulia', 'crediti': 10,
+                            'prezzo_seduta_cents': 10000,
+                            'sessioni': [seduta(1, '2026-09-01'),
+                                         seduta(2, '2026-09-03', cancellata=True),
+                                         seduta(3, '2026-09-05',
+                                                non_fatta='2026-09-16')]}],
+             'mensili': [], 'esclusi': []}
+    settembre = LV.per_mese(reg_l, [], 2026)[8]
+    _check(r, cat, 'la seduta non fatta non è lavoro, la disdetta tardiva sì',
+           (settembre['sedute'], settembre['cancellate']), (1, 1))
+    _check(r, cat, 'e non vale franchi',
+           settembre['cents'], 20000)
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
