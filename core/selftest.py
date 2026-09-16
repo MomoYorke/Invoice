@@ -2644,6 +2644,20 @@ def _test_migrazione_servizi(r):
                servizio_della_riga(con, 'Consulenza'), None)
         con.close()
 
+        # --- Fix Finale E: il nome di una regola non sparisce solo perché è
+        # una sottostringa di un pulsante — deve starci come parola intera,
+        # con lo stesso confronto di _contiene usato due righe più sopra ---
+        con = con_righe(
+            {'servizi': 'Running Coaching',
+             'servizi_abbonamento': 'Run = run, corsa'},
+            [(20, '2026-05-01', 'Run 10.05.26 - 09.06.26', 15000, False)])
+        M.esegui(con, nessun_registro, fai_copia=False)
+        _check(r, cat, 'una regola «Run» non sparisce dentro un pulsante «Running Coaching»: '
+                       'non ci sta come parola intera, diventa un servizio suo',
+               sorted(n for n, in con.execute('SELECT nome FROM servizi')),
+               ['Run', 'Running Coaching'])
+        con.close()
+
         # --- un'app appena installata ---
         con = _db_servizi()
         _check(r, cat, 'senza fatture non si crea niente, e la migrazione si segna fatta',

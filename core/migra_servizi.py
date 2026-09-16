@@ -171,7 +171,7 @@ def nomi_di_partenza(con, settings, righe):
     pulsanti = [x.strip() for x in (settings.get('servizi') or '').splitlines() if x.strip()]
     nomi = list(pulsanti)
     for nome, _modello, _parole in srv.regole(settings):
-        if any(nome.lower() in p.lower() for p in pulsanti):
+        if any(_contiene(p, nome) for p in pulsanti):
             continue
         if _righe_del_servizio(righe, nome, settings):
             nomi.append(nome)
