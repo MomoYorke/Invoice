@@ -2244,7 +2244,7 @@ def api_periodo_successivo():
     client_id = request.args.get('client_id', type=int)
     servizio_id = request.args.get('servizio_id', type=int)
     con = get_con()
-    servizio = srv.uno(con, servizio_id) if servizio_id else None
+    servizio = _servizio_scelto(con, servizio_id)
     fuori = srv.proposta(con, client_id, servizio) if servizio else {'found': False}
     con.close()
     return jsonify(fuori)

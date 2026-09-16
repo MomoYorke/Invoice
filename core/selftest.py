@@ -1250,6 +1250,14 @@ def _test_servizi(r):
     _check(r, 'Servizi', 'la nuova fattura scrive il servizio su ogni riga',
            ('servizio_della_riga' in corpo, 'total_cents,servizio_id)' in corpo), (True, True))
 
+    # --- Fix Finale, seguito: /api/periodo-successivo ha la stessa debolezza
+    # della D su un id di servizio troppo grande (stessa guardia già scritta) ---
+    corpo_api = sorgente[sorgente.index('def api_periodo_successivo'):]
+    corpo_api = corpo_api[:corpo_api.index('\n\n\n')]
+    _check(r, 'Servizi', 'la proposta di riga tratta un id di servizio troppo grande '
+                         'per sqlite come uno sconosciuto',
+           '_servizio_scelto' in corpo_api, True)
+
     # --- Performance: il fatturato per servizio collegato ---------------------
     from . import stats as ST
     con = _db_servizi()
