@@ -2755,6 +2755,15 @@ def _test_conferme(r):
             reg12['pacchetti'][0]['sessioni'][0].get('non_fatta')),
            (0, [], None))
 
+    _sorgente = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             'app.py')
+    with io.open(_sorgente, encoding='utf-8') as _f:
+        _app = _f.read()
+    _check(r, cat, 'la lettura del calendario chiama il confronto',
+           ('conferme.confronta(' in _app and 'conferme.applica(' in _app), True)
+    _check(r, cat, 'e legge anche la finestra indietro di 14 giorni',
+           'conferme.finestra(' in _app, True)
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.

@@ -31,6 +31,7 @@ from core import recurring as ric
 from core import sessions as sess
 from core import lavoro
 from core import mensili
+from core import conferme
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
 from core import branding
@@ -1506,9 +1507,13 @@ def _sincronizza_calendario(forzata=False):
     da, a = sync_sessions.finestra(reg)
     if da > a:
         return 'niente', ''
+    # il confronto guarda anche indietro: il file iCal si scarica una volta
+    # sola e si legge sull'intervallo piu' largo dei due
+    indietro, oggi_ = conferme.finestra(datetime.date.today())
+    da_leggere = min(da, indietro)
     try:
         testo = calendar_feed.scarica(url)
-        eventi = calendar_feed.leggi(testo, da, a, e_testo=True)
+        eventi = calendar_feed.leggi(testo, da_leggere, a, e_testo=True)
     except Exception as e:
         err_logger.error('Lettura calendario fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
@@ -1519,6 +1524,15 @@ def _sincronizza_calendario(forzata=False):
     except Exception as e:
         err_logger.error('Sincronizzazione crediti fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
+    # Il confronto sta fuori dal try di sopra: se fallisce, la lettura del
+    # calendario resta comunque valida. Non cancella niente, mette domande.
+    try:
+        esiti = conferme.confronta(reg, eventi, datetime.date.today())
+        mosse, domande = conferme.applica(reg, esiti, datetime.date.today())
+        if mosse or domande:
+            sess.salva(reg)
+    except Exception as e:
+        err_logger.error('Confronto con il calendario fallito: %s', e)
     con = get_con()
     db.set_setting(con, 'calendario_ultimo',
                    datetime.datetime.now().isoformat(timespec='seconds'))
