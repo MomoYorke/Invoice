@@ -90,3 +90,76 @@ def confronta(reg, voci, oggi, giorni=FINESTRA_GIORNI):
             continue
         sparite.append({'gruppo': gruppo, 'seduta': s, 'event_id': s['event_id']})
     return {'spostate': spostate, 'sparite': sparite}
+
+
+def _ricalcola(reg, gruppo):
+    if gruppo.get('dal'):
+        from . import mensili
+        mensili.ricalcola(reg, gruppo)
+    else:
+        S.ricalcola(gruppo)
+
+
+def applica(reg, esiti, oggi):
+    """Sposta le spostate, mette le sparite fra le domande. Ritorna i conteggi."""
+    for x in esiti.get('spostate') or []:
+        x['seduta']['data'] = x['data_nuova']
+        x['seduta']['event_id'] = x['id_nuovo']
+        _ricalcola(reg, x['gruppo'])
+    in_lista = {v.get('event_id') for v in reg.get('da_confermare') or []}
+    nuove = 0
+    for x in esiti.get('sparite') or []:
+        if x['event_id'] in in_lista:
+            continue
+        reg.setdefault('da_confermare', []).append({
+            'event_id': x['event_id'],
+            'data': x['seduta'].get('data'),
+            'titolo': x['seduta'].get('titolo', ''),
+            'cliente': x['gruppo'].get('cliente', ''),
+            'gruppo': x['gruppo'].get('id'),
+            'vista': oggi.isoformat(),
+        })
+        in_lista.add(x['event_id'])
+        nuove += 1
+    return len(esiti.get('spostate') or []), nuove
+
+
+def segna(reg, event_ids, come, oggi):
+    """Scrive la risposta sulle sedute e toglie le domande. Ritorna quante segnate.
+
+    Una domanda il cui gruppo nel frattempo non e' piu' aperto si toglie senza
+    toccare niente: quel conto e' chiuso.
+    """
+    voluti = set(event_ids or ())
+    segnate = 0
+    for gruppo in _gruppi(reg):
+        if not _aperto(gruppo, oggi.isoformat()):
+            continue
+        for s in gruppo.get('sessioni') or []:
+            if s.get('event_id') in voluti and not s.get('non_fatta') and not s.get('confermata'):
+                s[come] = oggi.isoformat()
+                segnate += 1
+                _ricalcola(reg, gruppo)
+    reg['da_confermare'] = [v for v in reg.get('da_confermare') or []
+                            if v.get('event_id') not in voluti]
+    return segnate
+
+
+def in_attesa(reg):
+    """Le domande da mostrare. Piu' sedute dello stesso cliente fanno una
+    domanda sola: quando si chiude una serie ripetuta ne spariscono tante
+    insieme, e cinque domande uguali sono cinque volte la stessa domanda."""
+    per_cliente = {}
+    for v in reg.get('da_confermare') or []:
+        per_cliente.setdefault(v.get('cliente', ''), []).append(v)
+    fuori = []
+    for cliente, voci in per_cliente.items():
+        voci = sorted(voci, key=lambda v: v.get('data') or '')
+        fuori.append({
+            'cliente': cliente,
+            'event_ids': [v['event_id'] for v in voci],
+            'date': [v.get('data') for v in voci],
+            'quante': len(voci),
+            'insieme': len(voci) >= SOGLIA_GRUPPO,
+        })
+    return sorted(fuori, key=lambda g: (g['date'][0] or '', g['cliente']))

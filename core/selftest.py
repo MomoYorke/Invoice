@@ -2699,6 +2699,62 @@ def _test_conferme(r):
     _check(r, cat, 'una domanda già in lista non si duplica',
            CF.confronta(reg7, [], OGGI)['sparite'], [])
 
+    reg8 = {'pacchetti': [pacchetto([dict(dal_calendario), dict(altra)])],
+            'mensili': [], 'esclusi': []}
+    esiti = CF.confronta(reg8, [voce('ev2@g', '2026-09-14')], OGGI)
+    _check(r, cat, 'applicare mette la domanda in lista senza cambiare i crediti',
+           (CF.applica(reg8, esiti, OGGI),
+            [v['event_id'] for v in reg8['da_confermare']],
+            S.ricalcola(reg8['pacchetti'][0])['usati']),
+           ((0, 1), ['ev1@g::2026-09-10'], 2))
+
+    _check(r, cat, 'la domanda dice chi e quando',
+           [(v['cliente'], v['data'], v['gruppo'], v['vista'])
+            for v in reg8['da_confermare']],
+           [('Giulia', '2026-09-10', 'GIU-01', '2026-09-16')])
+
+    _check(r, cat, 'rispondere «non l\'ho fatta» ridà il credito e chiude la domanda',
+           (CF.segna(reg8, ['ev1@g::2026-09-10'], 'non_fatta', OGGI),
+            reg8['pacchetti'][0]['usati'], reg8['pacchetti'][0]['rimasti'],
+            reg8['da_confermare']),
+           (1, 1, 9, []))
+
+    reg9 = {'pacchetti': [pacchetto([dict(dal_calendario)])], 'mensili': [], 'esclusi': []}
+    CF.applica(reg9, CF.confronta(reg9, [], OGGI), OGGI)
+    CF.segna(reg9, ['ev1@g::2026-09-10'], 'confermata', OGGI)
+    _check(r, cat, 'rispondere «tienila» lascia il credito e non si richiede più',
+           (reg9['pacchetti'][0]['sessioni'][0].get('confermata'),
+            reg9['da_confermare'],
+            CF.confronta(reg9, [], OGGI)['sparite']),
+           ('2026-09-16', [], []))
+
+    reg10 = {'pacchetti': [pacchetto([dict(dal_calendario)])], 'mensili': [], 'esclusi': []}
+    esiti = CF.confronta(reg10, [voce('ev1@g', '2026-09-11')], OGGI)
+    CF.applica(reg10, esiti, OGGI)
+    s10 = reg10['pacchetti'][0]['sessioni'][0]
+    _check(r, cat, 'lo spostamento cambia giorno e identificativo, e non chiede niente',
+           (s10['data'], s10['event_id'], reg10.get('da_confermare') or [],
+            reg10['pacchetti'][0]['usati']),
+           ('2026-09-11', 'ev1@g::2026-09-11', [], 1))
+
+    molte = [seduta(i + 1, d, event_id='ev%d@g::%s' % (i + 1, d))
+             for i, d in enumerate(['2026-09-08', '2026-09-10', '2026-09-14'])]
+    reg11 = {'pacchetti': [pacchetto(molte)], 'mensili': [], 'esclusi': []}
+    CF.applica(reg11, CF.confronta(reg11, [], OGGI), OGGI)
+    _check(r, cat, 'tre sedute sparite insieme diventano una domanda sola',
+           [(g['cliente'], g['quante']) for g in CF.in_attesa(reg11)],
+           [('Giulia', 3)])
+
+    reg12 = {'pacchetti': [pacchetto([dict(dal_calendario)])], 'mensili': [], 'esclusi': []}
+    CF.applica(reg12, CF.confronta(reg12, [], OGGI), OGGI)
+    reg12['pacchetti'][0]['fattura_numero'] = 90
+    reg12['pacchetti'][0]['fine'] = '2026-09-15'
+    _check(r, cat, 'una domanda su un pacchetto nel frattempo fatturato si toglie in silenzio',
+           (CF.segna(reg12, ['ev1@g::2026-09-10'], 'non_fatta', OGGI),
+            reg12['da_confermare'],
+            reg12['pacchetti'][0]['sessioni'][0].get('non_fatta')),
+           (0, [], None))
+
 
 def _test_migrazione_servizi(r):
     """Il listino nasce da quello che c'era, una volta sola, senza perdere niente.
