@@ -1243,7 +1243,9 @@ def _test_servizi(r):
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     with io.open(os.path.join(base, 'app.py'), encoding='utf-8') as f:
         sorgente = f.read()
-    corpo = sorgente[sorgente.index('def _crea_fattura'):]
+    # _salva_fattura_e_sedute (chiamata da _crea_fattura) scrive le INSERT:
+    # la fetta parte da lì per includere anche quel corpo
+    corpo = sorgente[sorgente.index('def _salva_fattura_e_sedute'):]
     corpo = corpo[:corpo.index('\n# ----')]
     _check(r, 'Servizi', 'la nuova fattura scrive il servizio su ogni riga',
            ('servizio_della_riga' in corpo, 'total_cents,servizio_id)' in corpo), (True, True))
@@ -2201,6 +2203,40 @@ def _test_sedute_dai_servizi(r):
     _check(r, cat, 'portano sedute solo le righe di un servizio che le comprende',
            _senza_scoppiare(lambda: [(s['nome'], q, t) for s, q, t in SR.righe_con_sedute(con, righe)]),
            [('12 Sessions Pack', 1, 180000), ('Abo con sedute', 1, 11000)])
+    con.close()
+
+    # --- Fix Finale A: se il salvataggio delle sedute fallisce DOPO che i file
+    # .docx/.pdf sono gia' scritti, la fattura si annulla E i file si tolgono —
+    # senza questo il prossimo tentativo trova la guardia dei file gia' scritti
+    # (app.py, prima di scrivere) a bloccare la strada, senza che la fattura
+    # sia mai stata salvata davvero ---
+    import app as APP
+    import tempfile
+    con = _db_servizi()
+    con.execute("INSERT INTO clients(id, key, name) VALUES(1, 'giulia', 'Giulia Ferrari')")
+    con.commit()
+    with tempfile.TemporaryDirectory() as tmp:
+        docx_path, pdf_path = os.path.join(tmp, 'x.docx'), os.path.join(tmp, 'x.pdf')
+        for p in (docx_path, pdf_path):
+            with open(p, 'w', encoding='utf-8') as f:
+                f.write('finto')
+        client = con.execute('SELECT * FROM clients WHERE id=1').fetchone()
+        # un servizio manomesso, troppo grande per una colonna sqlite: fa
+        # esplodere righe_con_sedute con OverflowError esattamente come
+        # qualunque altro guasto vero in quel punto (assegna_chiave_sedute,
+        # la lettura di ricorrenti) — senza toccare produzione per la prova
+        item_rotto = [{'qty': 1, 'description': 'x', 'unit_cents': 1000,
+                       'total_cents': 1000, 'servizio_id': 2 ** 63, 'ricorda': False}]
+        guasto = _senza_scoppiare(
+            lambda: APP._salva_fattura_e_sedute(
+                con, 501, client, 'Giulia Ferrari', ['Via Roma 1'], '2026-09-14', 2026,
+                1000, item_rotto, docx_path, pdf_path, 'rif-501', None, ''))
+        _check(r, cat, 'un guasto nel preparare le sedute segnala il problema',
+               isinstance(guasto, str) and 'OverflowError' in guasto, True)
+        _check(r, cat, 'e non lascia i file .docx/.pdf sul disco',
+               (os.path.exists(docx_path), os.path.exists(pdf_path)), (False, False))
+        _check(r, cat, 'e non lascia una fattura a metà nel database',
+               con.execute('SELECT COUNT(*) AS n FROM invoices').fetchone()['n'], 0)
     con.close()
 
     with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app.py'),

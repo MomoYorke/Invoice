@@ -387,6 +387,52 @@ def _servizio_scelto(con, servizio_id):
     return srv.uno(con, servizio_id)
 
 
+def _salva_fattura_e_sedute(con, number, client, intestatario, addr_lines, date_iso, year,
+                            total, items, docx_path, pdf_path, qr_ref, ric_id, periodo):
+    """Scrive la fattura (invoice + items) e prepara le sedute, in una sola
+    transazione: se un guasto capita qui — righe_con_sedute, assegna_chiave_sedute
+    o la lettura di `ricorrenti` possono fallire quanto le INSERT — la
+    transazione si annulla E i file .docx/.pdf gia' scritti si tolgono. Senza
+    questo, un guasto qui lascerebbe i file sul disco e il prossimo tentativo
+    troverebbe la guardia dei file gia' scritti (l'exists() prima di questa
+    funzione) a bloccare la strada, senza che la fattura sia mai stata salvata.
+
+    Ritorna (inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo)."""
+    try:
+        cur = con.execute(
+            'INSERT INTO invoices(number, client_id, client_name, client_address, date, year, '
+            "total_cents, status, source, docx_path, pdf_path, created_at, qr_ref, "
+            'ricorrente_id, periodo) '
+            "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?, ?, ?, ?)",
+            (number, client['id'], intestatario, '\n'.join(addr_lines), date_iso, year,
+             total, docx_path, pdf_path, db.now_iso(), qr_ref, ric_id, periodo))
+        inv_id = cur.lastrowid
+        for pos, it in enumerate(items):
+            con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,'
+                        'total_cents,servizio_id) VALUES(?,?,?,?,?,?,?)',
+                        (inv_id, pos, str(it['qty']), it['description'],
+                         it['unit_cents'], it['total_cents'], it['servizio_id']))
+            if it['ricorda']:
+                srv.ricorda(con, it['description'], it['servizio_id'])
+        # le sedute vanno al cliente della fattura: la sua chiave nasce qui, insieme
+        # alla fattura, la prima volta che compra un servizio con sedute
+        righe_sedute = srv.righe_con_sedute(con, items)
+        chiave_sedute, doppione = (db.assegna_chiave_sedute(con, client['id'])
+                                   if righe_sedute else (None, False))
+        giorno_rinnovo = None
+        if ric_id:
+            regola = con.execute('SELECT giorno FROM ricorrenti WHERE id=?', (ric_id,)).fetchone()
+            giorno_rinnovo = regola['giorno'] if regola else None
+    except Exception:
+        con.rollback()
+        for p in (docx_path, pdf_path):
+            if os.path.exists(p):
+                os.remove(p)
+        raise
+    con.commit()
+    return inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo
+
+
 def _crea_fattura(con):
     f = request.form
     # --- cliente ---
@@ -532,31 +578,16 @@ def _crea_fattura(con):
                guai=' '.join(problems))
         return redirect(url_for('nuova'))
 
-    cur = con.execute(
-        'INSERT INTO invoices(number, client_id, client_name, client_address, date, year, '
-        "total_cents, status, source, docx_path, pdf_path, created_at, qr_ref, "
-        'ricorrente_id, periodo) '
-        "VALUES(?,?,?,?,?,?,?, 'emessa', 'app', ?, ?, ?, ?, ?, ?)",
-        (number, client['id'], intestatario, '\n'.join(addr_lines), date_iso, year,
-         total, docx_path, pdf_path, db.now_iso(), qr_ref, ric_id, periodo))
-    inv_id = cur.lastrowid
-    for pos, it in enumerate(items):
-        con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,'
-                    'total_cents,servizio_id) VALUES(?,?,?,?,?,?,?)',
-                    (inv_id, pos, str(it['qty']), it['description'],
-                     it['unit_cents'], it['total_cents'], it['servizio_id']))
-        if it['ricorda']:
-            srv.ricorda(con, it['description'], it['servizio_id'])
-    # le sedute vanno al cliente della fattura: la sua chiave nasce qui, insieme
-    # alla fattura, la prima volta che compra un servizio con sedute
-    righe_sedute = srv.righe_con_sedute(con, items)
-    chiave_sedute, doppione = (db.assegna_chiave_sedute(con, client['id'])
-                               if righe_sedute else (None, False))
-    giorno_rinnovo = None
-    if ric_id:
-        regola = con.execute('SELECT giorno FROM ricorrenti WHERE id=?', (ric_id,)).fetchone()
-        giorno_rinnovo = regola['giorno'] if regola else None
-    con.commit()
+    try:
+        inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo = _salva_fattura_e_sedute(
+            con, number, client, intestatario, addr_lines, date_iso, year, total, items,
+            docx_path, pdf_path, qr_ref, ric_id, periodo)
+    except Exception as e:
+        con.close()
+        err_logger.error('Fattura #%s NON salvata: %s', number, e)
+        avvisa('⚠️ Fattura NON creata: un problema ha impedito di prepararla. '
+               'Nessun file è stato salvato: controlla i dati e riprova.', 'error')
+        return redirect(url_for('nuova'))
     con.close()
     lg = _lingua_app()
     msg = lng.t('Fattura #{n} creata e verificata ✓ — {tot} (importo confermato '

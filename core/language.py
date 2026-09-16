@@ -749,6 +749,8 @@ TESTI = {
             'A file «{file}» already exists — to be safe I am not overwriting it.',
         '⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. {guai} Nessun file è stato salvato: controlla i dati e riprova.':
             '⚠️ Invoice NOT created: the automatic check found a problem. {guai} No file was saved: check the data and try again.',
+        '⚠️ Fattura NON creata: un problema ha impedito di prepararla. Nessun file è stato salvato: controlla i dati e riprova.':
+            '⚠️ Invoice NOT created: a problem got in the way of preparing it. No file was saved: check the data and try again.',
         'Fattura inviata a {a} il {data} alle {ora}.': 'Invoice sent to {a} on {data} at {ora}.',
         '{quante} fatture inviate a {a} il {data} alle {ora}.':
             '{quante} invoices sent to {a} on {data} at {ora}.',
@@ -2221,6 +2223,8 @@ TESTI = {
             'Eine Datei «{file}» gibt es schon — sicherheitshalber überschreibe ich sie nicht.',
         '⚠️ Fattura NON creata: la verifica automatica ha trovato un problema. {guai} Nessun file è stato salvato: controlla i dati e riprova.':
             '⚠️ Rechnung NICHT erstellt: die automatische Prüfung hat ein Problem gefunden. {guai} Es wurde keine Datei gespeichert: prüf die Angaben und versuch es nochmals.',
+        '⚠️ Fattura NON creata: un problema ha impedito di prepararla. Nessun file è stato salvato: controlla i dati e riprova.':
+            '⚠️ Rechnung NICHT erstellt: ein Problem hat die Vorbereitung verhindert. Es wurde keine Datei gespeichert: prüf die Angaben und versuch es nochmals.',
         'Fattura inviata a {a} il {data} alle {ora}.': 'Rechnung an {a} gesendet am {data} um {ora}.',
         '{quante} fatture inviate a {a} il {data} alle {ora}.':
             '{quante} Rechnungen an {a} gesendet am {data} um {ora}.',
