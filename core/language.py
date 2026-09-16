@@ -1315,6 +1315,7 @@ TESTI = {
         'nel Cestino': 'in the Trash',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sessions for {nome} from {dal} to {al}: {sedute}.',
         'Sedute dai servizi': 'Sessions from services',
+        'Sedute non fatte': 'Sessions not done',
         'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
             'Opened pack {pid} for {nome}: {crediti} sessions available.',
         'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.':
@@ -2795,6 +2796,7 @@ TESTI = {
         'nel Cestino': 'im Papierkorb',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sitzungen von {nome} vom {dal} bis {al}: {sedute}.',
         'Sedute dai servizi': 'Sitzungen aus Leistungen',
+        'Sedute non fatte': 'Nicht durchgeführte Sitzungen',
         'Aperto il pacchetto {pid} per {nome}: {crediti} sedute disponibili.':
             'Paket {pid} für {nome} eröffnet: {crediti} Sitzungen verfügbar.',
         'Collegata al pacchetto {pid} di {nome}, che ha ancora {rimasti} sedute.':

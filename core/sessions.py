@@ -333,9 +333,18 @@ def apri_pacchetto(reg, chiave, data_inizio, crediti=None):
     return p
 
 
+def contate(gruppo):
+    """Le sedute che consumano un credito: tutte tranne quelle segnate non fatte.
+
+    La regola sta qui e in nessun altro posto: se un conteggio la ripetesse per
+    conto suo, un giorno una pagina direbbe 9 e un'altra 10.
+    """
+    return [s for s in (gruppo or {}).get('sessioni') or [] if not s.get('non_fatta')]
+
+
 def ricalcola(p):
     """Aggiorna usati/rimasti di un pacchetto dalle sue sessioni."""
-    p['usati'] = len(p.get('sessioni', []))
+    p['usati'] = len(contate(p))
     p['rimasti'] = p['crediti'] - p['usati']
     return p
 
@@ -387,7 +396,7 @@ def _nel_pacchetto(reg, chiave, seduta):
     if p is None:
         p = _apri_successivo(reg, chiave, data)
         aperto_nuovo = True
-    elif len(p.get('sessioni', [])) >= p['crediti']:
+    elif len(contate(p)) >= p['crediti']:
         # pacchetto pieno: si chiude e si apre il successivo (spec 6.1 punto 7)
         p['fine'] = max(s['data'] for s in p['sessioni'])
         ricalcola(p)
@@ -480,7 +489,7 @@ def vista_crediti(reg, oggi=None):
             chiusi = [q for q in suoi if q.get('fine')]
             rif = max(chiusi, key=lambda q: q['fine']) if chiusi else None
             stato = STATO_TERMINATI
-        usati = len(rif.get('sessioni', [])) if rif else 0
+        usati = len(contate(rif)) if rif else 0
         scaduto = bool(rif and rif.get('scaduto'))
         righe.append({
             'cliente': cfg['nome'], 'chiave': chiave,
@@ -503,7 +512,7 @@ def vista_crediti(reg, oggi=None):
             'fatturato': rif.get('fatturato') if rif else None,
             'fattura_numero': rif.get('fattura_numero') if rif else None,
             'nota': rif.get('nota', '') if rif else '',
-            'ultima_sessione': max((s['data'] for s in rif.get('sessioni', [])), default=None) if rif else None,
+            'ultima_sessione': max((s['data'] for s in contate(rif)), default=None) if rif else None,
             'mensile': mensile,
         })
     ordine = {STATO_TERMINATI: 0, STATO_ESAURIMENTO: 1, STATO_CORSO: 2}

@@ -105,7 +105,7 @@ def run_all():
     _esegui_famiglie(r, (
         _test_email, _test_oggetto, _test_intestazione_fattura, _test_marchio,
         _test_clienti_crediti, _test_servizi, _test_servizi_riconosciuti, _test_migrazione_servizi,
-        _test_sedute_dai_servizi,
+        _test_sedute_dai_servizi, _test_conferme,
         _test_da_fare, _test_lingua, _test_primi_passi, _test_icone, _test_menu,
         _test_etichette, _test_finestra_stretta, _test_calendario,
         _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
@@ -2578,6 +2578,27 @@ def _test_sedute_dai_servizi(r):
                (getattr(risposta, 'status_code', None), 'GIU-M01' in corpo), (200, True))
     finally:
         S.REGISTRY = prima_registry
+
+
+def _test_conferme(r):
+    """Le sedute che non sono state fatte non consumano il credito."""
+    from . import sessions as S
+    cat = 'Sedute non fatte'
+
+    def seduta(n, data, **altro):
+        return dict({'n': n, 'data': data, 'titolo': 'Giulia', 'cancellata': False}, **altro)
+
+    p = {'id': 'GIU-01', 'cliente': 'Giulia', 'chiavi': ['giulia'], 'crediti': 10,
+         'inizio': '2026-09-01', 'fine': None,
+         'sessioni': [seduta(1, '2026-09-01'), seduta(2, '2026-09-03'),
+                      seduta(3, '2026-09-05', non_fatta='2026-09-16')]}
+
+    _check(r, cat, 'una seduta non fatta non consuma il credito',
+           (S.ricalcola(p)['usati'], p['rimasti']), (2, 8))
+    _check(r, cat, 'le sedute che contano sono quelle senza il segno',
+           [s['n'] for s in S.contate(p)], [1, 2])
+    _check(r, cat, 'un gruppo senza sedute non fa esplodere niente',
+           S.contate({}), [])
 
 
 def _test_migrazione_servizi(r):
