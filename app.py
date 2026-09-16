@@ -377,6 +377,16 @@ def _precompila_abbonamento(con, ric_id, mese):
             'servizio_id': servizio_id}
 
 
+def _servizio_scelto(con, servizio_id):
+    """Il servizio di quell'id, o None se non esiste — anche quando l'id e'
+    troppo grande per una colonna sqlite: un id manomesso puo' superare
+    2**63-1, e sqlite3 solleva OverflowError invece di dire semplicemente che
+    non lo trova (stessa guardia di services.servizio_della_riga)."""
+    if not servizio_id or servizio_id > 2**63 - 1:
+        return None
+    return srv.uno(con, servizio_id)
+
+
 def _crea_fattura(con):
     f = request.form
     # --- cliente ---
@@ -1113,7 +1123,7 @@ def abbonamenti_nuovo():
     giorno = min(max(f.get('giorno', type=int) or 1, 1), 31)
     dal = (f.get('dal') or '').strip()
     con = get_con()
-    servizio = srv.uno(con, servizio_id) if servizio_id else None
+    servizio = _servizio_scelto(con, servizio_id)
     if not client_id or servizio is None or not servizio['attivo'] or not servizio['ogni_mese']:
         con.close()
         avvisa('Per un abbonamento servono il cliente e un servizio «ogni mese».', 'error')

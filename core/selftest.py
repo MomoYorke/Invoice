@@ -6590,6 +6590,20 @@ def _test_abbonamenti(r):
                              "e importo della regola, senza servizio",
            _senza_scoppiare(precompilato, 2),
            ('Coaching September', fmt_dash(7000), None, 1))
+
+    # --- un id di servizio manomesso, troppo grande per una colonna sqlite
+    # (Fix Finale D): deve rispondere come un id qualunque che non esiste,
+    # non far esplodere la pagina con un OverflowError ---
+    ignoto = _senza_scoppiare(lambda: APP._servizio_scelto(con, 999999))
+    trovato = _senza_scoppiare(lambda: APP._servizio_scelto(con, mensile))
+    enorme = _senza_scoppiare(lambda: APP._servizio_scelto(con, 2 ** 63))
+    _check(r, 'Abbonamenti', 'un id sconosciuto ma nell’intervallo di sqlite non trova niente',
+           ignoto, None)
+    _check(r, 'Abbonamenti', 'un id esistente si trova',
+           trovato['id'] if trovato else None, mensile)
+    _check(r, 'Abbonamenti', 'un id troppo grande per una colonna sqlite non fa esplodere la '
+                             'pagina: risponde come per un id sconosciuto qualsiasi',
+           enorme, None)
     con.close()
 
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -6608,6 +6622,8 @@ def _test_abbonamenti(r):
     _check(r, 'Abbonamenti', 'un abbonamento nuovo si salva col servizio e lo stile',
            ('servizio_id' in corpo('abbonamenti_nuovo'), 'stile' in corpo('abbonamenti_nuovo')),
            (True, True))
+    _check(r, 'Abbonamenti', 'un abbonamento nuovo cerca il servizio con la guardia sull’id',
+           '_servizio_scelto' in corpo('abbonamenti_nuovo'), True)
     _check(r, 'Abbonamenti', 'la fattura preparata da un abbonamento porta il servizio sulla riga',
            ('riga_per' in corpo('_precompila_abbonamento'),
             "'servizio_id'" in corpo('_precompila_abbonamento')), (True, True))
