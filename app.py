@@ -1185,14 +1185,18 @@ def abbonamenti_stato():
         con.execute('DELETE FROM ricorrenti_saltati WHERE ricorrente_id=?', (ric_id,))
         # le fatture gia' nate restano, e restano legate al loro mese: cosa e'
         # stato fatturato e' un fatto, e non cambia perche' cambi idea adesso
-        avvisa('Abbonamento cancellato. Le fatture già fatte restano dove sono.', 'ok')
     else:
         con.execute('UPDATE ricorrenti SET attiva=? WHERE id=?',
                     (0 if azione == 'sospendi' else 1, ric_id))
-        avvisa('Abbonamento sospeso: non te lo ricordo più finché non lo riattivi.'
-               if azione == 'sospendi' else 'Abbonamento riattivato.', 'ok')
     con.commit()
     con.close()
+    # il messaggio solo dopo il commit: per la lingua apre una connessione sua,
+    # e con la modifica ancora in corso troverebbe il database bloccato
+    if azione == 'cancella':
+        avvisa('Abbonamento cancellato. Le fatture già fatte restano dove sono.', 'ok')
+    else:
+        avvisa('Abbonamento sospeso: non te lo ricordo più finché non lo riattivi.'
+               if azione == 'sospendi' else 'Abbonamento riattivato.', 'ok')
     return redirect(url_for('abbonamenti'))
 
 

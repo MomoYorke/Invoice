@@ -6947,6 +6947,45 @@ def _test_abbonamenti(r):
            ('riga_per' in corpo('_precompila_abbonamento'),
             "'servizio_id'" in corpo('_precompila_abbonamento')), (True, True))
 
+    # --- Cancella, Sospendi e Riattiva funzionano davvero ---
+    # Il messaggio in cima alla pagina legge la lingua con una connessione sua.
+    # Chiesto prima del commit, trovava il database bloccato dalla modifica
+    # ancora in corso: «database is locked», e l'abbonamento restava li'.
+    import shutil
+    import sqlite3
+    import tempfile
+    from . import db as D, sessions as S
+    vero_db, vero_registro = D.DB_PATH, S.REGISTRY
+    tmp = tempfile.mkdtemp(prefix='prova-abbonamenti-')
+    try:
+        D.DB_PATH = os.path.join(tmp, 'fatture.db')
+        S.REGISTRY = os.path.join(tmp, 'sessions.json')   # il registro vero non si legge
+        con = D.init()
+        con.execute("INSERT INTO clients(id, key, name) VALUES(1, 'giulia', 'Giulia Ferrari')")
+        for rid in (1, 2):
+            con.execute("INSERT INTO ricorrenti(id, client_id, descrizione, importo_cents, giorno, "
+                        "dal, attiva) VALUES(?, 1, 'Coaching {mese}', 7000, 1, '2026-09', 1)", (rid,))
+        con.commit()
+        con.close()
+        cliente = APP.app.test_client()
+
+        def premi(rid, azione):
+            risposta = cliente.post('/abbonamenti/stato', data={'id': rid, 'azione': azione})
+            c = sqlite3.connect(D.DB_PATH)
+            riga = c.execute('SELECT attiva FROM ricorrenti WHERE id=?', (rid,)).fetchone()
+            c.close()
+            return risposta.status_code, riga[0] if riga else None
+
+        _check(r, 'Abbonamenti', 'Sospendi spegne l’abbonamento e torna alla pagina',
+               _senza_scoppiare(premi, 1, 'sospendi'), (302, 0))
+        _check(r, 'Abbonamenti', 'Riattiva lo riaccende',
+               _senza_scoppiare(premi, 1, 'riattiva'), (302, 1))
+        _check(r, 'Abbonamenti', 'Cancella lo toglie davvero, senza «database is locked»',
+               _senza_scoppiare(premi, 2, 'cancella'), (302, None))
+    finally:
+        D.DB_PATH, S.REGISTRY = vero_db, vero_registro
+        shutil.rmtree(tmp, ignore_errors=True)
+
 
 def _test_lavoro(r):
     """Le sedute per mese e quanto valgono.
