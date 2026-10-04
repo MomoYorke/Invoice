@@ -161,6 +161,36 @@ def _scenario():
         'data_citata': prova('Rechnung vom 20.09.2026 fuer Sandra', 5),
     }
     k.close()
+    # --- A3: buttare nel Cestino e rifare un pacchetto non raddoppia i crediti ---
+    from core import sessions as S, mensili as M
+    k = D.connect()
+    sid = k.execute("INSERT INTO servizi(nome, prezzo_cents, ogni_mese, sedute, attivo) "
+                    "VALUES('12 Sessions Pack', 200000, 0, 10, 1)").lastrowid
+    k.commit()
+    k.close()
+    riga = {'client_id': '1', 'data': '2026-10-04', 'desc_0': '12 Sessions Pack',
+            'tot_0': '2000', 'servizio_0': str(sid)}
+    c.post('/nuova', data=dict(riga, numero='60'))
+    k = D.connect()
+    k.execute("UPDATE invoices SET deleted_at='2026-10-04T12:00:00' WHERE number=60")   # «buttata»
+    k.commit()
+    k.close()
+    c.post('/nuova', data=dict(riga, numero='61'))                                        # «rifatta»
+    reg = S.carica()
+    fatti['pacchetto_rifatto'] = [[q.get('fattura_numero'), q.get('crediti')]
+                                  for q in reg['pacchetti']] + [reg.get('prepagate')]
+
+    # --- A8: rispondere su un mese chiuso lo dice, non tace --------------------
+    S.ricarica()
+    reg = S.carica()
+    M.da_fattura(reg, 'giulia', 'Giulia Ferrari', 9, '2020-01-01',
+                 {'id': sid, 'nome': 'Monthly abo', 'prezzo_cents': 40000, 'sedute': 4,
+                  'ogni_mese': 1, 'passano': 0, 'massimo': 0}, '2020-01', 1)
+    S.aggiungi_sessione(reg, 'giulia', '2020-01-15', 'Giulia pt', 'vecchia::2020-01-15')
+    S.salva(reg)
+    pagina = c.post('/crediti/seduta/non-fatta', data={'event_id': 'vecchia::2020-01-15'},
+                    follow_redirects=True).get_data(as_text=True)
+    fatti['mese_chiuso'] = ['già chiuso' in pagina]
     print(MARCA + json.dumps(fatti))
 
 
@@ -247,6 +277,13 @@ def _test_revisione(r):
     # D2
     _check(r, 'Revisione', 'Esporti serve i file della sua cartella e solo quelli',
            (f['esporti_buono'], f['esporti_fuori']), (200, [404, 404]))
+
+    # A3
+    _check(r, 'Revisione crediti', 'buttata e rifatta dal modulo: un pacchetto solo, 10 crediti, niente in coda',
+           f['pacchetto_rifatto'], [[61, 10], {}])
+    # A8
+    _check(r, 'Revisione crediti', 'rispondere su un mese chiuso dice che è chiuso',
+           f['mese_chiuso'], [True])
 
     # A2
     b = f['banca']

@@ -634,6 +634,11 @@ def _crea_fattura(con):
         inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo = _salva_fattura_e_sedute(
             con, number, client, intestatario, addr_lines, date_iso, year, total, items,
             docx_path, pdf_path, qr_ref, ric_id, periodo)
+        # le fatture dello stesso cliente buttate nel Cestino: questa puo' essere
+        # la versione rifatta di una di loro, e allora non da' sedute due volte
+        cestinate = [x['number'] for x in con.execute(
+            'SELECT number FROM invoices WHERE client_id=? AND deleted_at IS NOT NULL',
+            (client['id'],))]
     except Exception as e:
         con.close()
         err_logger.error('Fattura #%s NON salvata: %s', number, e)
@@ -654,7 +659,8 @@ def _crea_fattura(con):
             sess.ricarica()             # la chiave del cliente puo' essere appena nata
             reg = sess.carica()
             frasi = sess.sedute_dalla_fattura(reg, chiave_sedute, number, date_iso,
-                                              righe_sedute, periodo, giorno_rinnovo)
+                                              righe_sedute, periodo, giorno_rinnovo,
+                                              sostituisce=cestinate)
             sess.salva(reg)
             for frase, valori in frasi:
                 msg += ' ' + lng.t(frase, lg).format(**valori)
@@ -1577,21 +1583,16 @@ def _sincronizza_calendario(forzata=False):
         err_logger.error('Lettura calendario fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
     try:
-        rap = sync_sessions.sincronizza(reg, eventi)
-        if rap['aggiunte'] or rap.get('esclusi_nuovi'):
+        # prima il confronto (una seduta spostata e' la stessa, non una nuova),
+        # poi le sedute nuove; se il confronto cade, la lettura vale lo stesso
+        rap, mosse, domande = sync_sessions.aggiorna_dal_calendario(reg, eventi)
+        if rap.get('errore_confronto'):
+            err_logger.error('Confronto con il calendario fallito: %s', rap['errore_confronto'])
+        if rap['aggiunte'] or rap.get('esclusi_nuovi') or mosse or domande:
             sess.salva(reg)
     except Exception as e:
         err_logger.error('Sincronizzazione crediti fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
-    # Il confronto sta fuori dal try di sopra: se fallisce, la lettura del
-    # calendario resta comunque valida. Non cancella niente, mette domande.
-    try:
-        esiti = conferme.confronta(reg, eventi, datetime.date.today())
-        mosse, domande = conferme.applica(reg, esiti, datetime.date.today())
-        if mosse or domande:
-            sess.salva(reg)
-    except Exception as e:
-        err_logger.error('Confronto con il calendario fallito: %s', e)
     con = get_con()
     db.set_setting(con, 'calendario_ultimo',
                    datetime.datetime.now().isoformat(timespec='seconds'))
@@ -1628,6 +1629,9 @@ def _risposta_sulle_sedute(come, messaggio):
     sess.salva(reg)
     if quante:
         avvisa(messaggio, 'ok', quante=quante)
+    elif ids:
+        # un mese o un pacchetto chiuso non si tocca: dirlo, invece di tacere
+        avvisa('Non ho cambiato niente: quel pacchetto o quel mese è già chiuso.', 'error')
     # si torna da dove si e' premuto: la domanda sta su Crediti, il pulsante
     # anche in Agenda
     return redirect(request.referrer or url_for('crediti'))

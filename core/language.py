@@ -800,6 +800,10 @@ TESTI = {
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
         'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
+            'Invoice #{numero} takes the place of #{vecchia} (in the Trash): the package {pid} of {nome} stays as it is, with no extra sessions.',
+        'Non ho cambiato niente: quel pacchetto o quel mese è già chiuso.':
+            'I changed nothing: that package or month is already closed.',
         'Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, oppure aggiungi qualcosa al nome per distinguerli.':
             'There is already a client called «{nome}»: pick them from the list, or add something to the name to tell them apart.',
         'Non hai scelto nessun file.': 'You have not chosen a file.',
@@ -2293,6 +2297,10 @@ TESTI = {
             'Kopie der Historie hat NICHT geklappt: {guaio}',
         'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
+            'Rechnung #{numero} ersetzt die #{vecchia} (im Papierkorb): das Paket {pid} von {nome} bleibt, wie es ist, ohne zusätzliche Einheiten.',
+        'Non ho cambiato niente: quel pacchetto o quel mese è già chiuso.':
+            'Ich habe nichts geändert: dieses Paket oder dieser Monat ist bereits abgeschlossen.',
         'Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, oppure aggiungi qualcosa al nome per distinguerli.':
             'Es gibt schon einen Kunden namens «{nome}»: wähle ihn aus der Liste, oder ergänze den Namen, damit man sie unterscheiden kann.',
         'Non hai scelto nessun file.': 'Du hast keine Datei gewählt.',

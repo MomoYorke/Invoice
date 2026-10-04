@@ -47,9 +47,22 @@ def _da_scaricare(url):
     return url
 
 
+def _controlla(testo):
+    """Un calendario vero comincia e finisce come un calendario.
+
+    Una pagina di accesso, un errore del server o un file tagliato non danno
+    errori nella lettura: danno «nessun evento». E nessun evento, per il
+    confronto con le sedute gia' registrate, vuol dire che sono sparite tutte."""
+    t = testo.strip()
+    if not t.upper().startswith('BEGIN:VCALENDAR') or 'END:VCALENDAR' not in t.upper():
+        raise ValueError("la risposta non è un calendario completo (indirizzo sbagliato, "
+                         "o file interrotto)")
+    return testo
+
+
 def scarica(url, timeout=TIMEOUT):
     with urllib.request.urlopen(_da_scaricare(url), timeout=timeout) as r:
-        return r.read(MAX_BYTE).decode('utf-8', errors='replace')
+        return _controlla(r.read(MAX_BYTE).decode('utf-8', errors='replace'))
 
 
 def nome(testo):

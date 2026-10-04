@@ -31,7 +31,7 @@ def _uid(event_id):
     return (event_id or '').split('::')[0]
 
 
-def _aperto(gruppo, oggi):
+def aperto(gruppo, oggi):
     """Un gruppo ancora in ballo: un pacchetto senza data di fine, oppure un
     mese di abbonamento che comprende oggi.
 
@@ -48,6 +48,9 @@ def _aperto(gruppo, oggi):
     return not gruppo.get('fine')
 
 
+_aperto = aperto          # il nome di prima, per chi lo usa ancora
+
+
 def _gruppi(reg):
     return list(reg.get('pacchetti') or []) + list(reg.get('mensili') or [])
 
@@ -58,7 +61,7 @@ def candidate(reg, oggi, giorni=FINESTRA_GIORNI):
     gia_in_lista = {v.get('event_id') for v in reg.get('da_confermare') or []}
     fuori = []
     for gruppo in _gruppi(reg):
-        if not _aperto(gruppo, oggi.isoformat()):
+        if not aperto(gruppo, oggi.isoformat()):
             continue
         for s in gruppo.get('sessioni') or []:
             if not s.get('event_id') or s.get('non_fatta') or s.get('confermata'):
@@ -73,9 +76,13 @@ def candidate(reg, oggi, giorni=FINESTRA_GIORNI):
 
 def confronta(reg, voci, oggi, giorni=FINESTRA_GIORNI):
     """Chi e' stata spostata e chi e' sparita, senza toccare il registro."""
-    presenti = {v['id']: v for v in voci or []}
+    # Un'occorrenza annullata resta nel file iCal con STATUS:CANCELLED: e' li'
+    # ma non c'e' piu', come una seduta sparita. Se la si credesse presente, la
+    # seduta gia' contata resterebbe contata senza che nessuno se ne accorga.
+    voci = [v for v in voci or [] if v.get('stato_google') != 'cancelled']
+    presenti = {v['id']: v for v in voci}
     per_uid = {}
-    for v in voci or []:
+    for v in voci:
         per_uid.setdefault(_uid(v['id']), []).append(v)
     registrate = {s.get('event_id') for gruppo in _gruppi(reg)
                   for s in gruppo.get('sessioni') or []}
@@ -102,8 +109,10 @@ def confronta(reg, voci, oggi, giorni=FINESTRA_GIORNI):
 
 def _ricalcola(reg, gruppo):
     if gruppo.get('dal'):
+        # i mesi si riportano le sedute l'uno all'altro: restituirne una a
+        # settembre cambia anche quante ne ha ottobre
         from . import mensili
-        mensili.ricalcola(reg, gruppo)
+        mensili.ricalcola_tutti(reg)
     else:
         S.ricalcola(gruppo)
 
@@ -141,7 +150,7 @@ def segna(reg, event_ids, come, oggi):
     voluti = set(event_ids or ())
     segnate = 0
     for gruppo in _gruppi(reg):
-        if not _aperto(gruppo, oggi.isoformat()):
+        if not aperto(gruppo, oggi.isoformat()):
             continue
         for s in gruppo.get('sessioni') or []:
             if s.get('event_id') in voluti and not s.get('non_fatta') and not s.get('confermata'):

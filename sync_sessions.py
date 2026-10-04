@@ -44,6 +44,29 @@ def finestra(reg, oggi=None):
     return da, oggi
 
 
+def aggiorna_dal_calendario(reg, eventi, oggi=None):
+    """Quello che fa l'app a ogni lettura: prima il confronto, poi le sedute nuove.
+
+    L'ordine conta. Una seduta spostata di giorno nel calendario ha lo stesso
+    evento ma un'altra data, quindi un id nuovo: se le sedute nuove si
+    registrassero prima, la nuova data diventerebbe una seconda seduta e la
+    vecchia una domanda. Il confronto per primo la riconosce come la stessa.
+    Ritorna (rapporto, spostate, domande)."""
+    from core import conferme
+    oggi = oggi or datetime.date.today()
+    mosse = domande = 0
+    guasto = None
+    try:
+        esiti = conferme.confronta(reg, eventi, oggi)
+        mosse, domande = conferme.applica(reg, esiti, oggi)
+    except Exception as e:           # il confronto non cancella niente: se cade,
+        guasto = e                   # le sedute nuove si leggono lo stesso
+    rap = sincronizza(reg, eventi, oggi)
+    if guasto is not None:
+        rap['errore_confronto'] = '%s: %s' % (type(guasto).__name__, guasto)
+    return rap, mosse, domande
+
+
 def estrai_eventi(dati):
     """Accetta la risposta grezza dell'API ({'events': [...]}) o una lista."""
     if isinstance(dati, dict):
@@ -116,6 +139,10 @@ def sincronizza(reg, eventi, oggi=None, prova=False):
             continue
         # a chi va addebitato il credito (regola della coppia)
         addebito, nota = S.attribuisci(chiave, clienti_per_giorno.get(ev['data'], set()))
+        # le sedute di molto prima del primo acquisto non sono di quell'acquisto
+        if S.prima_del_primo_acquisto(reg, addebito, ev['data']):
+            rap['fuori_finestra'] += 1
+            continue
         if nota:
             rap.setdefault('addebiti_speciali', []).append((ev['data'], ev['titolo'], nota))
         if not prova:

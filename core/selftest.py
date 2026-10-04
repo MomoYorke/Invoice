@@ -114,6 +114,7 @@ def run_all():
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
+        _test_revisione_crediti,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -148,6 +149,11 @@ def _esegui_famiglie(r, famiglie):
 def _test_revisione(r):
     from . import selftest_revisione
     selftest_revisione._test_revisione(r)
+
+
+def _test_revisione_crediti(r):
+    from . import selftest_revisione_crediti
+    selftest_revisione_crediti._test_revisione_crediti(r)
 
 
 def _test_registro_avvio(r):
@@ -2764,8 +2770,13 @@ def _test_conferme(r):
                              'app.py')
     with io.open(_sorgente, encoding='utf-8') as _f:
         _app = _f.read()
+    with io.open(os.path.join(os.path.dirname(_sorgente), 'sync_sessions.py'), encoding='utf-8') as _f:
+        _sync = _f.read()
+    # il confronto sta dentro aggiorna_dal_calendario, che lo fa PRIMA delle sedute nuove
     _check(r, cat, 'la lettura del calendario chiama il confronto',
-           ('conferme.confronta(' in _app and 'conferme.applica(' in _app), True)
+           ('sync_sessions.aggiorna_dal_calendario(' in _app
+            and 'conferme.confronta(' in _sync and 'conferme.applica(' in _sync
+            and _sync.index('conferme.confronta(') < _sync.index('rap = sincronizza(')), True)
     _check(r, cat, 'e legge anche la finestra indietro di 14 giorni',
            'conferme.finestra(' in _app, True)
 

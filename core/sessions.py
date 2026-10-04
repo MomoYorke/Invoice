@@ -269,6 +269,30 @@ def id_evento_gia_presente(reg):
     return visti
 
 
+def prima_del_primo_acquisto(reg, chiave, data, tolleranza_giorni=14):
+    """Vero se quella seduta e' di molto precedente al primo pacchetto o mese
+    che il cliente ha comprato.
+
+    Con INIZIO_LETTURA fissa, chi cominciava ad usare l'app mesi dopo si vedeva
+    arrivare nel suo primo pacchetto le sedute di tutto il tempo prima, e il
+    pacchetto risultava finito prima di iniziare. Chi non ha ancora comprato
+    niente non e' coperto da questa regola: le sue sedute restano fra gli
+    esclusi, in attesa del primo acquisto. I giorni di tolleranza sono per la
+    fattura fatta qualche giorno dopo le prime sedute, con la lettura in ritardo."""
+    partenze = []
+    for x in list(reg.get('pacchetti') or []) + list(reg.get('mensili') or []):
+        if chiave in _chiavi_di(x):
+            iso = x.get('inizio') or x.get('dal')
+            try:
+                partenze.append(datetime.date.fromisoformat(iso))
+            except (TypeError, ValueError):
+                continue
+    if not partenze:
+        return False
+    limite = min(partenze) - datetime.timedelta(days=tolleranza_giorni)
+    return datetime.date.fromisoformat(data) < limite
+
+
 def ultima_data_registrata(reg):
     date = [s['data'] for gruppo in list(reg['pacchetti']) + list(reg.get('mensili') or [])
             for s in gruppo.get('sessioni', []) if s.get('data')]
@@ -452,7 +476,7 @@ def _mese_in_vista(reg, mesi, oggi):
             'usate': mensili.usate(reg, m), 'disponibili': disponibili,
             'nuove': int(m.get('sedute') or 0) if m.get('fattura_numero') else 0,
             'riportate': mensili.riportate(reg, m),
-            'in_piu': max(0, len(m.get('sessioni') or []) - disponibili),
+            'in_piu': max(0, len(contate(m)) - disponibili),
             'in_corso': bool(in_corso), 'fatturato': bool(m.get('fattura_numero'))}
 
 
@@ -623,7 +647,7 @@ def _accoda_prepagata(reg, chiave, numero, sedute, dati):
     prepagate[chiave] = attese
 
 
-def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
+def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio, sostituisce=()):
     """Le sedute di una riga «una volta» entrano nel registro. Tre casi:
 
       - pacchetto aperto e non ancora fatturato (pieno o no) -> la fattura lo
@@ -645,22 +669,28 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
     Ritorna (esito, (frase, valori))."""
     nome = nome_cliente(chiave)
     dati = dati_del_servizio(servizio, data)
+    vecchia = _fattura_rifatta(reg, chiave, sedute, sostituisce)
+    if vecchia is not None:
+        return _prendi_il_posto(vecchia, nome, numero, sedute, dati)
     p = pacchetto_aperto_di(reg, chiave)
     if p is not None and p.get('scade') and data > p['scade']:
         chiudi_scaduto(p)
         p = None
     if p is not None and not e_saldato(p):
-        sessioni = p.get('sessioni', [])
         paga_n = int(sedute) if sedute else 0
-        if paga_n and len(sessioni) > paga_n:
-            ordinate = sorted(sessioni, key=lambda s: (s['data'], s['n']))
-            tenute, eccesso = ordinate[:paga_n], ordinate[paga_n:]
-            for i, s in enumerate(tenute, 1):
-                s['n'] = i
+        # Si contano le sedute fatte, non le voci: una seduta segnata «non
+        # fatta» resta nell'elenco ma non consuma un credito, e contarla
+        # chiudeva il pacchetto a 9 su 10 spingendo una seduta vera in uno nuovo.
+        if paga_n and len(contate(p)) > paga_n:
+            fatte = sorted(contate(p), key=lambda s: (s['data'], s['n']))
+            tenute, eccesso = fatte[:paga_n], fatte[paga_n:]
+            non_fatte = [s for s in p.get('sessioni', []) if s.get('non_fatta')]
             _paga(p, numero, sedute, dati)
             # si chiude PRIMA di piazzare l'eccesso, sennò aggiungi_sessione
             # lo ritroverebbe ancora aperto e ci rimetterebbe dentro le sedute
-            p['sessioni'] = tenute
+            p['sessioni'] = sorted(tenute + non_fatte, key=lambda s: (s['data'], s['n']))
+            for i, s in enumerate(p['sessioni'], 1):
+                s['n'] = i
             p['fine'] = tenute[-1]['data']
             ricalcola(p)
             nuovo_id = None
@@ -717,6 +747,34 @@ def aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio):
                      {'pid': nuovo['id'], 'nome': nome, 'crediti': nuovo['crediti']})
 
 
+def _fattura_rifatta(reg, chiave, sedute, sostituisce):
+    """Il pacchetto che una fattura buttata nel Cestino aveva aperto, se la
+    fattura nuova e' la sua versione rifatta.
+
+    Si butta nel Cestino per rifare, e la fattura rifatta e' la stessa vendita:
+    senza questo il cliente si ritrovava le sedute due volte. Vale solo se il
+    pacchetto ha ancora sedute da fare e le sedute sono le stesse: un pacchetto
+    gia' finito o una misura diversa sono un altro acquisto.
+    """
+    if not sostituisce:
+        return None
+    for p in reg.get('pacchetti') or []:
+        if (chiave in _chiavi_di(p) and p.get('fattura_numero') in set(sostituisce)
+                and not p.get('fine') and int(p.get('crediti') or 0) == int(sedute or 0)
+                and len(contate(p)) < int(p.get('crediti') or 0)):
+            return p
+    return None
+
+
+def _prendi_il_posto(p, nome, numero, sedute, dati):
+    vecchio = p.get('fattura_numero')
+    _paga(p, numero, sedute, dati, nota=f'Fattura #{numero}, rifatta al posto della #{vecchio}')
+    return 'collegato', (
+        'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto '
+        '{pid} di {nome} resta com’è, senza altre sedute.',
+        {'numero': numero, 'vecchia': vecchio, 'pid': p['id'], 'nome': nome})
+
+
 def _prima_prepagata(reg, chiave):
     """La prima fattura in attesa per quel cliente, senza toglierla: un
     dizionario, un numero (la forma vecchia) oppure None."""
@@ -757,7 +815,8 @@ def _giorno_breve(iso):
     return datetime.date.fromisoformat(iso).strftime('%d.%m.%Y')
 
 
-def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=None):
+def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=None,
+                         sostituisce=()):
     """Le sedute delle righe di una fattura appena salvata.
 
     righe: [(servizio, quantita', totale)] da services.righe_con_sedute.
@@ -780,6 +839,7 @@ def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=No
         sedute = sedute_della_riga(servizio, qty, totale)
         if sedute <= 0:
             continue
-        _esito, frase = aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio)
+        _esito, frase = aggancia_pacchetto(reg, chiave, numero, data, sedute, servizio,
+                                           sostituisce)
         frasi.append(frase)
     return frasi

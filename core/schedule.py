@@ -89,9 +89,11 @@ def _sedute(reg):
             yield gruppo, s
 
 
-def elenco(reg, orari=None, cliente=None, anno=None):
+def elenco(reg, orari=None, cliente=None, anno=None, oggi=None):
     """Tutte le sessioni del registro, dalla piu' recente, pronte da mostrare."""
+    from . import conferme
     orari = carica_indice() if orari is None else orari
+    oggi = (oggi or datetime.date.today()).isoformat()
     righe = []
     for p, s in _sedute(reg):
         data = s.get('data') or ''
@@ -107,8 +109,9 @@ def elenco(reg, orari=None, cliente=None, anno=None):
             'non_fatta': s.get('non_fatta'),
             'event_id': s.get('event_id'),
             # il numero della fattura non chiude niente: il pacchetto nasce da
-            # una fattura. Cio' che lo chiude e' `fine`.
-            'aperto': not p.get('fine'),
+            # una fattura. Cio' che lo chiude e' `fine`; un mese di abbonamento
+            # si chiude da solo l'ultimo giorno. Stessa regola di chi risponde.
+            'aperto': conferme.aperto(p, oggi),
             'nota': s.get('nota') or '',
             'fattura': p.get('fattura_numero'),
         })
