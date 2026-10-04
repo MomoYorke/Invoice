@@ -5335,7 +5335,8 @@ def _test_windows(r):
             testo = f.read()
         sorgenti[nome] = testo
         for nodo in _ast.walk(_ast.parse(testo)):
-            if isinstance(nodo, _ast.Import) and any(x.name == 'subprocess' for x in nodo.names):
+            if (isinstance(nodo, _ast.Import) and any(x.name == 'subprocess' for x in nodo.names)
+                    and 'selftest' not in nome):          # i collaudi lanciano l'app di prova
                 lancia.append(nome)
         # i file di collaudo no: qui quei percorsi ci sono per forza, scritti
         # apposta per confrontarli
@@ -5464,7 +5465,7 @@ def _test_spegnimento(r):
            'si_spegne=_SERVER is not None' in programma, True)
 
     _check(r, 'Spegnimento', 'il bottone è nella barra e chiede conferma',
-           ("url_for('spegni')" in barra, 'onsubmit="return confirm' in barra),
+           ("url_for('spegni')" in barra, "onsubmit='return confirm(" in barra),
            (True, True))
     # La pagina di congedo non puo' ereditare da base.html: il menu porterebbe
     # a pagine che fra un istante non rispondono piu', e nemmeno il foglio di

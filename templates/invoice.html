@@ -54,7 +54,7 @@
     </form>
     {% if inv.source == 'app' %}
     <form method="post" action="{{ url_for('elimina', inv_id=inv.id) }}" style="display:inline"
-          onsubmit="return confirm({{ _("Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.").format(n=inv.number) | tojson }})">
+          onsubmit='return confirm({{ _("Eliminare la fattura #{n}? I file finiscono nel Cestino dell'app.").format(n=inv.number) | tojson }})'>
       <button class="btn small danger">{{ _('Elimina') }}</button>
     </form>
     {% endif %}

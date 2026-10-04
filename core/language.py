@@ -507,6 +507,9 @@ TESTI = {
             'The money in on your bank statement, set side by side with your invoices.',
         "L'app non segna niente da sola": 'The app marks nothing by itself',
         ': propone, confermi tu.': ': it suggests, you confirm.',
+        'Propone, confermi tu': 'It suggests, you confirm',
+        ': solo i casi senza dubbi li collega da sola, e si annullano con un click.':
+            ': only the cases with no doubt are linked by itself, and each can be undone with one click.',
         'versamenti da decidere': 'payments to decide on',
         'di cui {n} con una proposta chiara': 'of which {n} with a clear match',
         '{n} già sistemati': '{n} already sorted',
@@ -797,6 +800,8 @@ TESTI = {
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
         'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, oppure aggiungi qualcosa al nome per distinguerli.':
+            'There is already a client called «{nome}»: pick them from the list, or add something to the name to tell them apart.',
         'Non hai scelto nessun file.': 'You have not chosen a file.',
         'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':
             'Image too heavy ({kb} KB): the maximum is 5 MB.',
@@ -1991,6 +1996,9 @@ TESTI = {
             'Die Eingänge auf deinem Kontoauszug, den Rechnungen gegenübergestellt.',
         "L'app non segna niente da sola": 'Die App markiert nichts von selbst',
         ': propone, confermi tu.': ': sie schlägt vor, du bestätigst.',
+        'Propone, confermi tu': 'Sie schlägt vor, du bestätigst',
+        ': solo i casi senza dubbi li collega da sola, e si annullano con un click.':
+            ': nur die Fälle ohne Zweifel verknüpft sie selbst, und jeden kannst du mit einem Klick rückgängig machen.',
         'versamenti da decidere': 'Zahlungen zu entscheiden',
         'di cui {n} con una proposta chiara': 'davon {n} mit einem klaren Vorschlag',
         '{n} già sistemati': '{n} bereits erledigt',
@@ -2285,6 +2293,8 @@ TESTI = {
             'Kopie der Historie hat NICHT geklappt: {guaio}',
         'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, oppure aggiungi qualcosa al nome per distinguerli.':
+            'Es gibt schon einen Kunden namens «{nome}»: wähle ihn aus der Liste, oder ergänze den Namen, damit man sie unterscheiden kann.',
         'Non hai scelto nessun file.': 'Du hast keine Datei gewählt.',
         'Immagine troppo pesante ({kb} KB): il massimo è 5 MB.':
             'Bild zu schwer ({kb} KB): das Maximum sind 5 MB.',

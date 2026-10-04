@@ -355,11 +355,23 @@ def _movimento(data, cent, descrizione, file, nome='', riferimento=''):
             'nome': nome, 'riferimento': riferimento, 'file': file, 'impronta': impronta}
 
 
+def _senza_dubbi(c):
+    """Un candidato si lega da solo solo se su chi e' non resta nessun dubbio.
+
+    Mezzo nome non basta: «Anna» o «Rossi» da soli li hanno anche altri clienti,
+    e un versamento di Sandra Mueller non e' la fattura di Peter Mueller. Con
+    mezzo nome la proposta resta, ma la conferma e' tua. Bastano il riferimento
+    della QR-fattura, la data della fattura nella causale, o tutto il nome.
+    """
+    return c['grado'] == CERTO or bool(c['data_citata']) or c['somiglianza'] >= 1.0
+
+
 def collega_automatico(con, movimenti, quando=None):
     """Collega da solo i versamenti su cui non c'e' niente da decidere.
 
     Regola: si tocca SOLO una proposta «chiara» — un unico candidato forte,
-    importo esatto e nome (o data della fattura) nella causale. Tutto il resto
+    importo esatto e il nome intero (o la data della fattura, o il riferimento
+    della QR-fattura) nella causale. Tutto il resto
     resta a te. Ogni riga creata resta marcata come automatica e si annulla con
     un click, perche' una decisione presa dall'app deve essere altrettanto
     facile da disfare quanto una presa a mano.
@@ -370,7 +382,8 @@ def collega_automatico(con, movimenti, quando=None):
     quando = quando or datetime.datetime.now().isoformat(timespec='seconds')
     fatti = []
     for _ in range(200):                     # limite di sicurezza, non un ciclo aperto
-        chiare = [p for p in proposte(con, movimenti) if not p['deciso'] and p['chiaro']]
+        chiare = [p for p in proposte(con, movimenti)
+                  if not p['deciso'] and p['chiaro'] and _senza_dubbi(p['candidati'][0])]
         if not chiare:
             break
         p = chiare[0]

@@ -62,7 +62,7 @@
       {% include '_eye.html' %}
     </button>
     <form method="post" action="{{ url_for('spegni') }}" class="no-blur"
-          onsubmit="return confirm('{{ _('Chiudo l’app? Il lavoro fatto è già salvato.') }}')">
+          onsubmit='return confirm({{ _('Chiudo l’app? Il lavoro fatto è già salvato.') | tojson }})'>
       <button class="privacy-mini spegni-mini" title="{{ _('Chiudi l’app') }}">
         {{ icona('spegni') }}
       </button>

@@ -3,7 +3,8 @@
 {% block content %}
 <h1>{{ _('Banca') }}</h1>
 <p class="sub">{{ _('Gli accrediti del tuo estratto conto, accostati alle fatture.') }}
-   <strong>{{ _("L'app non segna niente da sola") }}</strong>{{ _(': propone, confermi tu.') }}</p>
+   {% if auto %}<strong>{{ _('Propone, confermi tu') }}</strong>{{ _(': solo i casi senza dubbi li collega da sola, e si annullano con un click.') }}
+   {% else %}<strong>{{ _("L'app non segna niente da sola") }}</strong>{{ _(': propone, confermi tu.') }}{% endif %}</p>
 
 {% if problemi %}
 <div class="panel" style="border-color:#f59e0b;background:#fffbeb">
@@ -61,7 +62,7 @@
           <input type="hidden" name="impronta" value="{{ p.m.impronta }}">
           <input type="hidden" name="invoice_id" value="{{ c.inv.id }}">
           <button class="btn small {{ '' if (loop.first and p.chiaro) else 'secondary' }}"
-                  onclick="return confirm({{ _('Segnare la #{n} pagata il {data}?').format(n=c.inv.number, data=p.m.data | dateit) | tojson }})">
+                  onclick='return confirm({{ _('Segnare la #{n} pagata il {data}?').format(n=c.inv.number, data=p.m.data | dateit) | tojson }})'>
             {{ _('Conferma') if (loop.first and p.chiaro) else _('È questa') }}
           </button>
         </form>
@@ -87,7 +88,7 @@
           <input type="hidden" name="invoice_ids"
                  value="{% for i in g.fatture %}{{ i.id }}{% if not loop.last %},{% endif %}{% endfor %}">
           <button class="btn small"
-                  onclick="return confirm({{ _('Segnare {numeri} pagate il {data}?').format(numeri=g.numeri, data=p.m.data | dateit) | tojson }})">
+                  onclick='return confirm({{ _('Segnare {numeri} pagate il {data}?').format(numeri=g.numeri, data=p.m.data | dateit) | tojson }})'>
             {{ _('Sono queste') }}
           </button>
         </form>

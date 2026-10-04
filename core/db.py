@@ -429,8 +429,15 @@ def init():
     _migrate(con)
     # prima della semina dei default: decide lei chi era gia' installato
     _migra_qr_gia_installato(con)
+    # Si scrive solo cio' che manca. Questa funzione gira a ogni pagina, e un
+    # INSERT OR IGNORE chiede il blocco di scrittura anche quando non
+    # aggiunge niente: se un'altra connessione aveva una modifica in corso
+    # (un cliente appena inserito, la fattura non ancora salvata), la pagina
+    # dell'errore restava ferma cinque secondi e poi diceva «database is locked».
+    presenti = {r[0] for r in con.execute('SELECT key FROM settings')}
     for k, v in DEFAULT_SETTINGS.items():
-        con.execute('INSERT OR IGNORE INTO settings(key, value) VALUES(?,?)', (k, v))
+        if k not in presenti:
+            con.execute('INSERT OR IGNORE INTO settings(key, value) VALUES(?,?)', (k, v))
     con.commit()
     _migra_servizi_una_volta(con)
     return con

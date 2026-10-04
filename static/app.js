@@ -32,6 +32,12 @@
   function alSicuro(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   }
+  // un valore dentro un attributo: le virgolette lo chiuderebbero a meta'
+  // («Abo "Gold"» diventava «Abo »)
+  function attr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
   // ---- parsing importi (specchio di money.py; il server ricalcola comunque) ----
   function parseAmount(s) {
@@ -64,14 +70,14 @@
     const div = document.createElement('div');
     div.className = 'item-row';
     div.innerHTML =
-      `<input type="text" name="qty_${i}" value="${qty || '1'}">` +
-      `<input type="text" name="desc_${i}" value="${desc || ''}" placeholder="${T.descrizione}">` +
-      `<input type="text" name="unit_${i}" value="${unit || ''}" placeholder="110.-">` +
-      `<input type="text" name="tot_${i}" value="${tot || ''}" placeholder="auto">` +
+      `<input type="text" name="qty_${i}" value="${attr(qty || '1')}">` +
+      `<input type="text" name="desc_${i}" value="${attr(desc || '')}" placeholder="${attr(T.descrizione)}">` +
+      `<input type="text" name="unit_${i}" value="${attr(unit || '')}" placeholder="110.-">` +
+      `<input type="text" name="tot_${i}" value="${attr(tot || '')}" placeholder="auto">` +
       // quale servizio vende la riga: lo mette un pulsante, e resta anche se
       // il testo cambia; svuotare la descrizione lo scioglie
-      `<input type="hidden" name="servizio_${i}" value="${servizio || ''}">` +
-      `<button type="button" class="remove-row" title="${T.rimuovi}">✕</button>`;
+      `<input type="hidden" name="servizio_${i}" value="${attr(servizio || '')}">` +
+      `<button type="button" class="remove-row" title="${attr(T.rimuovi)}">✕</button>`;
     div.querySelector('.remove-row').onclick = () => { div.remove(); updateTotal(); };
     div.querySelectorAll('input').forEach(el => el.addEventListener('input', updateTotal));
     const descEl = div.querySelector(`input[name="desc_${i}"]`);

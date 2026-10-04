@@ -15,9 +15,10 @@ import datetime
 import logging
 import threading
 import traceback
+from urllib.parse import urlsplit
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   send_file, jsonify, flash, abort, g)
+                   send_file, send_from_directory, jsonify, flash, abort, g)
 from dateutil.relativedelta import relativedelta
 
 from core import db, stats, importer, exports, verify, selftest, corrections, backup, mailer
@@ -98,6 +99,25 @@ def logo():
     # il browser puo' tenerselo un'ora; quando cambia, cambia anche il ?v=
     r.headers['Cache-Control'] = 'private, max-age=3600'
     return r
+
+
+# L'app ascolta solo su questo computer, ma un sito aperto nello stesso browser
+# puo' comunque mandarle richieste (cambiare l'IBAN, mettere fatture nel
+# Cestino, spegnerla). Il browser dice sempre da dove arriva una richiesta che
+# modifica qualcosa: se non e' da qui, non si esegue. E si risponde solo a chi
+# si presenta col nome di questo computer, contro i siti che si fanno passare
+# per lui (DNS rebinding).
+_NOMI_DI_QUESTO_COMPUTER = ('localhost', '127.0.0.1', '::1')
+
+
+@app.before_request
+def _solo_richieste_di_questa_app():
+    if (urlsplit('//' + request.host).hostname or '') not in _NOMI_DI_QUESTO_COMPUTER:
+        abort(403)
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        provenienza = request.headers.get('Origin') or request.headers.get('Referer')
+        if provenienza and urlsplit(provenienza).netloc != request.host:
+            abort(403)
 
 
 @app.route('/health')
@@ -434,6 +454,29 @@ def _salva_fattura_e_sedute(con, number, client, intestatario, addr_lines, date_
     return inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo
 
 
+def _chiave_libera(con, name):
+    """La chiave di un cliente nuovo: ricavata dal nome, mai gia' usata.
+
+    Nomi diversi possono dare la stessa chiave («Jürg» e «Jörg», «Zoë» e «Zoé»:
+    le lettere con l'accento spariscono). Prima il secondo riscriveva il primo,
+    e la fattura partiva col nome nuovo all'indirizzo vecchio."""
+    base = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or 'cliente'
+    chiave, n = base, 1
+    while con.execute('SELECT 1 FROM clients WHERE key=?', (chiave,)).fetchone():
+        n += 1
+        chiave = f'{base}-{n}'
+    return chiave
+
+
+def _cliente_omonimo(con, name):
+    """Il cliente che ha gia' esattamente questo nome, se c'e'."""
+    voluto = name.strip().casefold()
+    for r in con.execute('SELECT id, name FROM clients'):
+        if (r['name'] or '').strip().casefold() == voluto:
+            return r
+    return None
+
+
 def _crea_fattura(con):
     f = request.form
     # --- cliente ---
@@ -445,11 +488,14 @@ def _crea_fattura(con):
         if not name:
             avvisa('Nome del nuovo cliente mancante.', 'error')
             return redirect(url_for('nuova'))
-        key = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+        if _cliente_omonimo(con, name):
+            con.close()
+            avvisa('Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, '
+                   'oppure aggiungi qualcosa al nome per distinguerli.', 'error', nome=name)
+            return redirect(url_for('nuova'))
         cur = con.execute(
             'INSERT INTO clients(key, name, address1, address2, file_label) VALUES(?,?,?,?,?) '
-            'ON CONFLICT(key) DO UPDATE SET name=excluded.name RETURNING id',
-            (key, name, a1, a2, name))
+            'RETURNING id', (_chiave_libera(con, name), name, a1, a2, name))
         client_id = cur.fetchone()['id']
     client = con.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     if not client:
@@ -466,7 +512,12 @@ def _crea_fattura(con):
     listino = con.execute('SELECT id, nome, attivo FROM servizi').fetchall()
     items = []
     total = 0
-    for i in range(8):
+    # Il modulo numera le righe senza riutilizzare i numeri: chi aggiunge e
+    # toglie righe si ritrova con la 9a, la 10a. Si leggono tutte quelle che
+    # arrivano, in ordine, e nessuna puo' perdersi per strada.
+    indici = sorted({int(m.group(1)) for chiave in f
+                     for m in [re.fullmatch(r'(?:desc|qty|unit|tot)_(\d+)', chiave)] if m})
+    for n_riga, i in enumerate(indici, 1):
         desc = f.get(f'desc_{i}', '').strip()
         qty_raw = f.get(f'qty_{i}', '').strip()
         unit_raw = f.get(f'unit_{i}', '').strip()
@@ -480,7 +531,7 @@ def _crea_fattura(con):
             tot_c = line_total(qty, unit_c)
         if tot_c is None:
             avvisa('Riga {n}: importo non riconosciuto («{cosa}»).', 'error',
-                   n=i + 1, cosa=tot_raw or unit_raw)
+                   n=n_riga, cosa=tot_raw or unit_raw)
             return redirect(url_for('nuova'))
         # Coerenza qty x unit = totale. Con quantita' 1 NON si blocca: e' il formato
         # che usi spesso sulle fatture-pacchetto (1 | "12 Sessions Pack" | 150.- | 1'800.-),
@@ -499,7 +550,7 @@ def _crea_fattura(con):
                 avvisa('Riga {n}: {qty} × {unit} = {calc}, ma il totale riga indicato è '
                        '{tot}.{suggerimento} Correggi una delle cifre, oppure lascia '
                        'vuoto il totale e lo calcolo io.', 'error',
-                       n=i + 1, qty=qty, unit=fmt_chf(unit_c), calc=fmt_chf(calc),
+                       n=n_riga, qty=qty, unit=fmt_chf(unit_c), calc=fmt_chf(calc),
                        tot=fmt_chf(tot_c), suggerimento=suggerimento)
                 return redirect(url_for('nuova'))
         servizio_id, ricorda = srv.servizio_della_riga(con, f.get(f'servizio_{i}'), desc, listino)
@@ -1315,12 +1366,17 @@ def cliente_nuovo():
     if not name:
         avvisa('Nome mancante.', 'error')
         return redirect(url_for('clienti'))
-    key = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
     con = get_con()
+    if _cliente_omonimo(con, name):
+        con.close()
+        avvisa('Esiste già un cliente di nome «{nome}»: sceglilo dall’elenco, '
+               'oppure aggiungi qualcosa al nome per distinguerli.', 'error', nome=name)
+        return redirect(url_for('clienti'))
     compleanno, perche = birthdays.leggi_compleanno(f.get('compleanno'))
-    con.execute('INSERT OR IGNORE INTO clients(key,name,address1,address2,file_label,email,'
+    con.execute('INSERT INTO clients(key,name,address1,address2,file_label,email,'
                 'compleanno) VALUES(?,?,?,?,?,?,?)',
-                (key, name, f.get('address1', '').strip(), f.get('address2', '').strip(),
+                (_chiave_libera(con, name), name, f.get('address1', '').strip(),
+                 f.get('address2', '').strip(),
                  f.get('file_label', '').strip() or name, f.get('email', '').strip(),
                  compleanno or ''))
     con.commit()
@@ -1475,10 +1531,9 @@ def commercialista_genera():
 
 @app.route('/esporti/<path:fname>')
 def esporti_file(fname):
-    p = os.path.join(exports.EXPORT_DIR, fname)
-    if not os.path.exists(p):
-        abort(404)
-    return send_file(p, as_attachment=True)
+    # send_from_directory non esce mai dalla cartella: «..» e percorsi assoluti
+    # danno 404, invece di consegnare il database o il codice dell'app
+    return send_from_directory(exports.EXPORT_DIR, fname, as_attachment=True)
 
 
 # ---------------------------------------------------------------- crediti
@@ -1698,9 +1753,10 @@ def banca_pagina():
                      "«collegato dall'app»: se sbaglio, Annulla."),
                'ok', quanti=len(fatti), quali=quali, extra=extra)
     prop = bank.proposte(con, movimenti)
+    auto = db.get_settings(con).get('banca_auto') == '1'
     con.close()
     da_decidere = [p for p in prop if not p['deciso']]
-    return render_template('bank.html', prop=prop, problemi=problemi,
+    return render_template('bank.html', prop=prop, problemi=problemi, auto=auto,
                            cartella=bank.CARTELLA,
                            da_decidere=da_decidere,
                            decisi=[p for p in prop if p['deciso']],

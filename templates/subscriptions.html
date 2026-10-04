@@ -77,7 +77,7 @@
           <button class="btn small secondary">{{ _('Riattiva') if not r.attiva else _('Sospendi') }}</button>
         </form>
         <form method="post" action="{{ url_for('abbonamenti_stato') }}" style="display:inline"
-              onsubmit="return confirm({{ _('Cancello questo abbonamento? Le fatture già fatte restano dove sono.') | tojson }})">
+              onsubmit='return confirm({{ _('Cancello questo abbonamento? Le fatture già fatte restano dove sono.') | tojson }})'>
           <input type="hidden" name="id" value="{{ r.id }}">
           <input type="hidden" name="azione" value="cancella">
           <button class="btn small secondary">{{ _('Cancella') }}</button>

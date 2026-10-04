@@ -32,9 +32,9 @@ def _scenario():
     con = D.init()
     for cid, chiave, nome, ind1, ind2 in (
             (1, 'giulia', 'Giulia Ferrari', 'Musterstrasse 1', '8000 Zürich'),
-            (2, 'j-rg-meier', 'Jürg Meier', 'Bahnhofstrasse 2', '8001 Zürich'),
-            (3, 'peter', 'Peter Müller', 'Seeweg 3', '8002 Zürich'),
-            (4, 'zo-keller', 'Zoë Keller', 'Hauptgasse 4', '3000 Bern')):
+            (2, 'j-rg-meier', 'Jürg Meier', 'Bahnhofstrasse 1', '8001 Zürich'),
+            (3, 'peter', 'Peter Müller', 'Musterweg 8a', '8000 Zürich'),
+            (4, 'zo-keller', 'Zoë Keller', 'Bahnhofstrasse 4', '6300 Zug')):
         con.execute('INSERT INTO clients(id, key, name, address1, address2, file_label) '
                     'VALUES(?,?,?,?,?,?)', (cid, chiave, nome, ind1, ind2, nome))
     con.commit()
@@ -82,7 +82,7 @@ def _scenario():
     k = D.connect()
     fatti['jurg'] = [k.execute('SELECT name, address1 FROM clients WHERE id=2').fetchone()[i]
                      for i in (0, 1)]
-    fatti['jorg'] = [tuple(x) for x in k.execute(
+    fatti['jorg'] = [list(x) for x in k.execute(
         "SELECT name, address1 FROM clients WHERE name LIKE 'J%rg Meier' ORDER BY id")]
     fatti['fatture_jorg'] = [r['client_address'] for r in k.execute(
         "SELECT client_address FROM invoices WHERE client_name='Jörg Meier'")]
@@ -94,9 +94,9 @@ def _scenario():
                                       ).fetchone()[0]
     k.close()
     # due nomi che sulla chiave si somigliano, dalla pagina Clienti
-    c.post('/cliente/nuovo', data={'name': 'Zoé Keller', 'address1': 'Dorfstrasse 1'})
+    c.post('/cliente/nuovo', data={'name': 'Zoé Keller', 'address1': 'Musterweg 3'})
     k = D.connect()
-    fatti['zoe_da_clienti'] = [tuple(x) for x in k.execute(
+    fatti['zoe_da_clienti'] = [list(x) for x in k.execute(
         "SELECT name, address1 FROM clients WHERE key LIKE 'zo-keller%' ORDER BY id")]
     k.close()
 
@@ -109,17 +109,17 @@ def _scenario():
                        b'database is locked' in r.data]
 
     # --- D1: una richiesta che arriva da un altro sito non si esegue ----------
-    r = c.post('/impostazioni', data={'business_iban': 'CH00 0000 0000 0000 0000 0'},
+    r = c.post('/impostazioni', data={'business_iban': 'CH93 0076 2011 6238 5295 7'},
                headers={'Origin': 'https://sito-qualunque.example'})
     k = D.connect()
     fatti['origine_estranea'] = [r.status_code, k.execute(
         "SELECT value FROM settings WHERE key='business_iban'").fetchone()[0]
-        == 'CH00 0000 0000 0000 0000 0']
+        == 'CH93 0076 2011 6238 5295 7']
     k.close()
-    r = c.post('/impostazioni', data={'business_iban': 'CH11 1111 1111 1111 1111 1'},
+    r = c.post('/impostazioni', data={'business_iban': 'CH58 0079 1123 0008 8901 2'},
                headers={'Origin': 'http://localhost'})
     fatti['origine_nostra'] = r.status_code
-    r = c.post('/impostazioni', data={'business_iban': 'CH11 1111 1111 1111 1111 1'})
+    r = c.post('/impostazioni', data={'business_iban': 'CH58 0079 1123 0008 8901 2'})
     fatti['senza_origine'] = r.status_code
     fatti['host_estraneo'] = c.get('/', headers={'Host': 'sito-qualunque.example'}).status_code
     fatti['host_nostro'] = [c.get('/', headers={'Host': '127.0.0.1:8000'}).status_code,
@@ -157,8 +157,8 @@ def _scenario():
         'solo_nome': prova('Zahlung Peter Schmid', 1),            # stesso nome di battesimo
         'solo_cognome': prova('Gutschrift Sandra Mueller', 2),     # stesso cognome
         'tutto_il_nome': prova('Zahlung Peter Mueller', 3),
-        'cognome_prima': prova('MUELLER PETER Seeweg 3', 4),
-        'data_citata': prova('Rechnung vom 20.09.2026 Sandra', 5),
+        'cognome_prima': prova('MUELLER PETER Musterweg 8a', 4),
+        'data_citata': prova('Rechnung vom 20.09.2026 fuer Sandra', 5),
     }
     k.close()
     print(MARCA + json.dumps(fatti))
@@ -212,22 +212,23 @@ def _test_revisione(r):
 
     # C2
     _check(r, 'Revisione', 'Elimina chiede conferma: la domanda arriva intera nella pagina',
-           [v.startswith('return confirm(') and v.endswith(')') and v.count('"') == 2
-            for v in f.get('onsubmit', [])], [True])
+           (len(f.get('onsubmit', [])) >= 2,
+            all(v.startswith('return confirm(') and v.endswith(')') and v.count('"') == 2
+                for v in f.get('onsubmit', []))), (True, True))
     _check(r, 'Revisione', 'nessun modulo scrive la domanda fra virgolette doppie sbagliate',
            _attributi_con_virgolette_doppie(), [])
 
     # B1
     _check(r, 'Revisione', 'un cliente nuovo con nome simile non riscrive quello che c’è',
-           f['jurg'], ['Jürg Meier', 'Bahnhofstrasse 2'])
+           f['jurg'], ['Jürg Meier', 'Bahnhofstrasse 1'])
     _check(r, 'Revisione', 'il cliente nuovo c’è, col suo indirizzo, e la fattura va a lui',
            (f['jorg'], f['fatture_jorg']),
-           ([('Jürg Meier', 'Bahnhofstrasse 2'), ('Jörg Meier', 'Via Nuova 5')],
+           ([['Jürg Meier', 'Bahnhofstrasse 1'], ['Jörg Meier', 'Via Nuova 5']],
             ['Via Nuova 5\n6900 Lugano']))
     _check(r, 'Revisione', 'lo stesso nome due volte non fa un secondo cliente',
            f['giulia_righe'], 1)
     _check(r, 'Revisione', 'da Clienti, un nome che sulla chiave coincide con un altro viene aggiunto davvero',
-           f['zoe_da_clienti'], [('Zoë Keller', 'Hauptgasse 4'), ('Zoé Keller', 'Dorfstrasse 1')])
+           f['zoe_da_clienti'], [['Zoë Keller', 'Bahnhofstrasse 4'], ['Zoé Keller', 'Musterweg 3']])
 
     # C1
     status, secondi, bloccato = f['blocco']
