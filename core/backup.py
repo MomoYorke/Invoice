@@ -242,6 +242,75 @@ def archivia_fuori(dest_dir=None, motivo='avvio'):
         return esito
 
 
+def ripristina(path, dest_dir=None):
+    """Rimette l'app com'era in una copia esterna: database, registro delle
+    sedute e i file delle fatture che mancano.
+
+    Prima di toccare qualsiasi cosa si fa una copia dello stato attuale, cosi'
+    anche un ripristino sbagliato si puo' disfare; se quella copia non riesce,
+    non si ripristina. I file delle fatture gia' presenti non si sovrascrivono.
+    Ritorna {ok, errore, fatture, file_rimessi, copia_prima}. Non solleva mai.
+    """
+    dest_dir = dest_dir or DEST_DEFAULT
+    esito = {'ok': False, 'errore': '', 'fatture': 0, 'file_rimessi': 0, 'copia_prima': None}
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            # Tutto in una cartella di lavoro PRIMA di fare la copia dello stato
+            # attuale: sfoltendo le copie vecchie quella che si sta ripristinando
+            # potrebbe sparire proprio adesso.
+            with zipfile.ZipFile(path) as z:
+                rotto = z.testzip()
+                if rotto:
+                    esito['errore'] = f"file danneggiato nell'archivio: {rotto}"
+                    return esito
+                if 'fatture.db' not in z.namelist():
+                    esito['errore'] = "manca il database nell'archivio"
+                    return esito
+                z.extractall(tmp)
+            nuovo_db = os.path.join(tmp, 'fatture.db')
+            k = sqlite3.connect(nuovo_db)
+            try:
+                integro = k.execute('PRAGMA integrity_check').fetchone()[0]
+                n = k.execute('SELECT COUNT(*) FROM invoices WHERE deleted_at IS NULL').fetchone()[0]
+            finally:
+                k.close()
+            if integro != 'ok':
+                esito['errore'] = f'integrity_check: {integro}'
+                return esito
+
+            prima = archivia_fuori(dest_dir, motivo='prima-del-ripristino')
+            if not prima['ok']:
+                esito['errore'] = ('non riesco a salvare lo stato di adesso, e senza non '
+                                   'ripristino: ' + prima['errore'])
+                return esito
+            esito['copia_prima'] = prima['path']
+
+            sorgenti = dict((nome, perc) for perc, nome in _sorgenti())
+            os.makedirs(os.path.dirname(db.DB_PATH), exist_ok=True)
+            shutil.copy2(nuovo_db, db.DB_PATH + '.nuovo')
+            os.replace(db.DB_PATH + '.nuovo', db.DB_PATH)
+            registro = os.path.join(tmp, 'sessions.json')
+            if os.path.isfile(registro):
+                shutil.copy2(registro, sorgenti['sessions.json'] + '.nuovo')
+                os.replace(sorgenti['sessions.json'] + '.nuovo', sorgenti['sessions.json'])
+            radice = os.path.join(tmp, 'Fatture')
+            base = os.path.realpath(sorgenti['Fatture'])
+            for cartella, _dirs, files in os.walk(radice):
+                for f in files:
+                    origine = os.path.join(cartella, f)
+                    dove = os.path.realpath(os.path.join(base, os.path.relpath(origine, radice)))
+                    if not dove.startswith(base + os.sep) or os.path.exists(dove):
+                        continue          # fuori dalla cartella, o gia' li': non si tocca
+                    os.makedirs(os.path.dirname(dove), exist_ok=True)
+                    shutil.copy2(origine, dove)
+                    esito['file_rimessi'] += 1
+        esito.update(ok=True, fatture=n)
+        return esito
+    except Exception as e:
+        esito['errore'] = f'{type(e).__name__}: {e}'
+        return esito
+
+
 def _nomi_in(dest_dir):
     """Cosa c'e' nella cartella, senza mai alzare le mani.
 

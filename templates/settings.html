@@ -310,12 +310,19 @@
 
   {% if copie %}
   <table class="mt">
-    <thead><tr><th>{{ _('Quando') }}</th><th class="num">{{ _('Dimensione') }}</th></tr></thead>
+    <thead><tr><th>{{ _('Quando') }}</th><th class="num">{{ _('Dimensione') }}</th><th></th></tr></thead>
     <tbody>
       {% for c in copie %}
       <tr>
         <td>{{ c.when.strftime('%d.%m.%Y %H:%M') }}</td>
         <td class="num no-blur">{{ (c.size / 1024) | round | int }} KB</td>
+        <td class="num">
+          <form method="post" action="{{ url_for('backup_ripristina') }}" style="display:inline"
+                onsubmit='return confirm({{ _("Tornare a com’era il {data}? Le fatture fatte dopo non ci saranno più, ma prima faccio una copia di come è adesso, e la ritrovi in questa lista.").format(data=c.when.strftime('%d.%m.%Y %H:%M')) | tojson }})'>
+            <input type="hidden" name="copia" value="{{ c.name }}">
+            <button class="btn secondary small" type="submit">{{ _('Ripristina') }}</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>

@@ -2316,6 +2316,28 @@ def impostazioni_logo_rimuovi():
     return redirect(url_for('impostazioni'))
 
 
+@app.route('/impostazioni/ripristina', methods=['POST'])
+def backup_ripristina():
+    """Torna com'era in una copia di sicurezza. Il nome si sceglie fra quelle
+    che ci sono: un percorso scritto a mano non si apre."""
+    dest = _cartella_backup()
+    scelta = request.form.get('copia', '')
+    copia = next((x for x in backup.elenco_esterni(dest) if x['name'] == scelta), None)
+    if copia is None:
+        avvisa('Quella copia non c’è più nella cartella: non ho cambiato niente.', 'error')
+        return redirect(url_for('impostazioni'))
+    esito = backup.ripristina(copia['path'], dest)
+    if esito['ok']:
+        sess.ricarica()
+        avvisa('Ripristinata la copia del {data}: {fatture} fatture, {file} file rimessi al loro '
+               'posto. Lo stato di prima è in una copia nella stessa cartella.', 'ok',
+               data=copia['when'].strftime('%d.%m.%Y %H:%M'), fatture=esito['fatture'],
+               file=esito['file_rimessi'])
+    else:
+        avvisa('Non ho ripristinato niente: {guaio}', 'error', guaio=esito['errore'])
+    return redirect(url_for('impostazioni'))
+
+
 @app.route('/impostazioni/backup-ora', methods=['POST'])
 def backup_ora():
     dest = _cartella_backup()

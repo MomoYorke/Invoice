@@ -800,6 +800,14 @@ TESTI = {
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
         'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'Quella copia non c’è più nella cartella: non ho cambiato niente.':
+            'That copy is no longer in the folder: I changed nothing.',
+        'Ripristinata la copia del {data}: {fatture} fatture, {file} file rimessi al loro posto. Lo stato di prima è in una copia nella stessa cartella.':
+            'Restored the copy of {data}: {fatture} invoices, {file} files put back in place. The state from before is in a copy in the same folder.',
+        'Non ho ripristinato niente: {guaio}':
+            'I restored nothing: {guaio}',
+        'Tornare a com’era il {data}? Le fatture fatte dopo non ci saranno più, ma prima faccio una copia di come è adesso, e la ritrovi in questa lista.':
+            'Go back to how it was on {data}? Invoices made after that will be gone, but first I make a copy of how it is now, and you will find it in this list.',
         'Non la ripristino: il numero #{n} è già usato da un’altra fattura. Se serve, buttala nel Cestino e poi ripristina questa.':
             'I am not restoring it: number #{n} is already used by another invoice. If needed, move that one to the Trash and then restore this one.',
         'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
@@ -2299,6 +2307,14 @@ TESTI = {
             'Kopie der Historie hat NICHT geklappt: {guaio}',
         'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'Quella copia non c’è più nella cartella: non ho cambiato niente.':
+            'Diese Kopie ist nicht mehr im Ordner: ich habe nichts geändert.',
+        'Ripristinata la copia del {data}: {fatture} fatture, {file} file rimessi al loro posto. Lo stato di prima è in una copia nella stessa cartella.':
+            'Die Kopie vom {data} ist wiederhergestellt: {fatture} Rechnungen, {file} Dateien zurückgelegt. Der Stand von vorher liegt als Kopie im selben Ordner.',
+        'Non ho ripristinato niente: {guaio}':
+            'Ich habe nichts wiederhergestellt: {guaio}',
+        'Tornare a com’era il {data}? Le fatture fatte dopo non ci saranno più, ma prima faccio una copia di come è adesso, e la ritrovi in questa lista.':
+            'Zurück zum Stand vom {data}? Rechnungen, die danach gemacht wurden, sind dann weg, aber vorher lege ich eine Kopie vom jetzigen Stand an, die du in dieser Liste wiederfindest.',
         'Non la ripristino: il numero #{n} è già usato da un’altra fattura. Se serve, buttala nel Cestino e poi ripristina questa.':
             'Ich stelle sie nicht wieder her: die Nummer #{n} wird bereits von einer anderen Rechnung verwendet. Falls nötig, lege jene in den Papierkorb und stelle dann diese wieder her.',
         'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
