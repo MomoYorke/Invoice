@@ -993,6 +993,12 @@ def fattura_email(inv_id):
             con.execute('SELECT description FROM items WHERE invoice_id=? ORDER BY pos', (inv_id,))]
     settings = db.get_settings(con)
     altre = _fatture_allegabili(con, inv)
+    # le fatture dello stesso cliente stanno a vista; quelle di altri clienti in un
+    # riquadro a parte: un clic sbagliato lì manderebbe a uno i dati di un altro
+    altre_stesse = [a for a in altre if (a['client_id'] == inv['client_id'] if inv['client_id']
+                                         else a['client_name'] == inv['client_name'])]
+    altre_altri = [a for a in altre if a not in altre_stesse]
+    posta_pronta = mailer.configurata(settings)
 
     f = request.form
     scelte = [int(x) for x in f.getlist('allega') if x.isdigit()]
@@ -1023,7 +1029,9 @@ def fattura_email(inv_id):
 
     def pagina():
         return render_template('email.html', inv=inv, cli=cli, msg=msg, settings=settings,
-                               altre=altre, scelte=scelte, modelli=mailer.MODELLI,
+                               altre_stesse=altre_stesse, altre_altri=altre_altri,
+                               posta_pronta=posta_pronta,
+                               scelte=scelte, modelli=mailer.MODELLI,
                                oggetti=oggetti, segnaposto_mese=mailer.SEGNAPOSTO_MESE,
                                corpo=corpo if corpo is not None
                                else mailer.testo_modello(settings, msg['modello'],
@@ -1033,6 +1041,12 @@ def fattura_email(inv_id):
         pausa = _pausa_smtp(settings)
         if pausa:
             flash(pausa, 'error')
+            con.close()
+            return pagina()
+        if not posta_pronta:
+            avvisa('La posta non è ancora collegata: vai in Impostazioni e poi riprova. '
+                   'Intanto il PDF della fattura lo puoi mandare dal tuo programma di posta.',
+                   'error')
             con.close()
             return pagina()
         if msg['problemi']:

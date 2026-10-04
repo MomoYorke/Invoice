@@ -213,7 +213,7 @@ def salute(con, settings, cartella_backup=None, lingua=None):
         aggiungi(t('Estratto conto'), t('mai letto'),
                  t('Scarica i movimenti dall’e-banking e mettili in «{cartella}».',
                    cartella=os.path.basename(_cartella_estratti())),
-                 GIALLO)
+                 VERDE)               # e' un'offerta, non un guaio: la Banca e' facoltativa
     else:
         try:
             giorni = (datetime.date.today()
@@ -458,7 +458,9 @@ def da_fare(con, settings, registro=None, cartella_backup=None):
             'link': ('controlli', {}),
         })
 
-    vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'), lg)
+    da_incassare = con.execute("SELECT 1 FROM invoices WHERE deleted_at IS NULL "
+                               "AND status<>'pagata' LIMIT 1").fetchone() is not None
+    vecchio = _estratto_vecchio(settings.get('banca_ultimo_estratto'), lg, da_incassare)
     if vecchio:
         voci.append({
             'chiave': 'estratto', 'icona': 'banca',
@@ -524,9 +526,16 @@ def _sedute_in_piu(registro, oggi=None):
         return []          # i crediti non devono poter spegnere la Dashboard
 
 
-def _estratto_vecchio(ultimo, lg=None):
-    """Da quanto l'app non sa piu' chi ti ha pagato. '' se e' aggiornato."""
+def _estratto_vecchio(ultimo, lg=None, da_incassare=False):
+    """Da quanto l'app non sa piu' chi ti ha pagato. '' se e' aggiornato.
+
+    Se non e' mai stato caricato un estratto, il promemoria ha senso solo se c'e'
+    qualcosa da incassare: su un'app appena nata, o per chi non usa la Banca e
+    segna i pagamenti a mano, sarebbe una voce che non si puo' mai spuntare, e
+    chi impara a ignorarne una ignora anche le altre."""
     if not ultimo:
+        if not da_incassare:
+            return ''
         return L.t("non ne hai ancora caricato nessuno: l'app non sa chi ti ha pagato", lg)
     try:
         giorni = (datetime.date.today() - datetime.date.fromisoformat(ultimo)).days

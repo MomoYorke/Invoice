@@ -4,6 +4,15 @@
 <h1>{{ _('Manda la fattura #{n}').format(n=inv.number) }}</h1>
 <p class="sub">{{ inv.client_name }} — {{ inv.date | dateit }} — <span class="money">{{ inv.total_cents | chf }}</span></p>
 
+{% if not posta_pronta %}
+<div class="panel" style="border-color:#f59e0b;background:#fffbeb;max-width:760px">
+  <p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }} {{ _('La posta non è ancora collegata, quindi da qui non si può mandare niente.') }}</p>
+  <p class="muted" style="font-size:13px;margin-bottom:0">
+    {{ _('La colleghi in {impostazioni}. Nel frattempo apri il PDF dalla fattura e mandalo col tuo programma di posta.').format(
+       impostazioni='<a href="%s">%s</a>' % (url_for('impostazioni'), _('Impostazioni'))) | safe }}</p>
+</div>
+{% endif %}
+
 {% if msg.problemi %}
 <div class="panel" style="border-color:#f59e0b;background:#fffbeb;max-width:760px">
   {% for p in msg.problemi %}<p style="margin:4px 0">{{ icona('avviso', 'ic-mini') }} {{ p }}</p>{% endfor %}
@@ -89,11 +98,12 @@
     {{ _('Allegati:') }} {% for a in msg.allegati %}<strong>{{ a.split('/')|last }}</strong>{% if not loop.last %}, {% endif %}{% else %}<em>{{ _('nessuno') }}</em>{% endfor %}
   </p>
 
-  {% if altre %}
+  {% if altre_stesse or altre_altri %}
   <div class="mt" style="border-top:1px solid var(--line);padding-top:12px">
+    {% if altre_stesse %}
     <fieldset class="gruppo">
-    <legend class="etichetta" style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente?') }}</legend>
-    {% for a in altre %}
+    <legend class="etichetta" style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?') }}</legend>
+    {% for a in altre_stesse %}
     <label style="display:block;font-weight:400">
       <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
              {{ 'checked' if a.id in scelte }}>
@@ -102,6 +112,22 @@
     </label>
     {% endfor %}
     </fieldset>
+    {% endif %}
+    {% if altre_altri %}
+    <details class="mt" {{ 'open' if altre_altri | selectattr('id', 'in', scelte) | list }}>
+      <summary>{{ _('Fatture di altri clienti (per esempio marito e moglie)') }}</summary>
+      <p class="muted" style="font-size:12.5px">{{ icona('avviso', 'ic-mini') }} {{ _('Attenzione: chi riceve la mail vedrebbe la fattura di un’altra persona. Spunta solo se è davvero giusto.') }}</p>
+      {% for a in altre_altri %}
+      <label style="display:block;font-weight:400">
+        <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
+               {{ 'checked' if a.id in scelte }}
+               onclick='if (this.checked && !confirm({{ _("Allegare la fattura di {nome} alla mail di {cliente}? Il cliente la vedrebbe.").format(nome=a.client_name, cliente=inv.client_name) | tojson }})) return false;'>
+        #{{ a.number }} — {{ a.client_name }} — <span class="money">{{ a.total_cents | chf(false) }}</span>
+        <span class="muted">({{ a.date | dateit }})</span>
+      </label>
+      {% endfor %}
+    </details>
+    {% endif %}
     <button class="btn small secondary mt" name="azione" value="rigenera" type="submit">
       {{ _('Aggiorna allegati e riscrivi il testo') }}
     </button>
@@ -111,12 +137,16 @@
   {% endif %}
 
   <div class="mt" style="border-top:1px solid var(--line);padding-top:14px">
-    <button class="btn secondary" name="azione" value="prova" type="submit">
-      {{ _('Prova su di me ({dove})').format(dove=settings.email_test_to) }}
+    {% set dove = settings.email_test_to or settings.smtp_user %}
+    {% if dove %}
+    <button class="btn secondary" name="azione" value="prova" type="submit"
+            {{ 'disabled' if not posta_pronta }}>
+      {{ _('Prova su di me ({dove})').format(dove=dove) }}
     </button>
+    {% endif %}
     <button class="btn" name="azione" value="invia" type="submit"
             onclick='return confirm({{ _("Mandare davvero a {a}?").format(a=msg.to) | tojson }})'
-            {{ 'disabled' if msg.problemi }}>
+            {{ 'disabled' if msg.problemi or not posta_pronta }}>
       {{ _('Invia a {chi}').format(chi=cli.name if cli else inv.client_name) }}
     </button>
     <a class="btn small secondary" href="{{ url_for('fattura', inv_id=inv.id) }}">{{ _('Torna alla fattura') }}</a>

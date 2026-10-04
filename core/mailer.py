@@ -332,6 +332,18 @@ def _nascondi(testo, settings):
     return testo.replace(pw, '********') if pw else testo
 
 
+def configurata(settings):
+    """Vero se la posta e' pronta per spedire: server, utente e password.
+
+    Su un'app appena installata non lo e' mai, e la pagina dell'email non deve
+    far credere di si': un tasto Invia acceso che da' un errore al clic, e lo
+    scrive pure fra i guasti, e' il modo piu' rapido di far pensare che l'app
+    non funzioni."""
+    return bool((settings.get('smtp_host') or '').strip()
+                and (settings.get('smtp_user') or '').strip()
+                and (settings.get('smtp_pass') or ''))
+
+
 def spedisci(msg, settings, destinatario=None):
     """Manda davvero.
 

@@ -800,6 +800,20 @@ TESTI = {
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
         'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'La posta non è ancora collegata: vai in Impostazioni e poi riprova. Intanto il PDF della fattura lo puoi mandare dal tuo programma di posta.':
+            'The mail is not connected yet: go to Settings and try again. Meanwhile you can send the invoice PDF from your own mail program.',
+        'La posta non è ancora collegata, quindi da qui non si può mandare niente.':
+            'The mail is not connected yet, so nothing can be sent from here.',
+        'La colleghi in {impostazioni}. Nel frattempo apri il PDF dalla fattura e mandalo col tuo programma di posta.':
+            'You connect it in {impostazioni}. Meanwhile open the PDF from the invoice and send it with your own mail program.',
+        'Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?':
+            'Do you want to attach another recent invoice of this client to the same mail?',
+        'Fatture di altri clienti (per esempio marito e moglie)':
+            'Invoices of other clients (for example husband and wife)',
+        'Attenzione: chi riceve la mail vedrebbe la fattura di un’altra persona. Spunta solo se è davvero giusto.':
+            'Careful: whoever receives the mail would see another person’s invoice. Tick only if it is really right.',
+        'Allegare la fattura di {nome} alla mail di {cliente}? Il cliente la vedrebbe.':
+            'Attach the invoice of {nome} to the mail of {cliente}? The client would see it.',
         'Quella copia non c’è più nella cartella: non ho cambiato niente.':
             'That copy is no longer in the folder: I changed nothing.',
         'Ripristinata la copia del {data}: {fatture} fatture, {file} file rimessi al loro posto. Lo stato di prima è in una copia nella stessa cartella.':
@@ -2307,6 +2321,20 @@ TESTI = {
             'Kopie der Historie hat NICHT geklappt: {guaio}',
         'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'La posta non è ancora collegata: vai in Impostazioni e poi riprova. Intanto il PDF della fattura lo puoi mandare dal tuo programma di posta.':
+            'Die Mail ist noch nicht verbunden: geh in die Einstellungen und versuche es dann noch einmal. Das PDF der Rechnung kannst du inzwischen mit deinem eigenen Mailprogramm schicken.',
+        'La posta non è ancora collegata, quindi da qui non si può mandare niente.':
+            'Die Mail ist noch nicht verbunden, von hier aus kann also nichts verschickt werden.',
+        'La colleghi in {impostazioni}. Nel frattempo apri il PDF dalla fattura e mandalo col tuo programma di posta.':
+            'Du verbindest sie in den {impostazioni}. Öffne inzwischen das PDF der Rechnung und schick es mit deinem Mailprogramm.',
+        'Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?':
+            'Möchtest du in derselben Mail noch eine weitere aktuelle Rechnung dieses Kunden anhängen?',
+        'Fatture di altri clienti (per esempio marito e moglie)':
+            'Rechnungen anderer Kunden (zum Beispiel Ehepaar)',
+        'Attenzione: chi riceve la mail vedrebbe la fattura di un’altra persona. Spunta solo se è davvero giusto.':
+            'Achtung: Wer die Mail erhält, sähe die Rechnung einer anderen Person. Nur ankreuzen, wenn es wirklich stimmt.',
+        'Allegare la fattura di {nome} alla mail di {cliente}? Il cliente la vedrebbe.':
+            'Die Rechnung von {nome} an die Mail von {cliente} anhängen? Der Kunde würde sie sehen.',
         'Quella copia non c’è più nella cartella: non ho cambiato niente.':
             'Diese Kopie ist nicht mehr im Ordner: ich habe nichts geändert.',
         'Ripristinata la copia del {data}: {fatture} fatture, {file} file rimessi al loro posto. Lo stato di prima è in una copia nella stessa cartella.':
