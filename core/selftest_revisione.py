@@ -208,6 +208,10 @@ def _fatti():
                INVOICE_STATEMENTS=os.path.join(dati, 'estratti'),
                INVOICE_BACKUP=os.path.join(dati, 'backup'),
                INVOICE_LOGO=os.path.join(dati, 'logo.png'), INVOICE_PORT='8498')
+    # un registro vuoto di partenza: senza, l'app ne crea uno dal file di
+    # partenza che sta nella cartella (lo storico vero, in quella viva)
+    with io.open(env['INVOICE_SESSIONS'], 'w', encoding='utf-8') as f:
+        json.dump({'generato': '2026-10-04', 'pacchetti': [], 'esclusi': [], 'prepagate': {}}, f)
     esito = subprocess.run(
         [sys.executable, '-c', 'from core import selftest_revisione as X; X._scenario()'],
         cwd=BASE, env=env, capture_output=True, text=True, timeout=240)
