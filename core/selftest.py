@@ -113,7 +113,7 @@ def run_all():
         _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
-        _test_registro_avvio, _test_batteria_regge,
+        _test_registro_avvio, _test_batteria_regge, _test_revisione,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -143,6 +143,11 @@ def _esegui_famiglie(r, famiglie):
                       'la famiglia «%s» si è fermata a metà: le prove dopo il '
                       'guasto non sono state fatte' % nome,
                       False, '%s: %s' % (type(guaio).__name__, guaio)))
+
+
+def _test_revisione(r):
+    from . import selftest_revisione
+    selftest_revisione._test_revisione(r)
 
 
 def _test_registro_avvio(r):
