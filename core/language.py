@@ -19,6 +19,8 @@ quando una traduzione manca esce l'italiano. Una pagina con una frase nella
 lingua sbagliata si usa lo stesso; una piena di sigle no.
 """
 
+import sys
+
 LINGUE = (('it', 'Italiano'), ('en', 'English'), ('de', 'Deutsch'))
 CODICI = tuple(c for c, _n in LINGUE)
 PREDEFINITA = 'it'
@@ -29,11 +31,34 @@ def normalizza(codice):
     return codice if codice in CODICI else PREDEFINITA
 
 
-def t(frase, lingua=None):
+# Parole che hanno senso solo su un Mac. L'app ha una frase sola per tutti i
+# sistemi: su un altro sistema la parola si cambia al momento di mostrarla,
+# cosi' chi usa Windows non legge di un «Finder» che non ha.
+_SENZA_MAC = {
+    'it': (('nel Finder', 'in Esplora file'), ('sul tuo Mac', 'sul tuo computer'),
+           ('questo Mac', 'questo computer'), ('dal Mac', 'dal computer')),
+    'en': (('in Finder', 'in File Explorer'), ('off this Mac', 'off this computer'),
+           ('off the Mac', 'off the computer'), ('your Mac', 'your computer'),
+           ('this Mac', 'this computer')),
+    'de': (('im Finder', 'im Explorer'), ('Im Finder', 'Im Explorer'),
+           ('ausserhalb des Macs', 'ausserhalb des Computers'),
+           ('deinem Mac', 'deinem Computer'), ('diesem Mac', 'diesem Computer')),
+}
+
+
+def _per_il_sistema(testo, lingua, sistema=None):
+    if (sistema or sys.platform) == 'darwin':
+        return testo
+    for da, a in _SENZA_MAC.get(lingua or PREDEFINITA, ()):
+        testo = testo.replace(da, a)
+    return testo
+
+
+def t(frase, lingua=None, sistema=None):
     """La frase nella lingua chiesta, o in italiano se non c'e'."""
     if not lingua or lingua == PREDEFINITA:
-        return frase
-    return TESTI.get(lingua, {}).get(frase, frase)
+        return _per_il_sistema(frase, PREDEFINITA, sistema)
+    return _per_il_sistema(TESTI.get(lingua, {}).get(frase, frase), lingua, sistema)
 
 
 def mancanti(lingua):
@@ -2455,7 +2480,7 @@ TESTI = {
         "Serve a due cose: la Dashboard raggruppa il fatturato per servizio, e l'email nomina il servizio giusto. Finché è vuoto l'app non prova a indovinare: mette tutto in «Altro» e nell'email non lo nomina.":
             'Gut für zwei Dinge: die Übersicht gruppiert den Umsatz nach Dienstleistung, und die E-Mail nennt die richtige. Solange es leer ist, rät die App nicht: sie legt alles unter «Anderes» und nennt es in der E-Mail nicht.',
         'Scrivi i tuoi servizi': 'Deine Dienstleistungen eintragen',
-        'La posta': 'Die Post',
+        'La posta': 'Die E-Mail',
         "Serve solo se vuoi spedire le fatture dall'app invece di allegarle a mano.":
             'Nur nötig, wenn du die Rechnungen aus der App verschicken willst, statt sie von Hand anzuhängen.',
         'Collega la casella': 'Postfach verbinden',
@@ -2796,7 +2821,7 @@ TESTI = {
             'Ab dann weiss die App nicht, wer dich bezahlt hat: lad einen neuen herunter.',
         'I versamenti fino a quella data sono stati esaminati.':
             'Die Zahlungen bis zu diesem Datum sind geprüft.',
-        'Posta': 'Post',
+        'Posta': 'E-Mail',
         'senza password': 'ohne Passwort',
         'Le fatture non possono partire finché manca in Impostazioni.':
             'Rechnungen können nicht rausgehen, solange es in den Einstellungen fehlt.',

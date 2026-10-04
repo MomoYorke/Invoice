@@ -494,8 +494,10 @@ def _crea_fattura(con):
                    'oppure aggiungi qualcosa al nome per distinguerli.', 'error', nome=name)
             return redirect(url_for('nuova'))
         cur = con.execute(
-            'INSERT INTO clients(key, name, address1, address2, file_label) VALUES(?,?,?,?,?) '
-            'RETURNING id', (_chiave_libera(con, name), name, a1, a2, name))
+            'INSERT INTO clients(key, name, address1, address2, file_label, lingua) '
+            'VALUES(?,?,?,?,?,?) RETURNING id',
+            (_chiave_libera(con, name), name, a1, a2, name,
+             lng.normalizza_doc(db.get_settings(con).get('lingua'))))
         client_id = cur.fetchone()['id']
     client = con.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     if not client:
@@ -1404,12 +1406,14 @@ def cliente_nuovo():
                'oppure aggiungi qualcosa al nome per distinguerli.', 'error', nome=name)
         return redirect(url_for('clienti'))
     compleanno, perche = birthdays.leggi_compleanno(f.get('compleanno'))
+    # i documenti del cliente nuovo escono nella lingua dell'app, non per forza in
+    # inglese: chi compra l'app in italiano non vuole fatture inglesi senza averlo chiesto
     con.execute('INSERT INTO clients(key,name,address1,address2,file_label,email,'
-                'compleanno) VALUES(?,?,?,?,?,?,?)',
+                'compleanno,lingua) VALUES(?,?,?,?,?,?,?,?)',
                 (_chiave_libera(con, name), name, f.get('address1', '').strip(),
                  f.get('address2', '').strip(),
                  f.get('file_label', '').strip() or name, f.get('email', '').strip(),
-                 compleanno or ''))
+                 compleanno or '', lng.normalizza_doc(db.get_settings(con).get('lingua'))))
     con.commit()
     con.close()
     if perche:

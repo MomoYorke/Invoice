@@ -85,6 +85,25 @@ def _scenario_ripristino():
     print(MARCA + json.dumps(fatti))
 
 
+def _scenario_lingua_clienti():
+    """Un cliente nuovo riceve i documenti nella lingua dell'app, non per forza in inglese."""
+    import app as APP
+    from core import db as D
+    con = D.init()
+    D.set_setting(con, 'lingua', 'de')
+    con.commit()
+    con.close()
+    c = APP.app.test_client()
+    c.post('/cliente/nuovo', data={'name': 'Giulia Ferrari', 'address1': 'Musterstrasse 1'})
+    c.post('/nuova', data={'nuovo_cliente': '1', 'nc_nome': 'Marco Neri', 'nc_indirizzo1': 'Musterweg 3',
+                           'nc_indirizzo2': '8000 Zürich', 'data': '2026-10-04',
+                           'desc_0': 'Seduta', 'tot_0': '100'})
+    k = D.connect()
+    fatti = {r['name']: r['lingua'] for r in k.execute('SELECT name, lingua FROM clients')}
+    k.close()
+    print(MARCA + json.dumps(fatti))
+
+
 def _scenario_email():
     from html.parser import HTMLParser
     import app as APP
@@ -175,11 +194,38 @@ def _prove_pagine_vuote(r):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _prove_lingue(r):
+    """Il tedesco e la piattaforma: quello che legge chi non ha un Mac."""
+    import re
+    from . import language as L
+    from .selftest import _check
+    _check(r, 'Vendibile', 'in tedesco la posta elettronica non è «Die Post» (la posta svizzera)',
+           (L.TESTI['de']['La posta'], L.TESTI['de']['Posta']), ('Die E-Mail', 'E-Mail'))
+    _check(r, 'Vendibile', 'sul Mac «Finder» e «Mac» restano come sono',
+           (L.t('Mostra nel Finder', 'it', 'darwin'), L.t('Mostra nel Finder', 'de', 'darwin')),
+           ('Mostra nel Finder', 'Im Finder anzeigen'))
+    _check(r, 'Vendibile', 'su Windows il Finder diventa Esplora file, in tutte e tre le lingue',
+           (L.t('Mostra nel Finder', 'it', 'win32'), L.t('Mostra nel Finder', 'en', 'win32'),
+            L.t('Mostra nel Finder', 'de', 'win32')),
+           ('Mostra in Esplora file', 'Show in File Explorer', 'Im Explorer anzeigen'))
+    rimasti = []
+    for lingua in ('it', 'en', 'de'):
+        for chiave in L.TESTI['en']:
+            fuori = L.t(chiave, lingua, 'win32')
+            if re.search(r'\bMacs?\b|Finder', fuori):
+                rimasti.append((lingua, fuori[:50]))
+    _check(r, 'Vendibile', 'su Windows nessuna frase parla di Mac o di Finder', rimasti, [])
+
+
 def _test_vendibile(r):
     from .selftest import _check
     from .selftest_revisione import _fatti
     _prove_pagine_vuote(r)
+    _prove_lingue(r)
     f = _fatti('selftest_vendibile', '_scenario_ripristino')
+    lc = _fatti('selftest_vendibile', '_scenario_lingua_clienti')
+    _check(r, 'Vendibile', 'un cliente nuovo riceve i documenti nella lingua dell’app (qui tedesco)',
+           (lc.get('Giulia Ferrari'), lc.get('Marco Neri')), ('de', 'de'))
     e = _fatti('selftest_vendibile', '_scenario_email')
     _check(r, 'Vendibile', 'senza posta configurata Invia è spento, e niente «()» vuoto',
            e['senza_posta'], {'invia_spento': True, 'prova_assente_o_spenta': True,
