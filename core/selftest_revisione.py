@@ -194,7 +194,7 @@ def _scenario():
     print(MARCA + json.dumps(fatti))
 
 
-def _fatti():
+def _fatti(modulo='selftest_revisione', funzione='_scenario'):
     tmp = tempfile.mkdtemp(prefix='prova-revisione-')
     env = dict(os.environ)
     for chiave in [k for k in env if k.startswith('INVOICE_') or k.startswith('FATTURE_')]:
@@ -213,7 +213,7 @@ def _fatti():
     with io.open(env['INVOICE_SESSIONS'], 'w', encoding='utf-8') as f:
         json.dump({'generato': '2026-10-04', 'pacchetti': [], 'esclusi': [], 'prepagate': {}}, f)
     esito = subprocess.run(
-        [sys.executable, '-c', 'from core import selftest_revisione as X; X._scenario()'],
+        [sys.executable, '-c', 'from core import %s as X; X.%s()' % (modulo, funzione)],
         cwd=BASE, env=env, capture_output=True, text=True, timeout=240)
     for riga in esito.stdout.splitlines():
         if riga.startswith(MARCA):

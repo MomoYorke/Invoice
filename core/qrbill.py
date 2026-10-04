@@ -28,6 +28,8 @@ che lo standard permette, invece di indovinarlo.
 """
 import re
 
+from . import caratteri
+
 # I tre tipi di riferimento, con i nomi che vanno scritti nel codice
 QRR, SCOR, NON = 'QRR', 'SCOR', 'NON'
 
@@ -368,15 +370,15 @@ def _blocco(c, x, y, titolo, righe, dim_titolo, dim_testo, larghezza):
     chi chiama impila i blocchi senza contare le righe.
     """
     from reportlab.lib.units import mm
-    c.setFont('Helvetica-Bold', dim_titolo)
+    c.setFont(caratteri.BOLD, dim_titolo)
     c.drawString(x * mm, y * mm, titolo)
     # l'etichetta sta ATTACCATA a cio' che spiega, non a mezza via fra il suo
     # contenuto e il blocco di sopra: lo stacco sotto e' solo un respiro
     y -= dim_titolo * 0.3 * PT
-    c.setFont('Helvetica', dim_testo)
+    c.setFont(caratteri.REG, dim_testo)
     passo = dim_testo * 1.2 * PT
     for riga in righe:
-        for pezzo in _spezza(riga, 'Helvetica', dim_testo, larghezza, c):
+        for pezzo in _spezza(riga, caratteri.REG, dim_testo, larghezza, c):
             y -= passo
             c.drawString(x * mm, y * mm, pezzo)
     return y
@@ -525,7 +527,7 @@ def disegna_su(c, largh_pagina, iban, creditore_nome, creditore_ind,
     STACCO_R, STACCO_P = 4.6, 5.7
 
     # ------------------------------------------------------- la ricevuta
-    c.setFont('Helvetica-Bold', 11)
+    c.setFont(caratteri.BOLD, 11)
     c.drawString(MARGINE * mm, 96 * mm, E['ricevuta'])
     y = _blocco(c, MARGINE, 88, E['conto'], conto, 6, 8, 52)
     if riferimento:
@@ -534,32 +536,32 @@ def disegna_su(c, largh_pagina, iban, creditore_nome, creditore_ind,
     if pagante:
         _blocco(c, MARGINE, y - STACCO_R, E['pagabile'], pagante, 6, 8, 52)
     else:
-        c.setFont('Helvetica-Bold', 6)
+        c.setFont(caratteri.BOLD, 6)
         c.drawString(MARGINE * mm, (y - STACCO_R) * mm, E['pagabile_vuoto'])
         # il fondo del campo e' fisso: sotto ci sono valuta e importo, e un
         # riquadro che ci finisce sopra si stampa addosso alle cifre
         alto = y - STACCO_R - 2
         _angoli(c, MARGINE, 41, 52, alto - 41)
 
-    c.setFont('Helvetica-Bold', 6)
+    c.setFont(caratteri.BOLD, 6)
     c.drawString(MARGINE * mm, 37 * mm, E['valuta'])
     c.drawString((MARGINE + 12) * mm, 37 * mm, E['importo'])
-    c.setFont('Helvetica', 8)
+    c.setFont(caratteri.REG, 8)
     c.drawString(MARGINE * mm, 33 * mm, moneta)
     c.drawString((MARGINE + 12) * mm, 33 * mm, _importo_scritto(importo_cents))
-    c.setFont('Helvetica-Bold', 6)
+    c.setFont(caratteri.BOLD, 6)
     c.drawRightString((RICEVUTA_W - MARGINE) * mm, 21 * mm, E['accettazione'])
 
     # ------------------------------------------- la sezione di pagamento
     sx = RICEVUTA_W + MARGINE                     # margine sinistro della sezione
-    c.setFont('Helvetica-Bold', 11)
+    c.setFont(caratteri.BOLD, 11)
     c.drawString(sx * mm, 96 * mm, E['sezione'])
     disegna_qr(c, testo_qr, sx, 42)
 
-    c.setFont('Helvetica-Bold', 8)
+    c.setFont(caratteri.BOLD, 8)
     c.drawString(sx * mm, 37 * mm, E['valuta'])
     c.drawString((sx + 20) * mm, 37 * mm, E['importo'])
-    c.setFont('Helvetica', 10)
+    c.setFont(caratteri.REG, 10)
     c.drawString(sx * mm, 32 * mm, moneta)
     c.drawString((sx + 20) * mm, 32 * mm, _importo_scritto(importo_cents))
 
@@ -577,7 +579,7 @@ def disegna_su(c, largh_pagina, iban, creditore_nome, creditore_ind,
     if pagante:
         _blocco(c, dx, y - STACCO_P, E['pagabile'], pagante, 8, 10, INFO_W)
     else:
-        c.setFont('Helvetica-Bold', 8)
+        c.setFont(caratteri.BOLD, 8)
         c.drawString(dx * mm, (y - STACCO_P) * mm, E['pagabile_vuoto'])
         _angoli(c, dx, y - STACCO_P - 28, 65, 25)
     c.restoreState()

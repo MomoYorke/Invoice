@@ -179,7 +179,7 @@ def _traduci_etichette(d, lingua):
 
 def build_docx(out_path, number, date_str, client_name, addr_lines, items, total_cents,
                settings=None, lingua=None):
-    """items: lista di dict {qty, description, unit_cents, total_cents} (max 8 righe)."""
+    """items: lista di dict {qty, description, unit_cents, total_cents} (quante servono: il modello ne ha otto, le altre si aggiungono)."""
     d = Document(TEMPLATE)
     _traduci_etichette(d, lingua)
     _scrivi_intestazione(d, settings, lingua)
@@ -209,7 +209,15 @@ def build_docx(out_path, number, date_str, client_name, addr_lines, items, total
             _set_paragraph_text(Paragraph(new_p, rcell.paragraphs[0]._parent), line)
     # righe articolo
     table = d.tables[2]
-    for i, it in enumerate(items[:8]):
+    # il modello ha otto righe: per averne di piu' si copia l'ultima, con la sua
+    # forma, tante volte quante servono. Prima le righe oltre l'ottava
+    # restavano fuori dal Word.
+    ultima = table.rows[8]._tr
+    for _ in range(max(0, len(items) - 8)):
+        nuova = deepcopy(ultima)
+        ultima.addnext(nuova)
+        ultima = nuova
+    for i, it in enumerate(items):
         row = table.rows[1 + i]
         _set_cell(row.cells[0], str(it['qty']))
         _set_cell(row.cells[1], it['description'])

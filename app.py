@@ -1150,6 +1150,17 @@ def cestino_ripristina(inv_id):
     if not inv or not inv['deleted_at']:
         con.close()
         abort(404)
+    # Il numero di una fattura buttata si puo' riusare, e a quel punto un'altra
+    # fattura attiva lo porta: riportarla indietro darebbe due fatture con lo
+    # stesso numero (e gli stessi file). Si rifiuta, e non si cambia niente.
+    altra = con.execute('SELECT id FROM invoices WHERE number=? AND deleted_at IS NULL AND id<>?',
+                        (inv['number'], inv_id)).fetchone()
+    if altra:
+        con.close()
+        avvisa('Non la ripristino: il numero #{n} è già usato da un’altra fattura. '
+               'Se serve, buttala nel Cestino e poi ripristina questa.', 'error',
+               n=inv['number'])
+        return redirect(url_for('cestino'))
     # rimetto i file al loro posto
     restored = 0
     for p in (inv['docx_path'], inv['pdf_path']):

@@ -114,7 +114,7 @@ def run_all():
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
-        _test_revisione_crediti,
+        _test_revisione_crediti, _test_revisione_documento,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -154,6 +154,11 @@ def _test_revisione(r):
 def _test_revisione_crediti(r):
     from . import selftest_revisione_crediti
     selftest_revisione_crediti._test_revisione_crediti(r)
+
+
+def _test_revisione_documento(r):
+    from . import selftest_revisione_documento
+    selftest_revisione_documento._test_revisione_documento(r)
 
 
 def _test_registro_avvio(r):

@@ -23,6 +23,7 @@ from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle, Paragraph,
 from reportlab.lib.styles import getSampleStyleSheet
 
 from . import stats
+from . import caratteri
 from . import language as L
 from .money import fmt_chf
 
@@ -194,11 +195,11 @@ def build_summary_pdf(con, year, out_path, settings, lingua=None):
     data.append(['', '', t('TOTALE'), fmt_chf(total), ''])
     tabella = Table(data, colWidths=[1.6 * cm, 2.6 * cm, 6.4 * cm, 3.6 * cm, 2.4 * cm], repeatRows=1)
     tabella.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
+        ('FONT', (0, 0), (-1, 0), caratteri.BOLD, 9),
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E5F')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
-        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 9),
+        ('FONT', (0, 1), (-1, -1), caratteri.REG, 9),
+        ('FONT', (0, -1), (-1, -1), caratteri.BOLD, 9),
         ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#BBBBBB')),
         ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#F3F6F8')]),
@@ -211,9 +212,9 @@ def build_summary_pdf(con, year, out_path, settings, lingua=None):
     md.append([t('TOTALE'), fmt_chf(sum(months))])
     tabella_mesi = Table(md, colWidths=[4 * cm, 4 * cm])
     tabella_mesi.setStyle(TableStyle([
-        ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 9),
-        ('FONT', (0, 1), (-1, -1), 'Helvetica', 9),
-        ('FONT', (0, -1), (-1, -1), 'Helvetica-Bold', 9),
+        ('FONT', (0, 0), (-1, 0), caratteri.BOLD, 9),
+        ('FONT', (0, 1), (-1, -1), caratteri.REG, 9),
+        ('FONT', (0, -1), (-1, -1), caratteri.BOLD, 9),
         ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#BBBBBB')),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
     ]))

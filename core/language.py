@@ -800,6 +800,8 @@ TESTI = {
         'Copia dello storico NON riuscita: {guaio}': 'Copy of the history did NOT work: {guaio}',
         'Storico: {nota}': 'History: {nota}',
         'Nome del nuovo cliente mancante.': 'Name of the new client missing.',
+        'Non la ripristino: il numero #{n} è già usato da un’altra fattura. Se serve, buttala nel Cestino e poi ripristina questa.':
+            'I am not restoring it: number #{n} is already used by another invoice. If needed, move that one to the Trash and then restore this one.',
         'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
             'Invoice #{numero} takes the place of #{vecchia} (in the Trash): the package {pid} of {nome} stays as it is, with no extra sessions.',
         'Non ho cambiato niente: quel pacchetto o quel mese è già chiuso.':
@@ -2297,6 +2299,8 @@ TESTI = {
             'Kopie der Historie hat NICHT geklappt: {guaio}',
         'Storico: {nota}': 'Historie: {nota}',
         'Nome del nuovo cliente mancante.': 'Name des neuen Kunden fehlt.',
+        'Non la ripristino: il numero #{n} è già usato da un’altra fattura. Se serve, buttala nel Cestino e poi ripristina questa.':
+            'Ich stelle sie nicht wieder her: die Nummer #{n} wird bereits von einer anderen Rechnung verwendet. Falls nötig, lege jene in den Papierkorb und stelle dann diese wieder her.',
         'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto {pid} di {nome} resta com’è, senza altre sedute.':
             'Rechnung #{numero} ersetzt die #{vecchia} (im Papierkorb): das Paket {pid} von {nome} bleibt, wie es ist, ohne zusätzliche Einheiten.',
         'Non ho cambiato niente: quel pacchetto o quel mese è già chiuso.':
