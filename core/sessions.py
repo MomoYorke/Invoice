@@ -597,7 +597,7 @@ def sedute_della_riga(servizio, qty, total_cents=None):
             # a prezzo: il punto di parita' e' la media geometrica dei due,
             # cioe' prezzo/sqrt(n); senza radici e senza float, al quadrato:
             # totale² × n < prezzo² × qty²
-            if total_cents ** 2 * n < prezzo ** 2 * qty ** 2:
+            if total_cents ** 2 * n < prezzo ** 2 * q ** 2:
                 return int(q)
         elif q == n:
             return n

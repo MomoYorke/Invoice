@@ -422,10 +422,13 @@ def proposta(con, client_id, servizio):
 
     Il prezzo e' quello dell'ultima riga di quel servizio fatturata a quel
     cliente, cercata per id e non per nome; se non c'e', il prezzo del servizio.
-    La quantita' e' sempre 1: un pacchetto scritto «12 × 150.-» si ripropone
-    come «1 × 150.- = 1'800.-», che e' un pacchetto solo. Il testo e' il nome
-    del servizio; per un servizio «ogni mese» gia' fatturato, l'ultima riga con
-    il periodo spostato avanti di un mese."""
+    La quantita' e' sempre 1 e il prezzo e' quello di UNO: un pacchetto scritto
+    «12 × 150.-» si ripropone come «1 × 1'800.-». La riga proposta deve tornare
+    da sola (quantita' × prezzo = totale): «1 × 150.-» con totale 1'800.-
+    tornava solo finche' nessuno toccava il totale, e svuotato usciva una
+    fattura da 150 franchi. Il testo e' il nome del servizio; per un servizio
+    «ogni mese» gia' fatturato, l'ultima riga con il periodo spostato avanti
+    di un mese."""
     riga = None
     if client_id:
         riga = (ultima_riga(con, client_id, servizio['id'])
@@ -440,13 +443,33 @@ def proposta(con, client_id, servizio):
     avanzata = avanza_periodo(riga['description']) if servizio['ogni_mese'] else None
     if avanzata:
         fuori.update(description=avanzata, advanced=True, previous=riga['description'])
-    if riga['unit_cents'] is not None:
-        fuori['unit'] = fmt_dash(riga['unit_cents'])
-        if riga['total_cents'] is not None and riga['total_cents'] != riga['unit_cents']:
-            fuori['total'] = fmt_dash(riga['total_cents'])
-    elif riga['total_cents'] is not None:
-        fuori['unit'] = fmt_dash(riga['total_cents'])
+    prezzo = _prezzo_di_uno(servizio, riga)
+    if prezzo is not None:
+        fuori['unit'] = fmt_dash(prezzo)
     return fuori
+
+
+def _prezzo_di_uno(servizio, riga):
+    """Quanto ha pagato il cliente per UNO di questo servizio, dalla sua ultima riga.
+
+    «12 × 150 = 1'800» su un pacchetto da 12 sedute contava le sedute: uno e'
+    il totale. «2 × 1'800 = 3'600» erano due pacchetti: uno e' il prezzo
+    unitario. «1 × 150 = 1'800» (il formato vecchio, col totale scritto a
+    mano) vale il totale. Chi decide se la quantita' contava le sedute e' la
+    stessa regola che poi apre i crediti, cosi' prezzo e sedute vanno d'accordo."""
+    unit, tot = riga['unit_cents'], riga['total_cents']
+    try:
+        q = float(riga['qty'])
+    except (TypeError, ValueError):
+        q = 1.0
+    if q > 1:
+        from . import sessions
+        contava_sedute = sessions.sedute_della_riga(servizio, q, tot) == int(q)
+        if not contava_sedute:
+            if unit is not None:
+                return unit
+            return int(round(tot / q)) if tot is not None else None
+    return tot if tot is not None else unit
 
 
 def servizio_della_riga(con, scelto, descrizione, servizi=None):

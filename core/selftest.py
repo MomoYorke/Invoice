@@ -1238,9 +1238,35 @@ def _test_servizi(r):
                     'total_cents, servizio_id) VALUES(?,0,?,?,?,?,?)',
                     (n, qty, desc, unit, tot, sid))
     p = SR.proposta(con, 1, pacco)
-    _check(r, 'Servizi', 'già fatturato: il prezzo dell’ultima riga, per un pacchetto solo',
+    # La riga proposta deve tornare: quantita' × prezzo = totale. «1 × 150.-»
+    # con totale 1'800.- tornava solo finche' nessuno toccava il totale: svuotato,
+    # la fattura usciva da 150 franchi. (Successo a chi usa l'app.)
+    _check(r, 'Servizi', 'già fatturato «12 × 150»: un pacchetto solo, al prezzo del pacchetto',
            (p['description'], p['qty'], p['unit'], p['total']),
-           ('12 Sessions Pack', '1', '150.-', "1'800.-"))
+           ('12 Sessions Pack', '1', "1'800.-", ''))
+
+    def dopo_una_riga(cliente, qty, unit, tot, servizio, giorno):
+        n = con.execute('SELECT COALESCE(MAX(id), 0) + 1 FROM invoices').fetchone()[0]
+        con.execute('INSERT INTO invoices(id, number, client_id, client_name, date, year, '
+                    'total_cents) VALUES(?,?,?,?,?,2026,?)', (n, n, cliente, 'x', giorno, tot))
+        con.execute('INSERT INTO items(invoice_id, pos, qty, description, unit_cents, '
+                    'total_cents, servizio_id) VALUES(?,0,?,?,?,?,?)',
+                    (n, qty, servizio['nome'], unit, tot, servizio['id']))
+        p = SR.proposta(con, cliente, servizio)
+        return p['qty'], p['unit'], p['total']
+
+    _check(r, 'Servizi', 'già fatturato «1 × 150 = 1’800» (il formato vecchio): 1 × 1’800',
+           dopo_una_riga(3, '1', 15000, 180000, pacco, '2026-09-01'), ('1', "1'800.-", ''))
+    _check(r, 'Servizi', 'un pacchetto scontato «12 × 140 = 1’680» resta un pacchetto da 1’680',
+           dopo_una_riga(3, '12', 14000, 168000, pacco, '2026-09-02'), ('1', "1'680.-", ''))
+    _check(r, 'Servizi', 'due pacchetti in una riga «2 × 1’800»: il prezzo di uno',
+           dopo_una_riga(3, '2', 180000, 360000, pacco, '2026-09-03'), ('1', "1'800.-", ''))
+    ore = SR.uno(con, SR.salva(con, SR.dal_modulo({'nome': 'Online Coaching', 'prezzo': '100',
+                                                   'ogni_mese': '0'})))
+    _check(r, 'Servizi', 'senza sedute, «3 × 100»: il prezzo di una',
+           dopo_una_riga(3, '3', 10000, 30000, ore, '2026-09-04'), ('1', '100.-', ''))
+    # il servizio di appoggio se ne va: le prove piu' sotto contano sul listino di prima
+    con.execute('DELETE FROM servizi WHERE id=?', (ore['id'],))
     p = SR.proposta(con, 1, mese)
     _check(r, 'Servizi', 'un abbonamento già fatturato riparte dal mese dopo',
            (p['description'], p['unit'], p['advanced']),
