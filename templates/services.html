@@ -75,7 +75,8 @@
     entro: {{ _('{sedute}, da usare entro {mesi}.') | tojson }},
     senzaScadenza: {{ _('{sedute}, senza scadenza.') | tojson }},
     passano: {{ _('Ogni mese {sedute}; quelle non usate passano al mese dopo, ma in un mese non se ne possono avere più di {massimo}.') | tojson }},
-    perse: {{ _('Ogni mese {sedute}; quelle non usate si perdono.') | tojson }}
+    perse: {{ _('Ogni mese {sedute}; quelle non usate si perdono.') | tojson }},
+    aSeduta: {{ _('{prezzo} a seduta.') | tojson }}
   };
   function riempi(frase, v) {
     return frase.replace(/\{(\w+)\}/g, function (t, k) { return k in v ? v[k] : t; });
@@ -104,18 +105,21 @@
   function aggiorna(form) {
     var mensile = scelto(form, 'ogni_mese'), conSedute = scelto(form, 'con_sedute');
     var scadono = scelto(form, 'scadono'), passano = scelto(form, 'passano');
+    var n = parseInt(form.querySelector('input[name="sedute"]').value, 10) || 0;
     var regole = {
-      sedute: conSedute, mensile: mensile,
+      sedute: conSedute, mensile: mensile, prezzoper: conSedute && n > 1,
       scadenza: conSedute && !mensile, mesi: conSedute && !mensile && scadono,
       riporto: conSedute && mensile, massimo: conSedute && mensile && passano
     };
     form.querySelectorAll('[data-quando]').forEach(function (el) {
       el.hidden = !regole[el.dataset.quando];
     });
-    var n = parseInt(form.querySelector('input[name="sedute"]').value, 10) || 0;
     var mx = form.querySelector('input[name="massimo"]');
     if (!mx.dataset.toccato) mx.value = n > 0 ? n + Math.ceil(n / 2) : '';
     var cents = centesimi(form.querySelector('input[name="prezzo"]').value);
+    // «ogni seduta»: il servizio tiene il prezzo di tutto, come fa il server
+    var perSeduta = form.querySelector('input[name="prezzo_per"]:checked');
+    if (cents !== null && conSedute && n > 1 && perSeduta && perSeduta.value === 'seduta') cents *= n;
     var frasi = [cents === null ? F.mancaPrezzo
                  : riempi(mensile ? F.alMese : F.unaVolta, { prezzo: chf(cents) })];
     if (conSedute && n > 0) {
@@ -131,6 +135,7 @@
         frasi.push(riempi(F.perse, { sedute: sed }));
       }
     }
+    if (cents !== null && conSedute && n > 1) frasi.push(riempi(F.aSeduta, { prezzo: chf(Math.round(cents / n)) }));
     form.querySelector('.riassunto').textContent = frasi.join(' ');
   }
   document.querySelectorAll('.scheda-servizio').forEach(function (form) {

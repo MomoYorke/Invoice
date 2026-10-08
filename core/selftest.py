@@ -1069,6 +1069,48 @@ def _test_servizi(r):
             if k in ('sedute', 'passano', 'massimo')},
            {'sedute': 0, 'passano': 0, 'massimo': 0})
     _check(r, 'Servizi', 'la scheda giusta non ha niente da ridire', SR.controlla(con, d), [])
+
+    # --- il prezzo scritto puo' essere quello di ogni seduta ------------------
+    # Chi vende un pacchetto da 12 sa «150 a seduta» e non pensa a 1'800: se
+    # scrive 150, la fattura usciva da 150 franchi. Il servizio tiene sempre il
+    # prezzo di TUTTO (e' quello che fattura, apre i crediti e va in Performance);
+    # la scelta «ogni seduta» fa il conto una volta sola, al salvataggio.
+    pacco = {'nome': '12 Sessions Pack', 'prezzo': '150', 'ogni_mese': '0',
+             'con_sedute': '1', 'sedute': '12'}
+    _check(r, 'Servizi', 'senza dire altro il prezzo e quello di tutto il pacchetto',
+           SR.dal_modulo(pacco)['prezzo_cents'], 15000)
+    per_seduta = SR.dal_modulo(dict(pacco, prezzo_per='seduta'))
+    _check(r, 'Servizi', '«ogni seduta»: 150 × 12 sedute = il prezzo del pacchetto',
+           (per_seduta['prezzo_cents'], per_seduta['prezzo_testo']), (180000, "1'800.-"))
+    _check(r, 'Servizi', 'anche l’abbonamento: 150 × 4 sedute al mese',
+           SR.dal_modulo({'nome': 'Monthly abo', 'prezzo': '150', 'ogni_mese': '1', 'con_sedute': '1',
+                          'sedute': '4', 'prezzo_per': 'seduta'})['prezzo_cents'], 60000)
+    _check(r, 'Servizi', 'una seduta sola: ogni seduta o tutto e lo stesso',
+           SR.dal_modulo({'nome': 'Personal Training', 'prezzo': '150', 'con_sedute': '1', 'sedute': '1',
+                          'prezzo_per': 'seduta'})['prezzo_cents'], 15000)
+    _check(r, 'Servizi', 'senza sedute la domanda non si vede e non vale',
+           SR.dal_modulo({'nome': 'Online Coaching', 'prezzo': '150', 'con_sedute': '0',
+                          'sedute': '12', 'prezzo_per': 'seduta'})['prezzo_cents'], 15000)
+    _check(r, 'Servizi', 'senza prezzo non si moltiplica niente',
+           SR.dal_modulo(dict(pacco, prezzo='', prezzo_per='seduta'))['prezzo_cents'], None)
+    intero = SR.dal_modulo(dict(pacco, prezzo='1800'))
+    _check(r, 'Servizi', 'la scheda dice anche quanto fa a seduta',
+           (intero['prezzo_cents'], SR.riassunto(intero, 'it')),
+           (180000, "1'800.00 CHF, una volta. 12 sedute, senza scadenza. 150.00 CHF a seduta."))
+    _check(r, 'Servizi', 'se il conto non e tondo, la frase arrotonda al centesimo',
+           SR.riassunto(SR.dal_modulo(dict(pacco, prezzo='1000')), 'it').endswith('83.33 CHF a seduta.'),
+           True)
+    _check(r, 'Servizi', 'con una seduta sola la frase non ripete il prezzo',
+           'a seduta' in SR.riassunto(SR.dal_modulo(
+               {'nome': 'Personal Training', 'prezzo': '150', 'con_sedute': '1', 'sedute': '1'}), 'it'), False)
+    _check(r, 'Servizi', 'senza sedute la frase non parla di sedute',
+           'a seduta' in SR.riassunto(SR.dal_modulo(
+               {'nome': 'Online Coaching', 'prezzo': '150'}), 'it'), False)
+    with io.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              'templates', 'service_card.html'), encoding='utf-8') as fscheda:
+        pagina = fscheda.read()
+    _check(r, 'Servizi', 'la scheda chiede se il prezzo e di tutto o di ogni seduta',
+           ('name="prezzo_per"' in pagina, 'value="seduta"' in pagina), (True, True))
     guasti = (
         (dict(f, nome='  '), 'senza nome non si salva'),
         (dict(f, prezzo=''), 'senza prezzo non si salva'),
@@ -1118,21 +1160,22 @@ def _test_servizi(r):
             'passano': 1, 'massimo': 6}
     _check(r, 'Servizi', 'la frase della scheda dice tutto in parole', SR.riassunto(mese),
            '110.00 CHF al mese. Ogni mese 4 sedute; quelle non usate passano al mese dopo, '
-           'ma in un mese non se ne possono avere più di 6.')
+           'ma in un mese non se ne possono avere più di 6. 27.50 CHF a seduta.')
     _check(r, 'Servizi', 'e in inglese', SR.riassunto(mese, 'en'),
            '110.00 CHF a month. Every month 4 sessions; unused ones carry over to the next '
-           'month, but no more than 6 can be held in a month.')
+           'month, but no more than 6 can be held in a month. 27.50 CHF per session.')
     pacco = {'prezzo_cents': 180000, 'ogni_mese': 0, 'sedute': 12, 'scadenza_mesi': 6,
              'passano': 0, 'massimo': 0}
     _check(r, 'Servizi', 'un pacchetto che scade, in tedesco', SR.riassunto(pacco, 'de'),
-           "1'800.00 CHF, einmalig. 12 Sitzungen, gültig für 6 Monate.")
+           "1'800.00 CHF, einmalig. 12 Sitzungen, gültig für 6 Monate. 150.00 CHF pro Sitzung.")
     _check(r, 'Servizi', 'una seduta sola si scrive al singolare',
            SR.riassunto(dict(pacco, sedute=1, scadenza_mesi=1)),
            "1'800.00 CHF, una volta. 1 seduta, da usare entro 1 mese.")
     _check(r, 'Servizi', 'che si perdono, senza scadenza',
            (SR.riassunto(dict(mese, passano=0)), SR.riassunto(dict(pacco, scadenza_mesi=0))),
-           ('110.00 CHF al mese. Ogni mese 4 sedute; quelle non usate si perdono.',
-            "1'800.00 CHF, una volta. 12 sedute, senza scadenza."))
+           ('110.00 CHF al mese. Ogni mese 4 sedute; quelle non usate si perdono. '
+            '27.50 CHF a seduta.',
+            "1'800.00 CHF, una volta. 12 sedute, senza scadenza. 150.00 CHF a seduta."))
     _check(r, 'Servizi', "la riga dell'elenco è corta",
            (SR.riga_breve(pacco), SR.riga_breve(dict(mese, sedute=0)),
             SR.riga_breve(mese), SR.riga_breve(dict(pacco, prezzo_cents=None))),

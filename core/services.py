@@ -166,13 +166,25 @@ def dal_modulo(f):
     scadono = con_sedute and not ogni_mese and f.get('scadono') == '1'
     passano = con_sedute and ogni_mese and f.get('passano') == '1'
     prezzo_testo = (f.get('prezzo') or '').strip()
+    prezzo_cents = parse_amount(prezzo_testo) if prezzo_testo else None
+    sedute = _intero(f.get('sedute')) if con_sedute else 0
+    # «Il prezzo e' quello di ogni seduta»: chi vende un pacchetto da 12 sa
+    # «150 a seduta», e se scrive 150 la fattura usciva da 150 franchi. Il
+    # servizio tiene sempre il prezzo di TUTTO (fattura, crediti e Performance
+    # leggono quello): il conto si fa qui, una volta, e la scheda riaperta
+    # mostra il totale. Con una seduta sola, o senza sedute, la domanda non
+    # si vede e non vale.
+    if (f.get('prezzo_per') == 'seduta' and prezzo_cents is not None
+            and sedute and sedute > 1):
+        prezzo_cents *= sedute
+        prezzo_testo = fmt_dash(prezzo_cents)
     return {
         'nome': re.sub(r'\s+', ' ', f.get('nome') or '').strip(),
         'prezzo_testo': prezzo_testo,
-        'prezzo_cents': parse_amount(prezzo_testo) if prezzo_testo else None,
+        'prezzo_cents': prezzo_cents,
         'ogni_mese': 1 if ogni_mese else 0,
         'con_sedute': con_sedute,
-        'sedute': _intero(f.get('sedute')) if con_sedute else 0,
+        'sedute': sedute,
         'scadono': scadono,
         'scadenza_mesi': _intero(f.get('scadenza_mesi')) if scadono else 0,
         'passano': 1 if passano else 0,
@@ -322,6 +334,11 @@ def riassunto(s, lingua=None):
         else:
             frasi.append(L.t('Ogni mese {sedute}; quelle non usate si perdono.',
                              lingua).format(sedute=sedute))
+    if n > 1 and s['prezzo_cents'] is not None:
+        # la frase che fa accorgere subito di un prezzo scritto nel posto
+        # sbagliato: «150.00 CHF» per un pacchetto da 12 sedute dice 12.50 a seduta
+        frasi.append(L.t('{prezzo} a seduta.', lingua).format(
+            prezzo=fmt_chf((2 * s['prezzo_cents'] + n) // (2 * n))))
     return ' '.join(frasi)
 
 

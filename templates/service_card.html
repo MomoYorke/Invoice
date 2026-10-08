@@ -24,6 +24,11 @@
       <span data-quando="mensile">{{ _('al mese') }}</span>
     </span>
   </fieldset>
+  <fieldset data-quando="prezzoper">
+    <legend>{{ _('Il prezzo scritto sopra è') }}</legend>
+    <label class="scelta"><input type="radio" name="prezzo_per" value="" checked> {{ _('di tutte le sedute insieme') }}</label>
+    <label class="scelta"><input type="radio" name="prezzo_per" value="seduta"> {{ _('di ogni seduta') }}</label>
+  </fieldset>
   <fieldset data-quando="scadenza">
     <legend>{{ _('Le sedute scadono?') }}</legend>
     <label class="scelta"><input type="radio" name="scadono" value="0" {{ 'checked' if not s.scadono }}> {{ _('Mai') }}</label>
