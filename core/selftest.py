@@ -4453,7 +4453,9 @@ def _test_cruscotto(r):
     # salute: senza cartella di destinazione il backup è un problema, non un dettaglio
     sal = C.salute(con, dict(S, smtp_pass='', calendario_ics=''),
                    '/questa/cartella/non/esiste')
-    voce = next(v for v in sal['voci'] if v['nome'] == 'Copia fuori dal Mac')
+    # la voce si chiama «dal Mac» solo sul Mac: altrove l'app scrive «dal computer»
+    from . import language as L
+    voce = next(v for v in sal['voci'] if v['nome'] == L.t('Copia fuori dal Mac'))
     _check(r, 'Cruscotto', 'backup mancante: rosso, non verde', voce['stato'], C.ROSSO)
     _check(r, 'Cruscotto', 'basta una voce rossa perché il riquadro lo dica',
            sal['stato'], C.ROSSO)

@@ -26,9 +26,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from core import sessions as S
 from core import mensili
 
-CAL_EM_PT = 'cd4f38a7aee2123f09dde5cf8b69a9dc793403e4e7ae56d7931b8019e17e4eac@group.calendar.google.com'
-CAL_ARCHIVIO = '707c70ca25fe3e1525c8a5a0480992fee1dcd67cc58b92222b6a31aeff71d98d@group.calendar.google.com'
-
 
 def finestra(reg, oggi=None):
     """Intervallo da leggere: mai prima del 20.08.2026, mai oltre oggi (spec 5.1)."""
@@ -212,7 +209,7 @@ def main():
     if a.finestra or (not a.eventi and not a.stato):
         da, fino = finestra(reg, oggi)
         print(f"\n  Calendario da leggere : quello delle sessioni")
-        print(f"  ID                    : {CAL_EM_PT}")
+        print("  Indirizzo             : quello scritto in Impostazioni")
         print(f"  Intervallo            : {da} -> {fino}")
         if da > fino:
             print(f"\n  Nulla da leggere: la finestra parte dal {S.INIZIO_LETTURA} "
