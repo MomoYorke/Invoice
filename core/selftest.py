@@ -49,6 +49,10 @@ def run_all():
         ('99.95', 9995), ('  ', None), ('abc', None), (None, None),
         ('12.345,67', 1234567), ("12'345.67", 1234567), ('0', 0),
         ('0.01', 1), ('0,05', 5), ('1000000', 100000000),
+        # uno sconto: il meno davanti resta, il trattino svizzero in fondo no
+        ('-50', -5000), ('-50.-', -5000), ("-1'800.00", -180000), ('CHF -50', -5000),
+        ('-50 CHF', -5000), ('- 50', -5000), ('\u221250', -5000), ('\u2013 50.-', -5000),
+        ('-0.50', -50), ('50.-', 5000), ('-', None),
     ]
     for txt, exp in parse_cases:
         _check(r, 'Lettura importi', f'"{txt}" → {fmt_chf(exp) if exp is not None else "vuoto"}',
@@ -115,6 +119,7 @@ def run_all():
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
         _test_revisione_crediti, _test_revisione_documento, _test_vendibile,
+        _test_sconti,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -164,6 +169,11 @@ def _test_revisione_documento(r):
 def _test_vendibile(r):
     from . import selftest_vendibile
     selftest_vendibile._test_vendibile(r)
+
+
+def _test_sconti(r):
+    from . import selftest_sconti
+    selftest_sconti._test_sconti(r)
 
 
 def _test_registro_avvio(r):
@@ -2110,6 +2120,8 @@ def _test_sedute_dai_servizi(r):
             (Decimal('0.05'), 9000, PACCHETTO, 0, 'meno di una seduta: niente'),
             (0, 0, PACCHETTO, 0, 'quantità zero: niente'),
             (-1, -180000, PACCHETTO, 0, 'quantità negativa: niente'),
+            (1, -180000, PACCHETTO, 0, 'uno storno al prezzo del pacchetto: niente'),
+            (12, -18000, PACCHETTO, 0, 'uno sconto su dodici sedute: niente'),
             (12, None, SENZA_PREZZO, 12, 'senza prezzo, quantità uguale alle sedute'),
             (3, None, SENZA_PREZZO, 36, 'senza prezzo, tre pacchetti'),
             (1, 11000, dict(PACCHETTO, sedute=0), 0, 'un servizio senza sedute')):
@@ -2487,6 +2499,11 @@ def _test_sedute_dai_servizi(r):
                                                [(ABO, qty_prova, 22000)], '2026-09', 13)
             _check(r, cat, f'una riga «ogni mese» con {perche} non apre nessun mese e non lo dice',
                    (dette_qty, reg_qty['mensili']), ([], []))
+        reg_sconto = reg_vuoto()
+        dette_sconto = S.sedute_dalla_fattura(reg_sconto, 'giulia', 212, '2026-09-14',
+                                              [(ABO, 1, -2000)], '2026-09', 13)
+        _check(r, cat, 'uno sconto collegato all’abbonamento non apre un altro mese',
+               (dette_sconto, reg_sconto['mensili']), ([], []))
 
         # il registro sa che quelle sedute ci sono già, e l'Agenda le mostra
         S.aggiungi_sessione(reg, 'giulia', '2026-09-16', 'Giulia', 'ev-agenda')

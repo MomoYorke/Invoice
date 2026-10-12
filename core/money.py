@@ -11,7 +11,8 @@ def parse_amount(s):
     """Converte un importo scritto in qualsiasi formato svizzero/italiano in centesimi (int).
 
     Accetta: '110.-', '110.–', '150,00 CHF', "1'800.00", '1.800,00CHF',
-             '1800', '1800.5', 'CHF 110', '110 CHF', '0.-'
+             '1800', '1800.5', 'CHF 110', '110 CHF', '0.-', e col meno
+             davanti gli sconti: '-50', 'CHF -50' (negativi)
     Ritorna None se non interpretabile.
     """
     if s is None:
@@ -22,6 +23,10 @@ def parse_amount(s):
     if not t:
         return None
     t = t.replace('CHF', '').replace('FR.', '').replace('SFR', '')
+    # un meno davanti e' uno sconto: «-50», «CHF -50», «− 50». Il trattino in
+    # fondo («110.-») e' invece il modo svizzero di scrivere i franchi tondi.
+    negativo = t.strip()[:1] in ('-', '\u2212', '–', '—')
+    t = t.replace('\u2212', '')
     # trattini finali svizzeri: "110.-" / "110.–" / "110.—"
     t = re.sub(r'\.\s*[-–—]\s*$', '', t.strip())
     t = t.replace('–', '').replace('—', '')
@@ -52,9 +57,10 @@ def parse_amount(s):
     if not t or t == '.':
         return None
     try:
-        return _to_cents(Decimal(t))
+        cents = _to_cents(Decimal(t))
     except (InvalidOperation, ValueError):
         return None
+    return -cents if negativo else cents
 
 
 def _to_cents(d):

@@ -771,6 +771,8 @@ TESTI = {
         'Seleziona un cliente.': 'Choose a client.',
         'Inserisci almeno una riga con descrizione e importo.':
             'Put in at least one line with a description and an amount.',
+        'Il totale della fattura è negativo ({tot}): controlla gli sconti.':
+            'The invoice total is negative ({tot}): check the discounts.',
         'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
             'Number #{n} already exists. The next free one is #{libero}.',
         'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':
@@ -2295,6 +2297,8 @@ TESTI = {
         'Seleziona un cliente.': 'Wähl einen Kunden.',
         'Inserisci almeno una riga con descrizione e importo.':
             'Trag mindestens eine Zeile mit Beschreibung und Betrag ein.',
+        'Il totale della fattura è negativo ({tot}): controlla gli sconti.':
+            'Der Rechnungstotal ist negativ ({tot}): prüf die Rabatte.',
         'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
             'Die Nummer #{n} gibt es schon. Die nächste freie ist #{libero}.',
         'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':
