@@ -140,3 +140,67 @@ def _test_numeri(r):
            f['pdf_guasto'], [])
     _check(r, 'Numeri', 'dopo il guasto la stessa fattura si rifà con lo stesso modulo',
            f['dopo_il_guasto'], 1)
+
+
+def _impronta_file(percorso):
+    import hashlib
+    with open(percorso, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def _test_controlla_copia(r):
+    """Lo script di collaudo trova i guai veri e non tocca il database."""
+    import shutil
+    import sqlite3
+    import tempfile
+    from . import controlla_copia as CC, db as D
+    from .selftest import _check
+
+    tmp = tempfile.mkdtemp(prefix='controlla-copia-')
+    vero_db = D.DB_PATH
+    try:
+        D.DB_PATH = os.path.join(tmp, 'copia.db')
+        D.init().close()
+
+        def fattura(con, numero, totale, righe, qr=None, cestino=None):
+            cur = con.execute(
+                "INSERT INTO invoices(number, client_name, date, year, total_cents, status, "
+                "source, qr_ref, deleted_at) VALUES(?, 'x', '2026-10-04', 2026, ?, 'emessa', "
+                "'app', ?, ?)", (numero, totale, qr, cestino))
+            for cent in righe:
+                con.execute('INSERT INTO items(invoice_id, pos, qty, description, total_cents) '
+                            "VALUES(?, 0, '1', 'x', ?)", (cur.lastrowid, cent))
+
+        k = sqlite3.connect(D.DB_PATH)
+        fattura(k, 1, 10000, [10000], qr='RF1')
+        fattura(k, 2, 20000, [15000, 5000], qr='RF2')
+        fattura(k, 3, 5000, [5000], qr='RF3', cestino='2026-10-05')
+        fattura(k, 3, 7000, [7000], qr='RF4')        # il #3 e' nel Cestino: non e' un doppio
+        k.commit()
+        k.close()
+        problemi, fatti = CC.controlla(D.DB_PATH)
+        _check(r, 'Controlla copia', 'dati in ordine: nessun problema, e dice cosa ha guardato',
+               (problemi, len(fatti) >= 4), ([], True))
+
+        k = sqlite3.connect(D.DB_PATH)
+        fattura(k, 2, 3000, [3000], qr='RF2')        # numero e riferimento gia' presi
+        fattura(k, 9, 4000, [1000])                  # il totale non e' la somma
+        fattura(k, 10, -500, [-500])                 # totale negativo
+        k.commit()
+        k.close()
+        _impronta_prima = _impronta_file(D.DB_PATH)
+        problemi, _ = CC.controlla(D.DB_PATH)
+        _impronta_dopo = _impronta_file(D.DB_PATH)
+        testo = ' '.join(problemi)
+        _check(r, 'Controlla copia', 'trova numero doppio, riferimento QR doppio, totale storto '
+               'e totale negativo',
+               ('#2' in testo, 'riferimento' in testo, '#9' in testo, '#10' in testo),
+               (True, True, True, True))
+        # il controllo sul file com'era prima delle aggiunte: stessi byte dopo
+        _check(r, 'Controlla copia', 'il controllo non scrive nel database',
+               _impronta_prima == _impronta_dopo, True)
+        _check(r, 'Controlla copia', 'un percorso sbagliato lo dice, senza scoppiare',
+               CC.controlla(D.DB_PATH + 'x')[0] != [], True)
+    finally:
+        D.DB_PATH = vero_db
+        shutil.rmtree(tmp, ignore_errors=True)
