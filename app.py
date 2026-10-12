@@ -562,6 +562,12 @@ def _crea_fattura(con):
     if not items:
         avvisa('Inserisci almeno una riga con descrizione e importo.', 'error')
         return redirect(url_for('nuova'))
+    # gli sconti tolgono, ma una fattura non puo' andare sotto zero: la
+    # QR-fattura non lo ammette, e quasi sempre e' un meno di troppo
+    if total < 0:
+        avvisa('Il totale della fattura è negativo ({tot}): controlla gli sconti.', 'error',
+               tot=fmt_chf(total))
+        return redirect(url_for('nuova'))
 
     # --- numero e data ---
     number = f.get('numero', type=int) or db.next_number(con)
@@ -2072,7 +2078,7 @@ def controlli_correggi():
     total_cents = None
     if importo_raw:
         total_cents = parse_amount(importo_raw)
-        if total_cents is None:
+        if total_cents is None or total_cents < 0:
             con.close()
             avvisa('Importo «{cosa}» non riconosciuto. Scrivilo come 1’800.- oppure '
                    '1800.00 e riprova.', 'error', cosa=importo_raw)

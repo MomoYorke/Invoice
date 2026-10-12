@@ -43,8 +43,10 @@
   function parseAmount(s) {
     if (!s) return null;
     let t = String(s).toUpperCase().replace(/CHF|FR\./g, '');
+    // un meno davanti e' uno sconto; il trattino in fondo («110.-») no
+    const negativo = /^[-\u2212–—]/.test(t.trim());
     t = t.replace(/\.\s*[-–—]\s*$/, '');
-    t = t.replace(/[–—'  ]/g, '');
+    t = t.replace(/[–—\u2212'  ]/g, '');
     if (!/\d/.test(t)) return null;
     if (t.includes(',') && t.includes('.')) {
       if (t.lastIndexOf(',') > t.lastIndexOf('.')) t = t.replace(/\./g, '').replace(',', '.');
@@ -58,11 +60,12 @@
     if (/^\d{1,3}\.\d{3}$/.test(t)) t = t.replace('.', '');
     t = t.replace(/[^0-9.]/g, '');
     if (!t || t === '.') return null;
-    return Math.round(parseFloat(t) * 100);
+    const cents = Math.round(parseFloat(t) * 100);
+    return negativo ? -cents : cents;
   }
   function fmtChf(c) {
     const fr = Math.floor(Math.abs(c) / 100), ct = Math.abs(c) % 100;
-    return fr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + '.' + String(ct).padStart(2, '0') + ' CHF';
+    return (c < 0 ? '-' : '') + fr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + '.' + String(ct).padStart(2, '0') + ' CHF';
   }
 
   function addRow(desc, qty, unit, tot, servizio) {

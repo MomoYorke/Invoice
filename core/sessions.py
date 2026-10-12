@@ -590,6 +590,9 @@ def sedute_della_riga(servizio, qty, total_cents=None):
         q = 1.0
     if n <= 0 or q <= 0:
         return 0
+    # uno sconto o uno storno collegato al servizio toglie soldi, non compra sedute
+    if total_cents is not None and total_cents < 0:
+        return 0
     prezzo = servizio['prezzo_cents']
     if q > 1:
         if prezzo and total_cents is not None:
@@ -823,6 +826,8 @@ def sedute_dalla_fattura(reg, chiave, numero, data, righe, periodo='', giorno=No
     Ritorna le frasi da mostrare a chi fattura: [(frase, valori)]."""
     frasi = []
     for servizio, qty, totale in righe:
+        if totale is not None and totale < 0:
+            continue    # uno sconto sul servizio non apre ne' mesi ne' pacchetti
         if servizio['ogni_mese']:
             try:
                 q = float(qty)
