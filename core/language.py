@@ -1387,6 +1387,16 @@ TESTI = {
         'nel Cestino': 'in the Trash',
         'Buttata per rifarla? Rifai la fattura a questo cliente con lo stesso pacchetto: la nuova prende il suo posto e le sedute già fatte restano.':
             'Trashed to redo it? Make the invoice again for this client with the same package: the new one takes its place and the sessions already done stay.',
+        'Il pacchetto {pid} di questa fattura era stato tolto e non torna da solo: le sedute già fatte sono state spostate. Controlla i crediti di {cliente} nella pagina Crediti.':
+            "Package {pid} of this invoice had been removed and does not come back by itself: the sessions already done were moved. Check {cliente}'s credits on the Credits page.",
+        'Togliere il pacchetto {pid}? Smette di contare crediti. Le sedute già fatte restano registrate. Se vuoi rifare la fattura, non toglierlo: rifalla e basta.':
+            "Remove package {pid}? It stops counting credits. Sessions already done stay recorded. If you want to redo the invoice, don't remove it: just make it again.",
+        'Togli pacchetto':
+            'Remove package',
+        'Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.':
+            'Package {pid} removed: it no longer counts credits. Sessions already done, which stay recorded: {n}.',
+        'Si può togliere solo il pacchetto di una fattura nel Cestino.':
+            'You can only remove the package of an invoice in the Trash.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sessions for {nome} from {dal} to {al}: {sedute}.',
         'Sedute dai servizi': 'Sessions from services',
         'Sedute non fatte': 'Sessions not done',
@@ -2921,6 +2931,16 @@ TESTI = {
         'nel Cestino': 'im Papierkorb',
         'Buttata per rifarla? Rifai la fattura a questo cliente con lo stesso pacchetto: la nuova prende il suo posto e le sedute già fatte restano.':
             'Zum Neumachen gelöscht? Erstelle die Rechnung für diesen Kunden mit demselben Paket neu: Die neue tritt an ihre Stelle und die bereits gemachten Sitzungen bleiben.',
+        'Il pacchetto {pid} di questa fattura era stato tolto e non torna da solo: le sedute già fatte sono state spostate. Controlla i crediti di {cliente} nella pagina Crediti.':
+            'Das Paket {pid} dieser Rechnung wurde entfernt und kommt nicht von selbst zurück: Die bereits gemachten Sitzungen wurden verschoben. Prüfe die Guthaben von {cliente} auf der Seite Guthaben.',
+        'Togliere il pacchetto {pid}? Smette di contare crediti. Le sedute già fatte restano registrate. Se vuoi rifare la fattura, non toglierlo: rifalla e basta.':
+            'Paket {pid} entfernen? Es zählt keine Guthaben mehr. Bereits gemachte Sitzungen bleiben erfasst. Wenn du die Rechnung neu machen willst, entferne es nicht: Mach sie einfach neu.',
+        'Togli pacchetto':
+            'Paket entfernen',
+        'Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.':
+            'Paket {pid} entfernt: Es zählt keine Guthaben mehr. Bereits gemachte Sitzungen, die erfasst bleiben: {n}.',
+        'Si può togliere solo il pacchetto di una fattura nel Cestino.':
+            'Nur das Paket einer Rechnung im Papierkorb kann entfernt werden.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sitzungen von {nome} vom {dal} bis {al}: {sedute}.',
         'Sedute dai servizi': 'Sitzungen aus Leistungen',
         'Sedute non fatte': 'Nicht durchgeführte Sitzungen',

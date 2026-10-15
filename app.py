@@ -1263,6 +1263,11 @@ def cestino_ripristina(inv_id):
     con.close()
     avvisa('Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).', 'ok',
            n=inv['number'], quanti=restored)
+    # il pacchetto di questa fattura, se era stato tolto, non torna da solo:
+    # le sedute fatte sono gia' andate altrove e rimetterle conterebbe doppio
+    for p in sess.carica().get('pacchetti_tolti') or []:
+        if p.get('fattura_numero') == inv['number']:
+            avvisa('Il pacchetto {pid} di questa fattura era stato tolto e non torna da solo: le sedute già fatte sono state spostate. Controlla i crediti di {cliente} nella pagina Crediti.', 'error', pid=p['id'], cliente=p.get('cliente', ''))
     return redirect(url_for('fattura', inv_id=inv_id))
 
 
@@ -2105,6 +2110,30 @@ def crediti_collega():
            'marcate. Il prossimo pacchetto si apre da solo alla prima sessione nuova.',
            'ok', pid=pid, n=numero, cliente=inv['client_name'],
            quante=len(p.get('sessioni', [])))
+    return redirect(url_for('crediti'))
+
+
+@app.route('/crediti/togli', methods=['POST'])
+def crediti_togli():
+    """Toglie il pacchetto di una fattura nel Cestino che non verra' rifatta.
+
+    Solo se la fattura e' nel Cestino: un pacchetto pagato non si toglie con
+    un click. Il pacchetto resta nel registro, da parte (sessions.togli_pacchetto)."""
+    pid = request.form.get('pacchetto', '')
+    reg = sess.carica()
+    p = next((q for q in reg['pacchetti'] if q['id'] == pid), None)
+    if p is None:
+        avvisa('Pacchetto inesistente.', 'error')
+        return redirect(url_for('crediti'))
+    con = get_con()
+    stato = _stati_delle_fatture(con).get(p.get('fattura_numero'))
+    con.close()
+    if stato != 'cestinata':
+        avvisa('Si può togliere solo il pacchetto di una fattura nel Cestino.', 'error')
+        return redirect(url_for('crediti'))
+    _, quante = sess.togli_pacchetto(reg, pid)
+    sess.salva(reg)
+    avvisa('Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.', 'ok', pid=pid, n=quante)
     return redirect(url_for('crediti'))
 
 

@@ -259,7 +259,10 @@ def pacchetto_aperto_di(reg, chiave):
 def id_evento_gia_presente(reg):
     """Tutti gli ID evento gia' registrati (spec 5.5): pacchetti, mesi, esclusi."""
     visti = set()
-    for gruppo in list(reg['pacchetti']) + list(reg.get('mensili') or []):
+    # anche i pacchetti tolti: le sedute «non fatte» restano solo li', e senza
+    # questo la lettura dopo le riprenderebbe come sedute nuove
+    for gruppo in (list(reg['pacchetti']) + list(reg.get('mensili') or [])
+                   + list(reg.get('pacchetti_tolti') or [])):
         for s in gruppo.get('sessioni', []):
             if s.get('event_id'):
                 visti.add(s['event_id'])
@@ -304,7 +307,8 @@ def prossimo_id_pacchetto(reg, chiave):
     # senza prefisso scritto se ne ricava uno dal nome: Anna Rossi -> ANN-01
     pref = (c and c['prefisso']) or (chiave or 'PAC')[:3].upper()
     n = 0
-    for p in reg['pacchetti']:
+    # i nomi dei pacchetti tolti restano presi: due STR-01 confonderebbero
+    for p in list(reg['pacchetti']) + list(reg.get('pacchetti_tolti') or []):
         m = re.match(rf'^{pref}-(\d+)$', p['id'])
         if m:
             n = max(n, int(m.group(1)))
@@ -566,6 +570,42 @@ def collega_fattura(reg, pacchetto_id, numero_fattura, chiudi=True):
         # qui lo segnaliamo soltanto
         nuovo = chiave
     return p, nuovo
+
+
+def togli_pacchetto(reg, pacchetto_id, oggi=None):
+    """Toglie il pacchetto di una fattura buttata nel Cestino e mai rifatta.
+
+    Il pacchetto non si cancella: passa in `pacchetti_tolti`, con la data, e
+    smette di contare crediti. Le sedute gia' fatte non si perdono: tornano
+    dove andrebbe una seduta letta adesso dal calendario (un pacchetto da
+    fatturare, un abbonamento, o fra le sedute senza pacchetto).
+    Chi chiama controlla che la fattura sia davvero nel Cestino.
+
+    Ritorna (pacchetto tolto, quante sedute rimesse)."""
+    p = next((q for q in reg['pacchetti'] if q['id'] == pacchetto_id), None)
+    if p is None:
+        raise KeyError(f'Pacchetto {pacchetto_id} inesistente')
+    chiavi = _chiavi_di(p)
+    reg['pacchetti'].remove(p)
+    p['tolto_il'] = oggi or datetime.date.today().isoformat()
+    reg.setdefault('pacchetti_tolti', []).append(p)
+    fatte = sorted(contate(p), key=lambda x: (x['data'], x.get('n', 0)))
+    for x in fatte:
+        titolo = x.get('titolo') or ''
+        chiave = classifica(titolo)[0]
+        if chiave not in chiavi:
+            chiave = chiavi[0] if chiavi else None
+        try:
+            if chiave is None:
+                raise SenzaPacchetto('nessun cliente')
+            aggiungi_sessione(reg, chiave, x['data'], titolo, x.get('event_id'),
+                              nota=x.get('nota'), ora=x.get('ora'))
+        except SenzaPacchetto:
+            reg.setdefault('esclusi', []).append(dict(
+                {k: v for k, v in x.items() if k not in ('n', 'fattura')},
+                cliente=nome_cliente(chiave) if chiave else p.get('cliente', ''),
+                chiave=chiave, motivo=mensili.MOTIVO_NESSUN_ABBONAMENTO))
+    return p, len(fatte)
 
 
 # ------------------------------------------------------------------ sedute dalla fattura
