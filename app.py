@@ -1263,6 +1263,11 @@ def cestino_ripristina(inv_id):
     con.close()
     avvisa('Fattura #{n} ripristinata ({quanti} file rimessi al loro posto).', 'ok',
            n=inv['number'], quanti=restored)
+    # il pacchetto di questa fattura, se era stato tolto, non torna da solo:
+    # le sedute fatte sono gia' andate altrove e rimetterle conterebbe doppio
+    for p in sess.carica().get('pacchetti_tolti') or []:
+        if p.get('fattura_numero') == inv['number']:
+            avvisa('Il pacchetto {pid} di questa fattura era stato tolto e non torna da solo: le sedute già fatte sono state spostate. Controlla i crediti di {cliente} nella pagina Crediti.', 'error', pid=p['id'], cliente=p.get('cliente', ''))
     return redirect(url_for('fattura', inv_id=inv_id))
 
 

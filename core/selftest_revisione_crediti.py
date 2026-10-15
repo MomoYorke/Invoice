@@ -273,6 +273,20 @@ def _togli_dalla_pagina(r, _check, _senza_scoppiare):
                _senza_scoppiare(premi, 'MAR-01'), (302, ['GIU-01', 'MAR-01']))
         _check(r, 'Revisione crediti', 'quello di una fattura nel Cestino sì',
                _senza_scoppiare(premi, 'GIU-01'), (302, ['MAR-01']))
+
+        def ripristina():
+            c = sqlite3.connect(D.DB_PATH)
+            inv_id = c.execute('SELECT id FROM invoices WHERE number=1').fetchone()[0]
+            c.close()
+            with cliente.session_transaction() as sessione:
+                sessione.pop('_flashes', None)      # gli avvisi di prima non contano
+            risposta = cliente.post('/cestino/%d/ripristina' % inv_id)
+            with cliente.session_transaction() as sessione:
+                avvisi = [m for _, m in sessione.get('_flashes', [])]
+            return risposta.status_code, any('GIU-01' in m and 'tolto' in m for m in avvisi)
+
+        _check(r, 'Revisione crediti', 'ripristinando la fattura, avvisa che il suo pacchetto era stato tolto',
+               _senza_scoppiare(ripristina), (302, True))
     finally:
         D.DB_PATH, S.REGISTRY = vero_db, vero_registro
         S.ricarica()
