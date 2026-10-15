@@ -101,6 +101,8 @@
           {% elif r.fattura_stato == 'cestinata' %}
             <div style="font-size:12px;color:#b91c1c;margin-top:3px">
               {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('nel Cestino') }}</div>
+            <div class="muted" style="font-size:12px;margin-top:2px;max-width:280px">
+              {{ _('Buttata per rifarla? Rifai la fattura a questo cliente con lo stesso pacchetto: la nuova prende il suo posto e le sedute già fatte restano.') }}</div>
           {% elif r.fattura_stato %}
             <div style="font-size:12px;color:#92400e;margin-top:3px">
               {{ _('fattura') }} <strong>#{{ r.fattura_numero }}</strong> · {{ _('da incassare') }}</div>
