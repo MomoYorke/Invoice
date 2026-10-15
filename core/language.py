@@ -773,6 +773,8 @@ TESTI = {
             'Put in at least one line with a description and an amount.',
         'Il totale della fattura è negativo ({tot}): controlla gli sconti.':
             'The invoice total is negative ({tot}): check the discounts.',
+        'Questa fattura era già stata creata: eccola. Non ne ho fatta una seconda.':
+            'This invoice had already been created: here it is. I did not make a second one.',
         'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
             'Number #{n} already exists. The next free one is #{libero}.',
         'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':
@@ -2299,6 +2301,8 @@ TESTI = {
             'Trag mindestens eine Zeile mit Beschreibung und Betrag ein.',
         'Il totale della fattura è negativo ({tot}): controlla gli sconti.':
             'Der Rechnungstotal ist negativ ({tot}): prüf die Rabatte.',
+        'Questa fattura era già stata creata: eccola. Non ne ho fatta una seconda.':
+            'Diese Rechnung war schon erstellt: hier ist sie. Ich habe keine zweite gemacht.',
         'Il numero #{n} esiste già. Il prossimo libero è #{libero}.':
             'Die Nummer #{n} gibt es schon. Die nächste freie ist #{libero}.',
         'Esiste già un file «{file}» — per sicurezza non sovrascrivo.':

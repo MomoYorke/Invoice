@@ -119,7 +119,7 @@ def run_all():
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
         _test_revisione_crediti, _test_revisione_documento, _test_vendibile,
-        _test_sconti,
+        _test_sconti, _test_numeri, _test_controlla_copia,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -174,6 +174,16 @@ def _test_vendibile(r):
 def _test_sconti(r):
     from . import selftest_sconti
     selftest_sconti._test_sconti(r)
+
+
+def _test_numeri(r):
+    from . import selftest_numeri
+    selftest_numeri._test_numeri(r)
+
+
+def _test_controlla_copia(r):
+    from . import selftest_numeri
+    selftest_numeri._test_controlla_copia(r)
 
 
 def _test_registro_avvio(r):

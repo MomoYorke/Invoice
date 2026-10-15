@@ -24,6 +24,7 @@
 {% endif %}
 
 <form method="post" id="invoice-form" class="panel" style="max-width:860px">
+  <input type="hidden" name="gettone" value="{{ gettone }}">
   {% if precompilato %}
   <input type="hidden" name="ricorrente_id" value="{{ precompilato.ricorrente_id }}">
   <input type="hidden" name="periodo" value="{{ precompilato.mese }}">

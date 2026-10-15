@@ -11,6 +11,9 @@ import re
 import sys
 import glob
 import shutil
+import secrets
+import sqlite3
+import collections
 import datetime
 import logging
 import threading
@@ -18,7 +21,7 @@ import traceback
 from urllib.parse import urlsplit
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   send_file, send_from_directory, jsonify, flash, abort, g)
+                   send_file, send_from_directory, jsonify, flash, abort, g, has_app_context)
 from dateutil.relativedelta import relativedelta
 
 from core import db, stats, importer, exports, verify, selftest, corrections, backup, mailer
@@ -151,7 +154,26 @@ MESI_S = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
           'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
 
 def get_con():
-    return db.init()
+    """Una connessione al database, chiusa da sola a fine richiesta.
+
+    Prima ogni pagina chiudeva la sua a mano, e le uscite anticipate (un
+    messaggio d'errore, un redirect) la lasciavano aperta con una scrittura a
+    meta': la pagina dopo trovava «database is locked». Adesso, qualunque strada
+    prenda la richiesta, quello che non e' stato salvato si annulla e il blocco
+    sparisce. Chiudere a mano resta permesso: chiudere due volte non fa niente."""
+    con = db.init()
+    if has_app_context():
+        g.setdefault('connessioni', []).append(con)
+    return con
+
+
+@app.teardown_appcontext
+def _chiudi_connessioni(_errore):
+    for con in g.pop('connessioni', []):
+        try:
+            con.close()
+        except sqlite3.Error:
+            pass
 
 
 def fmt_date_it(iso):
@@ -351,11 +373,34 @@ def benvenuto():
 
 
 # ---------------------------------------------------------------- nuova fattura
+# Una fattura alla volta. Il numero si sceglie, poi si scrivono i file, poi la
+# riga nel database: se due richieste facessero la strada insieme, troverebbero
+# lo stesso numero libero e uscirebbero due fatture #7 con lo stesso file.
+_BLOCCO_FATTURE = threading.Lock()
+
+# Ogni modulo «Nuova fattura» nasce con un gettone suo. Premere Crea due volte,
+# o tornare indietro e premerlo ancora, rimanda lo stesso gettone: la fattura
+# esiste gia' e si va a quella, invece di farne una seconda uguale. Il
+# gettone si ricorda solo finche' l'app e' accesa, ed e' abbastanza: serve a
+# chi preme due volte nello stesso minuto, non a chi torna domani.
+_GETTONI_USATI = collections.OrderedDict()
+_GETTONI_TENUTI = 200
+
+
+def _ricorda_gettone(gettone, inv_id):
+    if not gettone:
+        return
+    _GETTONI_USATI[gettone] = inv_id
+    while len(_GETTONI_USATI) > _GETTONI_TENUTI:
+        _GETTONI_USATI.popitem(last=False)
+
+
 @app.route('/nuova', methods=['GET', 'POST'])
 def nuova():
     con = get_con()
     if request.method == 'POST':
-        return _crea_fattura(con)
+        with _BLOCCO_FATTURE:
+            return _crea_fattura(con)
     clients = con.execute('SELECT * FROM clients WHERE archived=0 ORDER BY name').fetchall()
     nxt = db.next_number(con)
     today = datetime.date.today()
@@ -366,6 +411,7 @@ def nuova():
                                   request.args.get('mese', ''))
     con.close()
     return render_template('new_invoice.html', clients=clients, next_number=nxt,
+                           gettone=secrets.token_hex(8),
                            today=today.isoformat(), servizi=elenco_servizi,
                            precompilato=pre,
                            cestinata=cestinata['client_name'] if cestinata else None)
@@ -479,6 +525,14 @@ def _cliente_omonimo(con, name):
 
 def _crea_fattura(con):
     f = request.form
+    # --- lo stesso modulo premuto due volte ---
+    gettone = (f.get('gettone') or '').strip()[:64]
+    if gettone and gettone in _GETTONI_USATI:
+        gia = _GETTONI_USATI[gettone]
+        con.close()
+        avvisa('Questa fattura era già stata creata: eccola. Non ne ho fatta una seconda.',
+               'ok')
+        return redirect(url_for('fattura', inv_id=gia))
     # --- cliente ---
     client_id = f.get('client_id', type=int)
     if f.get('nuovo_cliente') == '1':
@@ -598,11 +652,6 @@ def _crea_fattura(con):
         avvisa('Esiste già un file «{file}» — per sicurezza non sovrascrivo.', 'error',
                file=fname)
         return redirect(url_for('nuova'))
-    # la lingua della fattura e' quella del CLIENTE: e' lui che la legge
-    lingua_cliente = lng.normalizza_doc(
-        client['lingua'] if 'lingua' in client.keys() else None)
-    docgen.build_docx(docx_path, number, date_str, intestatario, addr_lines, items, total,
-                      settings, lingua_cliente)
     # Da quale abbonamento nasce, e quale mese copre. Il mese si accetta solo
     # se e' ancora da fare: due schede aperte sulla stessa proposta non devono
     # poter produrre due fatture per settembre. La verifica si rifa' qui, un
@@ -618,12 +667,24 @@ def _crea_fattura(con):
                'error')
         return redirect(url_for('abbonamenti'))
 
-    # il riferimento della QR-fattura si decide QUI, una volta, e finisce sia
-    # sul foglio che nel database: e' il filo che riportera' il versamento a
-    # questa fattura, e i due capi devono essere lo stesso filo
-    qr_ref = qrbill.riferimento_della_fattura(number, settings)
-    pdfgen.build_pdf(pdf_path, number, date_str, intestatario, addr_lines, items,
-                     total, settings, lingua_cliente, qr_ref)
+    # la lingua della fattura e' quella del CLIENTE: e' lui che la legge
+    lingua_cliente = lng.normalizza_doc(
+        client['lingua'] if 'lingua' in client.keys() else None)
+    try:
+        docgen.build_docx(docx_path, number, date_str, intestatario, addr_lines, items,
+                          total, settings, lingua_cliente)
+        # il riferimento della QR-fattura si decide QUI, una volta, e finisce sia
+        # sul foglio che nel database: e' il filo che riportera' il versamento a
+        # questa fattura, e i due capi devono essere lo stesso filo
+        qr_ref = qrbill.riferimento_della_fattura(number, settings)
+        pdfgen.build_pdf(pdf_path, number, date_str, intestatario, addr_lines, items,
+                         total, settings, lingua_cliente, qr_ref)
+    except Exception:
+        # un file a meta' bloccherebbe la fattura dopo: «Esiste già un file»
+        for p in (docx_path, pdf_path):
+            if os.path.exists(p):
+                os.remove(p)
+        raise
 
     # --- VERIFICA AUTOMATICA: rileggo i file veri e controllo gli importi al centesimo.
     #     Se qualcosa non torna, NON salvo la fattura e rimuovo i file generati. ---
@@ -642,6 +703,7 @@ def _crea_fattura(con):
         inv_id, righe_sedute, chiave_sedute, doppione, giorno_rinnovo = _salva_fattura_e_sedute(
             con, number, client, intestatario, addr_lines, date_iso, year, total, items,
             docx_path, pdf_path, qr_ref, ric_id, periodo)
+        _ricorda_gettone(gettone, inv_id)
         # le fatture dello stesso cliente buttate nel Cestino: questa puo' essere
         # la versione rifatta di una di loro, e allora non da' sedute due volte
         cestinate = [x['number'] for x in con.execute(
