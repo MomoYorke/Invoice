@@ -1385,6 +1385,8 @@ TESTI = {
         'sedute': 'sessions',
         '{chi} — oltre quelle del mese': '{chi} — beyond the month’s sessions',
         'nel Cestino': 'in the Trash',
+        'Buttata per rifarla? Rifai la fattura a questo cliente con lo stesso pacchetto: la nuova prende il suo posto e le sedute già fatte restano.':
+            'Trashed to redo it? Make the invoice again for this client with the same package: the new one takes its place and the sessions already done stay.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sessions for {nome} from {dal} to {al}: {sedute}.',
         'Sedute dai servizi': 'Sessions from services',
         'Sedute non fatte': 'Sessions not done',
@@ -2917,6 +2919,8 @@ TESTI = {
         'sedute': 'Sitzungen',
         '{chi} — oltre quelle del mese': '{chi} — über die Sitzungen des Monats hinaus',
         'nel Cestino': 'im Papierkorb',
+        'Buttata per rifarla? Rifai la fattura a questo cliente con lo stesso pacchetto: la nuova prende il suo posto e le sedute già fatte restano.':
+            'Zum Neumachen gelöscht? Erstelle die Rechnung für diesen Kunden mit demselben Paket neu: Die neue tritt an ihre Stelle und die bereits gemachten Sitzungen bleiben.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sitzungen von {nome} vom {dal} bis {al}: {sedute}.',
         'Sedute dai servizi': 'Sitzungen aus Leistungen',
         'Sedute non fatte': 'Nicht durchgeführte Sitzungen',
