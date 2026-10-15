@@ -811,6 +811,9 @@ def _fattura_rifatta(reg, chiave, sedute, sostituisce):
 
 def _prendi_il_posto(p, nome, numero, sedute, dati):
     vecchio = p.get('fattura_numero')
+    # spesso si rifa' la fattura per un nome scritto male: il pacchetto prende
+    # il nome che il cliente ha adesso, non quello sbagliato di prima
+    p['cliente'] = nome
     _paga(p, numero, sedute, dati, nota=f'Fattura #{numero}, rifatta al posto della #{vecchio}')
     return 'collegato', (
         'La fattura #{numero} prende il posto della #{vecchia} (nel Cestino): il pacchetto '

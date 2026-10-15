@@ -201,6 +201,19 @@ def _fattura_rifatta(r, S, _check, _senza_scoppiare):
     S.aggancia_pacchetto(reg, 'giulia', 2, '2026-10-04', 10, PACK10, sostituisce=[1])
     _check(r, 'Revisione crediti', 'se il pacchetto della fattura cestinata è già finito, la nuova apre il suo',
            [(q['fattura_numero'], len(S.contate(q))) for q in reg['pacchetti']], [(1, 10), (2, 0)])
+    # nome sbagliato sulla fattura: si corregge il cliente, si butta la fattura
+    # e la si rifa'. Il pacchetto passa alla nuova con la seduta gia' fatta e
+    # con il nome giusto, non con quello sbagliato di prima.
+    sbagliato = dict(GIULIA, name='Guilia Ferrari', chiave_sedute='giulia')
+    S.configura([sbagliato, MARCO])
+    reg = _vuoto()
+    S.aggancia_pacchetto(reg, 'giulia', 1, '2026-10-01', 10, PACK10)
+    S.aggiungi_sessione(reg, 'giulia', '2026-10-02', 'Guilia pt', 'g1::2026-10-02')
+    S.configura([GIULIA, MARCO])
+    S.aggancia_pacchetto(reg, 'giulia', 2, '2026-10-03', 10, PACK10, sostituisce=[1])
+    _check(r, 'Revisione crediti', 'la fattura rifatta col nome giusto tiene la seduta fatta e corregge il nome del pacchetto',
+           [(q['fattura_numero'], len(S.contate(q)), q['crediti'], q['cliente']) for q in reg['pacchetti']],
+           [(2, 1, 10, 'Giulia')])
 
 
 def _pacchetto_tolto(r, S, _check):
