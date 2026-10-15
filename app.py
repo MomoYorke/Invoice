@@ -2108,6 +2108,30 @@ def crediti_collega():
     return redirect(url_for('crediti'))
 
 
+@app.route('/crediti/togli', methods=['POST'])
+def crediti_togli():
+    """Toglie il pacchetto di una fattura nel Cestino che non verra' rifatta.
+
+    Solo se la fattura e' nel Cestino: un pacchetto pagato non si toglie con
+    un click. Il pacchetto resta nel registro, da parte (sessions.togli_pacchetto)."""
+    pid = request.form.get('pacchetto', '')
+    reg = sess.carica()
+    p = next((q for q in reg['pacchetti'] if q['id'] == pid), None)
+    if p is None:
+        avvisa('Pacchetto inesistente.', 'error')
+        return redirect(url_for('crediti'))
+    con = get_con()
+    stato = _stati_delle_fatture(con).get(p.get('fattura_numero'))
+    con.close()
+    if stato != 'cestinata':
+        avvisa('Si può togliere solo il pacchetto di una fattura nel Cestino.', 'error')
+        return redirect(url_for('crediti'))
+    _, quante = sess.togli_pacchetto(reg, pid)
+    sess.salva(reg)
+    avvisa('Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.', 'ok', pid=pid, n=quante)
+    return redirect(url_for('crediti'))
+
+
 # ---------------------------------------------------------------- controlli / impostazioni
 @app.route('/controlli')
 def controlli():

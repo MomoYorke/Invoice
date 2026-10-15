@@ -43,8 +43,10 @@ def _test_revisione_crediti(r):
         _fattura_su_pacchetto(r, S, _check)
         _inizio_lettura(r, S, SY, _check)
         _fattura_rifatta(r, S, _check, _senza_scoppiare)
+        _pacchetto_tolto(r, S, _check)
     finally:
         S.ricarica()
+    _togli_dalla_pagina(r, _check, _senza_scoppiare)
 
 
 def _spostata_e_calendario(r, S, C, F, SY, _check, _senza_scoppiare):
@@ -199,3 +201,79 @@ def _fattura_rifatta(r, S, _check, _senza_scoppiare):
     S.aggancia_pacchetto(reg, 'giulia', 2, '2026-10-04', 10, PACK10, sostituisce=[1])
     _check(r, 'Revisione crediti', 'se il pacchetto della fattura cestinata è già finito, la nuova apre il suo',
            [(q['fattura_numero'], len(S.contate(q))) for q in reg['pacchetti']], [(1, 10), (2, 0)])
+
+
+def _pacchetto_tolto(r, S, _check):
+    # --- fattura nel Cestino che non si rifa': il pacchetto si toglie ---------
+    reg = _vuoto()
+    S.aggancia_pacchetto(reg, 'giulia', 1, '2026-10-01', 10, PACK10)
+    S.aggiungi_sessione(reg, 'giulia', '2026-10-02', 'Giulia pt', 'g1::2026-10-02')
+    S.aggancia_pacchetto(reg, 'marco', 2, '2026-10-01', 10, PACK10)
+    tolto = S.togli_pacchetto(reg, 'GIU-01', '2026-10-05')
+    _check(r, 'Revisione crediti', 'un pacchetto tolto non compare più fra i crediti, gli altri sì',
+           [x['cliente'] for x in S.vista_crediti(reg, D(2026, 10, 5)) if x['pacchetto']], ['Marco'])
+    _check(r, 'Revisione crediti', 'un pacchetto tolto non si cancella: resta da parte, con la data',
+           [(q['id'], q['tolto_il'], len(q['sessioni'])) for q in reg['pacchetti_tolti']],
+           [('GIU-01', '2026-10-05', 1)])
+    _check(r, 'Revisione crediti', 'la seduta già fatta non si perde: torna fra le sedute senza pacchetto',
+           ([(e['data'], e['chiave']) for e in reg['esclusi']], tolto[1]), ([('2026-10-02', 'giulia')], 1))
+    _check(r, 'Revisione crediti', 'e la lettura dopo non la rilegge come nuova',
+           'g1::2026-10-02' in S.id_evento_gia_presente(reg), True)
+    # la fattura nuova apre un pacchetto nuovo, non riusa il nome di quello tolto
+    S.aggancia_pacchetto(reg, 'giulia', 3, '2026-10-06', 10, PACK10)
+    _check(r, 'Revisione crediti', 'il pacchetto dopo non riusa il nome di quello tolto',
+           [q['id'] for q in reg['pacchetti'] if 'giulia' in q.get('chiavi', [])], ['GIU-02'])
+    # chi aveva gia' un pacchetto finito prima: la seduta torna da fatturare
+    reg = _vuoto()
+    S.aggancia_pacchetto(reg, 'giulia', 1, '2026-08-01', 10, PACK10)
+    for g in range(1, 11):
+        S.aggiungi_sessione(reg, 'giulia', '2026-08-%02d' % g, 'Giulia pt', 'c%d::2026-08-%02d' % (g, g))
+    S.aggancia_pacchetto(reg, 'giulia', 2, '2026-09-01', 10, PACK10)
+    S.aggiungi_sessione(reg, 'giulia', '2026-09-02', 'Giulia pt', 'd1::2026-09-02')
+    S.togli_pacchetto(reg, 'GIU-02', '2026-09-05')
+    _check(r, 'Revisione crediti', 'con un pacchetto finito prima, la seduta torna in un pacchetto da fatturare',
+           [(q['id'], len(S.contate(q)), S.e_saldato(q)) for q in reg['pacchetti']],
+           [('GIU-01', 10, True), ('GIU-03', 1, False)])
+
+
+def _togli_dalla_pagina(r, _check, _senza_scoppiare):
+    # --- il pulsante «Togli pacchetto»: solo per una fattura nel Cestino ------
+    import json
+    import sqlite3
+    from . import db as D, sessions as S
+    import app as APP
+    vero_db, vero_registro = D.DB_PATH, S.REGISTRY
+    tmp = tempfile.mkdtemp(prefix='prova-togli-')
+    try:
+        D.DB_PATH = os.path.join(tmp, 'fatture.db')
+        S.REGISTRY = os.path.join(tmp, 'sessions.json')
+        con = D.init()
+        con.execute("INSERT INTO clients(id, key, name, chiave_sedute) VALUES(1, 'giulia', 'Giulia Ferrari', 'giulia')")
+        con.execute("INSERT INTO clients(id, name, key, chiave_sedute) VALUES(2, 'Marco', 'marco', 'marco')")
+        con.execute("INSERT INTO invoices(number, client_id, client_name, date, year, status, deleted_at) "
+                    "VALUES(1, 1, 'Giulia Ferrari', '2026-10-01', 2026, 'emessa', '2026-10-02 10:00:00')")
+        con.execute("INSERT INTO invoices(number, client_id, client_name, date, year, status) "
+                    "VALUES(2, 2, 'Marco Neri', '2026-10-01', 2026, 'emessa')")
+        con.commit()
+        con.close()
+        S.ricarica()
+        reg = _vuoto()
+        S.aggancia_pacchetto(reg, 'giulia', 1, '2026-10-01', 10, PACK10)
+        S.aggancia_pacchetto(reg, 'marco', 2, '2026-10-01', 10, PACK10)
+        S.salva(reg)
+        cliente = APP.app.test_client()
+
+        def premi(pid):
+            risposta = cliente.post('/crediti/togli', data={'pacchetto': pid})
+            with open(S.REGISTRY, encoding='utf-8') as f:
+                dopo = json.load(f)
+            return risposta.status_code, sorted(q['id'] for q in dopo['pacchetti'])
+
+        _check(r, 'Revisione crediti', 'il pacchetto di una fattura valida non si toglie',
+               _senza_scoppiare(premi, 'MAR-01'), (302, ['GIU-01', 'MAR-01']))
+        _check(r, 'Revisione crediti', 'quello di una fattura nel Cestino sì',
+               _senza_scoppiare(premi, 'GIU-01'), (302, ['MAR-01']))
+    finally:
+        D.DB_PATH, S.REGISTRY = vero_db, vero_registro
+        S.ricarica()
+        shutil.rmtree(tmp, ignore_errors=True)

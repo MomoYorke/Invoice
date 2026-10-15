@@ -1385,6 +1385,14 @@ TESTI = {
         'sedute': 'sessions',
         '{chi} — oltre quelle del mese': '{chi} — beyond the month’s sessions',
         'nel Cestino': 'in the Trash',
+        'Togliere il pacchetto {pid}? Smette di contare crediti. Le sedute già fatte restano registrate. Se vuoi rifare la fattura, non toglierlo: rifalla e basta.':
+            "Remove package {pid}? It stops counting credits. Sessions already done stay recorded. If you want to redo the invoice, don't remove it: just make it again.",
+        'Togli pacchetto':
+            'Remove package',
+        'Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.':
+            'Package {pid} removed: it no longer counts credits. Sessions already done, which stay recorded: {n}.',
+        'Si può togliere solo il pacchetto di una fattura nel Cestino.':
+            'You can only remove the package of an invoice in the Trash.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sessions for {nome} from {dal} to {al}: {sedute}.',
         'Sedute dai servizi': 'Sessions from services',
         'Sedute non fatte': 'Sessions not done',
@@ -2917,6 +2925,14 @@ TESTI = {
         'sedute': 'Sitzungen',
         '{chi} — oltre quelle del mese': '{chi} — über die Sitzungen des Monats hinaus',
         'nel Cestino': 'im Papierkorb',
+        'Togliere il pacchetto {pid}? Smette di contare crediti. Le sedute già fatte restano registrate. Se vuoi rifare la fattura, non toglierlo: rifalla e basta.':
+            'Paket {pid} entfernen? Es zählt keine Guthaben mehr. Bereits gemachte Sitzungen bleiben erfasst. Wenn du die Rechnung neu machen willst, entferne es nicht: Mach sie einfach neu.',
+        'Togli pacchetto':
+            'Paket entfernen',
+        'Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.':
+            'Paket {pid} entfernt: Es zählt keine Guthaben mehr. Bereits gemachte Sitzungen, die erfasst bleiben: {n}.',
+        'Si può togliere solo il pacchetto di una fattura nel Cestino.':
+            'Nur das Paket einer Rechnung im Papierkorb kann entfernt werden.',
         'Sedute di {nome} dal {dal} al {al}: {sedute}.': 'Sitzungen von {nome} vom {dal} bis {al}: {sedute}.',
         'Sedute dai servizi': 'Sitzungen aus Leistungen',
         'Sedute non fatte': 'Nicht durchgeführte Sitzungen',

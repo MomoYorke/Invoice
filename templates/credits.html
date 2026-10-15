@@ -117,6 +117,13 @@
                 onclick="var e=document.getElementById('lk-{{ loop.index }}');e.style.display=(e.style.display==='block'?'none':'block')">
           {{ _('Cambia fattura') if r.fattura_numero else _('Collega fattura') }}
         </button>
+        {% if r.fattura_stato == 'cestinata' %}
+        <form method="post" action="{{ url_for('crediti_togli') }}" style="margin-top:6px"
+              onsubmit='return confirm({{ _("Togliere il pacchetto {pid}? Smette di contare crediti. Le sedute già fatte restano registrate. Se vuoi rifare la fattura, non toglierlo: rifalla e basta.").format(pid=r.pacchetto) | tojson }})'>
+          <input type="hidden" name="pacchetto" value="{{ r.pacchetto }}">
+          <button class="btn small secondary">{{ _('Togli pacchetto') }}</button>
+        </form>
+        {% endif %}
       </td>
       {% else %}
       <td class="muted">—</td><td class="num muted">—</td><td class="num muted">—</td>
