@@ -20,6 +20,7 @@
     <form method="post" action="{{ url_for('crediti_sincronizza') }}" style="display:inline">
       <button class="btn small secondary">{{ _('Aggiorna adesso') }}</button></form>
   {% endif %}
+  <a class="btn small secondary" href="{{ url_for('crediti_report') }}">{{ _('Report del mese') }}</a>
 </div>
 
 {% if domande %}
