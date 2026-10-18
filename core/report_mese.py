@@ -152,6 +152,16 @@ def markdown(rep, lingua=None):
     return '\n'.join(righe) + '\n'
 
 
+def percorso_pulito(testo):
+    """La cartella come la incolla il Mac: a volte fra apici, a volte con
+    «\\ » al posto degli spazi (se viene dal Terminale). E' sempre la stessa
+    cartella, e dirle «non esiste» farebbe pensare a un errore che non c'e'."""
+    testo = (testo or '').strip()
+    if len(testo) >= 2 and testo[0] == testo[-1] and testo[0] in '\'"':
+        testo = testo[1:-1].strip()
+    return testo.replace('\\ ', ' ')
+
+
 def nome_file(mese):
     return 'Report crediti %s.md' % mese
 
