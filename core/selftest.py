@@ -4290,9 +4290,47 @@ def _test_calendario(r):
            serie('DTSTART;TZID=Europe/Zurich:20260805T003000\r\n'
                  'RRULE:FREQ=WEEKLY;UNTIL=20260825T223000Z\r\n'),
            ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'])
-    _check(r, 'Calendario', 'una serie di giornate intere arriva fino al suo ultimo giorno',
-           serie('DTSTART;VALUE=DATE:20260821\r\nRRULE:FREQ=WEEKLY;UNTIL=20260904\r\n'),
+    _check(r, 'Calendario', 'una serie con la fine scritta come sola data arriva fino all’ultimo giorno',
+           serie('DTSTART;TZID=Europe/Zurich:20260821T070000\r\n'
+                 'RRULE:FREQ=WEEKLY;UNTIL=20260904\r\n'),
            ['2026-08-21', '2026-08-28', '2026-09-04'])
+
+    # --- cose che il lettore leggeva male (revisione 11 ott) ---
+    def leggi_testo(corpo, uid='u1@prova', titolo='Anna'):
+        testo = ('BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:%s\r\nSUMMARY:%s\r\n' % (uid, titolo)
+                 + corpo + 'END:VEVENT\r\nEND:VCALENDAR\r\n')
+        return C.leggi(testo, datetime.date(2026, 8, 1), datetime.date(2026, 9, 30),
+                       e_testo=True)
+
+    _check(r, 'Calendario', 'un evento di tutto il giorno non è una seduta',
+           leggi_testo('DTSTART;VALUE=DATE:20260821\r\n', titolo='Anna in vacanza'), [])
+    _check(r, 'Calendario', 'nemmeno una serie di giornate intere',
+           serie('DTSTART;VALUE=DATE:20260821\r\nRRULE:FREQ=WEEKLY;UNTIL=20260904\r\n'), [])
+    _check(r, 'Calendario', 'una seduta con l’ora resta una seduta',
+           [(e['data'], e['ora']) for e in leggi_testo('DTSTART;TZID=Europe/Zurich:20260821T070000\r\n')],
+           [('2026-08-21', '07:00')])
+
+    promemoria = ('DTSTART;TZID=Europe/Zurich:20260821T070000\r\n'
+                  'BEGIN:VALARM\r\nACTION:EMAIL\r\nSUMMARY:Alarm notification\r\n'
+                  'UID:allarme@prova\r\nTRIGGER:-PT30M\r\nEND:VALARM\r\n')
+    _check(r, 'Calendario', 'un promemoria dentro l’evento non cambia titolo né identificativo',
+           [(e['titolo'], e['id']) for e in leggi_testo(promemoria)],
+           [('Anna', 'u1@prova::2026-08-21')])
+    _check(r, 'Calendario', 'con o senza promemoria la seduta ha lo stesso id',
+           [e['id'] for e in leggi_testo(promemoria)],
+           [e['id'] for e in leggi_testo('DTSTART;TZID=Europe/Zurich:20260821T070000\r\n')])
+
+    # le 22:30 UTC del 21 sono le 00:30 del 22 a Zurigo (estate: UTC+2)
+    _check(r, 'Calendario', 'una seduta scritta in UTC conta nel giorno svizzero',
+           [(e['data'], e['ora']) for e in leggi_testo('DTSTART:20260821T223000Z\r\n')],
+           [('2026-08-22', '00:30')])
+    _check(r, 'Calendario', 'una serie con inizio in UTC parte dal giorno svizzero',
+           serie('DTSTART:20260821T223000Z\r\nRRULE:FREQ=WEEKLY;COUNT=2\r\n'),
+           ['2026-08-22', '2026-08-29'])
+    _check(r, 'Calendario', 'la data saltata (EXDATE) in UTC è quella svizzera',
+           serie('DTSTART;TZID=Europe/Zurich:20260822T003000\r\n'
+                 'RRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE:20260828T223000Z\r\n'),
+           ['2026-08-22', '2026-09-05'])
 
     # --- i link di Apple ---
     # Il calendario pubblico di iCloud da' un indirizzo webcal://, che e'
