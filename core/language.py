@@ -1603,6 +1603,98 @@ TESTI = {
 
         'prima di aggiornare il programma': 'before updating the program',
 
+
+        # report del mese
+        'Il primo di ogni mese preparami il report del mese scorso':
+            "On the first of every month, prepare last month's report for me",
+        'Arriva a {indirizzo}.':
+            'It goes to {indirizzo}.',
+        'In una cartella':
+            'In a folder',
+        'Una nota Markdown al mese, per esempio nel tuo vault di Obsidian. Lascia vuoto per non salvarla.':
+            'One Markdown note a month, for example in your Obsidian vault. Leave empty not to save it.',
+        'Cartella':
+            'Folder',
+        'Salvalo adesso nella cartella':
+            'Save it to the folder now',
+        'Questa cartella non esiste: {cartella}':
+            'This folder does not exist: {cartella}',
+        'Ogni mese salvo il report anche in {cartella}.':
+            'Every month I will also save the report in {cartella}.',
+        'Il report non si salva più in una cartella.':
+            'The report is no longer saved in a folder.',
+        'Report salvato in {percorso}.':
+            'Report saved in {percorso}.',
+        'Report non salvato: {motivo}':
+            'Report not saved: {motivo}',
+        'la cartella {cartella} non esiste più.':
+            'the folder {cartella} no longer exists.',
+        'Ti preparo il report dei crediti il primo di ogni mese.':
+            "I'll prepare the credits report for you on the first of every month.",
+        'Report mensile spento.':
+            'Monthly report turned off.',
+        'Report del mese':
+            'Monthly report',
+        'Sedute fatte nel mese e crediti che restano oggi. Il report guarda soltanto: non cambia né il calendario né i crediti.':
+            'Sessions done in the month and credits left today. The report only looks: it changes neither the calendar nor the credits.',
+        '← Mese prima':
+            '← Previous month',
+        'Mese dopo →':
+            'Next month →',
+        'Torna ai Crediti':
+            'Back to Credits',
+        'Da fatturare presto':
+            'To invoice soon',
+        '{rimasti} crediti rimasti':
+            '{rimasti} credits left',
+        '{cliente}: {rimasti} crediti rimasti':
+            '{cliente}: {rimasti} credits left',
+        'Nessuno: tutti hanno ancora più di 2 crediti.':
+            'Nobody: everyone still has more than 2 credits.',
+        'Anomalie':
+            'Anomalies',
+        'Nessuna: tutto torna.':
+            'None: everything adds up.',
+        'Tutti i clienti':
+            'All clients',
+        'Sedute nel mese':
+            'Sessions in the month',
+        'Crediti rimasti':
+            'Credits left',
+        'Ultima seduta':
+            'Last session',
+        'Nessun cliente con un pacchetto.':
+            'No client with a package.',
+        'Per email':
+            'By email',
+        "Parte la prima volta che apri l'app nel mese nuovo: se il primo è spenta, arriva il giorno in cui la riapri.":
+            'It goes out the first time you open the app in the new month: if the app is closed on the first, it arrives the day you open it again.',
+        'Mandamelo adesso':
+            'Send it to me now',
+        'Per ricevere il report per email serve la posta: si configura in Impostazioni.':
+            'To receive the report by email, set up email in Settings.',
+        'Vai alle Impostazioni':
+            'Go to Settings',
+        'Report mandato a {indirizzo}.':
+            'Report sent to {indirizzo}.',
+        'Report non mandato: {motivo}':
+            'Report not sent: {motivo}',
+        'la posta non è ancora configurata in Impostazioni.':
+            'email is not set up yet in Settings.',
+        'Report crediti: {mese}':
+            'Credits report: {mese}',
+        '{cliente}: {sedute} sedute nel mese, {rimasti} crediti rimasti, ultima seduta {ultima}':
+            '{cliente}: {sedute} sessions in the month, {rimasti} credits left, last session {ultima}',
+        "Report fatto dall'app: non ha cambiato niente, né nel calendario né nei crediti.":
+            'Report made by the app: it changed nothing, neither in the calendar nor in the credits.',
+        '{testo}: crediti sotto zero ({quanti}). Controlla le sedute del pacchetto.':
+            '{testo}: credits below zero ({quanti}). Check the sessions in the package.',
+        '{testo}: {quanti} seduta/e sparite dal calendario, da confermare in Crediti.':
+            '{testo}: {quanti} session(s) gone from the calendar, to confirm in Credits.',
+        '«{testo}»: seduta senza pacchetto né abbonamento, non è stata scalata.':
+            '«{testo}»: session with no package or subscription, it was not deducted.',
+        '«{testo}»: nessun cliente riconosciuto nel titolo. Correggi il nome nel calendario o nella scheda del cliente.':
+            "«{testo}»: no client recognised in the title. Fix the name in the calendar or on the client's card.",
     },
     'de': {
         'Il bollettino QR':
@@ -3147,6 +3239,98 @@ TESTI = {
 
         'prima di aggiornare il programma': 'vor dem Aktualisieren des Programms',
 
+
+        # report del mese
+        'Report del mese':
+            'Monatsbericht',
+        'Sedute fatte nel mese e crediti che restano oggi. Il report guarda soltanto: non cambia né il calendario né i crediti.':
+            'Im Monat absolvierte Sitzungen und heute verbleibendes Guthaben. Der Bericht schaut nur: Er ändert weder den Kalender noch das Guthaben.',
+        '← Mese prima':
+            '← Vormonat',
+        'Mese dopo →':
+            'Nächster Monat →',
+        'Torna ai Crediti':
+            'Zurück zum Guthaben',
+        'Da fatturare presto':
+            'Bald in Rechnung stellen',
+        '{rimasti} crediti rimasti':
+            '{rimasti} Guthaben übrig',
+        '{cliente}: {rimasti} crediti rimasti':
+            '{cliente}: {rimasti} Guthaben übrig',
+        'Nessuno: tutti hanno ancora più di 2 crediti.':
+            'Niemand: Alle haben noch mehr als 2 Guthaben.',
+        'Anomalie':
+            'Unstimmigkeiten',
+        'Nessuna: tutto torna.':
+            'Keine: Alles stimmt.',
+        'Tutti i clienti':
+            'Alle Kunden',
+        'Sedute nel mese':
+            'Sitzungen im Monat',
+        'Crediti rimasti':
+            'Verbleibendes Guthaben',
+        'Ultima seduta':
+            'Letzte Sitzung',
+        'Nessun cliente con un pacchetto.':
+            'Kein Kunde mit einem Paket.',
+        'Per email':
+            'Per E-Mail',
+        "Parte la prima volta che apri l'app nel mese nuovo: se il primo è spenta, arriva il giorno in cui la riapri.":
+            'Er geht beim ersten Öffnen der App im neuen Monat raus: Ist sie am Ersten geschlossen, kommt er an dem Tag, an dem du sie wieder öffnest.',
+        'Mandamelo adesso':
+            'Schick ihn mir jetzt',
+        'Per ricevere il report per email serve la posta: si configura in Impostazioni.':
+            'Um den Bericht per E-Mail zu erhalten, richte die E-Mail in den Einstellungen ein.',
+        'Vai alle Impostazioni':
+            'Zu den Einstellungen',
+        'Report mandato a {indirizzo}.':
+            'Bericht an {indirizzo} gesendet.',
+        'Report non mandato: {motivo}':
+            'Bericht nicht gesendet: {motivo}',
+        'la posta non è ancora configurata in Impostazioni.':
+            'die E-Mail ist in den Einstellungen noch nicht eingerichtet.',
+        'Report crediti: {mese}':
+            'Guthaben-Bericht: {mese}',
+        '{cliente}: {sedute} sedute nel mese, {rimasti} crediti rimasti, ultima seduta {ultima}':
+            '{cliente}: {sedute} Sitzungen im Monat, {rimasti} Guthaben übrig, letzte Sitzung {ultima}',
+        "Report fatto dall'app: non ha cambiato niente, né nel calendario né nei crediti.":
+            'Bericht von der App erstellt: Sie hat nichts geändert, weder im Kalender noch beim Guthaben.',
+        '{testo}: crediti sotto zero ({quanti}). Controlla le sedute del pacchetto.':
+            '{testo}: Guthaben unter null ({quanti}). Prüfe die Sitzungen des Pakets.',
+        '{testo}: {quanti} seduta/e sparite dal calendario, da confermare in Crediti.':
+            '{testo}: {quanti} Sitzung(en) aus dem Kalender verschwunden, im Guthaben bestätigen.',
+        '«{testo}»: seduta senza pacchetto né abbonamento, non è stata scalata.':
+            '«{testo}»: Sitzung ohne Paket oder Abo, sie wurde nicht abgezogen.',
+        '«{testo}»: nessun cliente riconosciuto nel titolo. Correggi il nome nel calendario o nella scheda del cliente.':
+            '«{testo}»: Kein Kunde im Titel erkannt. Korrigiere den Namen im Kalender oder in der Kundenkarte.',
+        'Il primo di ogni mese preparami il report del mese scorso':
+            'Bereite mir am Ersten jedes Monats den Bericht des Vormonats vor',
+        'Arriva a {indirizzo}.':
+            'Er geht an {indirizzo}.',
+        'In una cartella':
+            'In einem Ordner',
+        'Una nota Markdown al mese, per esempio nel tuo vault di Obsidian. Lascia vuoto per non salvarla.':
+            'Eine Markdown-Notiz pro Monat, zum Beispiel in deinem Obsidian-Vault. Leer lassen, um sie nicht zu speichern.',
+        'Cartella':
+            'Ordner',
+        'Salvalo adesso nella cartella':
+            'Jetzt im Ordner speichern',
+        'Questa cartella non esiste: {cartella}':
+            'Dieser Ordner existiert nicht: {cartella}',
+        'Ogni mese salvo il report anche in {cartella}.':
+            'Jeden Monat speichere ich den Bericht auch in {cartella}.',
+        'Il report non si salva più in una cartella.':
+            'Der Bericht wird nicht mehr in einem Ordner gespeichert.',
+        'Report salvato in {percorso}.':
+            'Bericht gespeichert in {percorso}.',
+        'Report non salvato: {motivo}':
+            'Bericht nicht gespeichert: {motivo}',
+        'la cartella {cartella} non esiste più.':
+            'der Ordner {cartella} existiert nicht mehr.',
+        'Ti preparo il report dei crediti il primo di ogni mese.':
+            'Ich bereite dir den Guthaben-Bericht am Ersten jedes Monats vor.',
+        'Report mensile spento.':
+            'Monatsbericht ausgeschaltet.',
     },
 }
 

@@ -36,6 +36,7 @@ from core import sessions as sess
 from core import lavoro
 from core import mensili
 from core import conferme
+from core import report_mese
 from core.money import parse_amount, fmt_chf, fmt_dash, parse_qty, line_total
 from core import docgen, pdfgen
 from core import branding
@@ -269,6 +270,8 @@ def dashboard():
     if ben.manca_l_essenziale(passi):
         con.close()
         return redirect(url_for('benvenuto'))
+    if report_mese.da_mandare(db.get_settings(con), datetime.date.today()):
+        _report_automatico_dietro()
     year = request.args.get('anno', type=int) or datetime.date.today().year
     k = stats.kpis(con, year)
     months = stats.monthly(con, year)
@@ -1797,6 +1800,214 @@ def crediti():
                            sync_esito=esito_sync, sync_dettaglio=dettaglio_sync,
                            sync_quando=impostazioni_cal.get('calendario_ultimo'),
                            sync_attivo=bool((impostazioni_cal.get('calendario_ics') or '').strip()))
+
+
+def _eventi_del_mese(settings, mese):
+    """Gli eventi del calendario nel mese, solo per trovare le anomalie.
+
+    Se il calendario non c'e' o non risponde il report si fa lo stesso, senza
+    quella parte: i conteggi vengono dal registro, non da qui."""
+    url = (settings.get('calendario_ics') or '').strip()
+    if not url:
+        return []
+    anno, m = (int(x) for x in mese.split('-'))
+    da = datetime.date(anno, m, 1)
+    a = da + relativedelta(months=1) - datetime.timedelta(days=1)
+    try:
+        return calendar_feed.leggi(calendar_feed.scarica(url), da, a, e_testo=True)
+    except Exception as e:
+        err_logger.error('Report del mese: calendario non letto: %s', e)
+        return []
+
+
+def _mese_chiesto(testo, oggi):
+    """'2026-09' se e' un mese vero, altrimenti il mese scorso."""
+    try:
+        datetime.date.fromisoformat((testo or '') + '-01')
+        return testo
+    except ValueError:
+        return report_mese.mese_scorso(oggi)
+
+
+def _destinatario_report(settings):
+    """Il report va a chi usa l'app, all'indirizzo da cui manda le fatture."""
+    return (settings.get('email_from') or settings.get('smtp_user') or '').strip()
+
+
+@app.route('/crediti/report')
+def crediti_report():
+    """Il report del mese: solo lettura, si puo' guardare quando si vuole."""
+    oggi = datetime.date.today()
+    mese = _mese_chiesto(request.args.get('mese'), oggi)
+    _sincronizza_calendario()
+    con = get_con()
+    settings = db.get_settings(con)
+    con.close()
+    rep = report_mese.costruisci(sess.carica(), mese, _eventi_del_mese(settings, mese), oggi)
+    anno, m = (int(x) for x in mese.split('-'))
+    prima = datetime.date(anno, m, 1) - datetime.timedelta(days=1)
+    dopo = datetime.date(anno, m, 28) + datetime.timedelta(days=4)
+    return render_template('report_mese.html', rep=rep,
+                           titolo_mese=report_mese.nome_mese(mese, _lingua_app()),
+                           anomalie=[report_mese.frase_anomalia(a, _lingua_app())
+                                     for a in rep['anomalie']],
+                           date_anomalie=[a['data'] for a in rep['anomalie']],
+                           mese_prima=prima.strftime('%Y-%m'),
+                           mese_dopo=dopo.strftime('%Y-%m') if dopo <= oggi else None,
+                           automatico=settings.get('report_mese_auto') == '1',
+                           cartella=settings.get('report_cartella') or '',
+                           destinatario=_destinatario_report(settings),
+                           posta_pronta=mailer.configurata(settings))
+
+
+@app.route('/crediti/report/automatico', methods=['POST'])
+def crediti_report_automatico():
+    con = get_con()
+    acceso = '1' if request.form.get('report_mese_auto') else '0'
+    db.set_setting(con, 'report_mese_auto', acceso)
+    if acceso == '1' and not db.get_settings(con).get('report_mese_ultimo'):
+        # da qui in avanti: chi lo accende oggi non riceve subito il mese scorso
+        db.set_setting(con, 'report_mese_ultimo',
+                       report_mese.mese_scorso(datetime.date.today()))
+    con.close()
+    avvisa('Ti preparo il report dei crediti il primo di ogni mese.' if acceso == '1'
+           else 'Report mensile spento.', 'ok')
+    return redirect(url_for('crediti_report'))
+
+
+@app.route('/crediti/report/manda', methods=['POST'])
+def crediti_report_manda():
+    oggi = datetime.date.today()
+    mese = _mese_chiesto(request.form.get('mese'), oggi)
+    esito, motivo = _manda_report(mese, oggi)
+    if esito == 'fatto':
+        avvisa('Report mandato a {indirizzo}.', 'ok', indirizzo=motivo)
+    else:
+        avvisa('Report non mandato: {motivo}', 'error', motivo=motivo)
+    return redirect(url_for('crediti_report', mese=mese))
+
+
+@app.route('/crediti/report/cartella', methods=['POST'])
+def crediti_report_cartella():
+    """Dove salvare anche la nota del mese: per esempio il proprio vault di
+    Obsidian. Vuota = da nessuna parte."""
+    testo = (request.form.get('report_cartella') or '').strip()
+    if testo and not os.path.isdir(os.path.expanduser(testo)):
+        avvisa('Questa cartella non esiste: {cartella}', 'error', cartella=testo)
+        return redirect(url_for('crediti_report'))
+    con = get_con()
+    db.set_setting(con, 'report_cartella', testo)
+    con.close()
+    avvisa('Ogni mese salvo il report anche in {cartella}.' if testo
+           else 'Il report non si salva più in una cartella.', 'ok', cartella=testo)
+    return redirect(url_for('crediti_report'))
+
+
+@app.route('/crediti/report/salva', methods=['POST'])
+def crediti_report_salva():
+    oggi = datetime.date.today()
+    mese = _mese_chiesto(request.form.get('mese'), oggi)
+    con = get_con()
+    settings = db.get_settings(con)
+    con.close()
+    esito, dettaglio = _salva_report(mese, oggi, settings)
+    if esito == 'fatto':
+        avvisa('Report salvato in {percorso}.', 'ok', percorso=dettaglio)
+    else:
+        avvisa('Report non salvato: {motivo}', 'error', motivo=dettaglio)
+    return redirect(url_for('crediti_report', mese=mese))
+
+
+_BLOCCO_REPORT = threading.Lock()
+
+
+def _manda_report(mese, oggi, manda=None):
+    """Compone e manda il report di `mese` a chi usa l'app. Ritorna (esito, dettaglio)."""
+    con = get_con()
+    settings = db.get_settings(con)
+    con.close()
+    if not mailer.configurata(settings) or not _destinatario_report(settings):
+        return 'posta', lng.t('la posta non è ancora configurata in Impostazioni.',
+                              lng.normalizza(settings.get('lingua')))
+    pausa = _pausa_smtp(settings)
+    if pausa:
+        return 'errore', pausa
+    rep = report_mese.costruisci(sess.carica(), mese, _eventi_del_mese(settings, mese), oggi)
+    msg = report_mese.componi(rep, _destinatario_report(settings),
+                              lng.normalizza(settings.get('lingua')))
+    ok, motivo, codice = (manda or mailer.spedisci)(msg, settings, msg['to'])
+    con = get_con()
+    _registra_email(con, destinatario=msg['to'], oggetto=msg['subject'],
+                    esito='ok' if ok else 'errore', motivo=motivo, corpo=msg['body'])
+    if not ok:
+        motivo = _conta_fallimento(con, codice, motivo)
+    con.close()
+    return ('fatto', msg['to']) if ok else ('errore', motivo)
+
+
+def _salva_report(mese, oggi, settings):
+    """La nota del mese nella cartella scelta. Ritorna (esito, dettaglio)."""
+    cartella = os.path.expanduser((settings.get('report_cartella') or '').strip())
+    if not os.path.isdir(cartella):
+        return 'errore', lng.t('la cartella {cartella} non esiste più.',
+                               lng.normalizza(settings.get('lingua'))).format(cartella=cartella)
+    rep = report_mese.costruisci(sess.carica(), mese, _eventi_del_mese(settings, mese), oggi)
+    perc = os.path.join(cartella, report_mese.nome_file(mese))
+    try:
+        with open(perc, 'w', encoding='utf-8') as f:
+            f.write(report_mese.markdown(rep, lng.normalizza(settings.get('lingua'))))
+    except OSError as e:
+        return 'errore', '%s: %s' % (type(e).__name__, e)
+    return 'fatto', perc
+
+
+def _report_automatico(oggi=None, manda=None):
+    """Il primo giorno in cui l'app e' aperta nel mese nuovo, manda il report
+    del mese scorso per email e lo salva nella cartella, se ce n'e' una.
+    Ritorna 'niente', 'posta', 'errore' o 'fatto'."""
+    oggi = oggi or datetime.date.today()
+    if not _BLOCCO_REPORT.acquire(blocking=False):
+        return 'niente'              # ci sta gia' pensando un'altra pagina
+    try:
+        con = get_con()
+        settings = db.get_settings(con)
+        con.close()
+        mese = report_mese.da_mandare(settings, oggi)
+        if not mese:
+            return 'niente'
+        posta = mailer.configurata(settings)
+        cartella = bool((settings.get('report_cartella') or '').strip())
+        if not posta and not cartella:
+            return 'posta'
+        con = get_con()
+        db.set_setting(con, 'report_mese_tentato', oggi.isoformat())
+        con.close()
+        esiti = []
+        if cartella:
+            esiti.append(_salva_report(mese, oggi, settings))
+        if posta:
+            esiti.append(_manda_report(mese, oggi, manda))
+        guasti = [motivo for esito, motivo in esiti if esito != 'fatto']
+        if guasti:
+            err_logger.error('Report del mese non completo: %s', ' · '.join(guasti))
+            return 'errore'
+        con = get_con()
+        db.set_setting(con, 'report_mese_ultimo', mese)
+        con.close()
+        return 'fatto'
+    finally:
+        _BLOCCO_REPORT.release()
+
+
+def _report_automatico_dietro():
+    """Senza far aspettare la pagina: l'invio puo' metterci qualche secondo."""
+    def lavora():
+        with app.app_context():
+            try:
+                _report_automatico()
+            except Exception as e:                       # pragma: no cover
+                err_logger.error('Report del mese: %s', e)
+    threading.Thread(target=lavora, daemon=True).start()
 
 
 @app.route('/crediti/clienti')

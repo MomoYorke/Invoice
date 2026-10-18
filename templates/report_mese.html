@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Report del mese') }}{% endblock %}
+{% block content %}
+<h1>{{ _('Report del mese') }}: {{ titolo_mese }}</h1>
+<p class="sub">{{ _('Sedute fatte nel mese e crediti che restano oggi. Il report guarda soltanto: non cambia né il calendario né i crediti.') }}</p>
+
+<div class="panel" style="padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+  <a class="btn small secondary" href="{{ url_for('crediti_report', mese=mese_prima) }}">{{ _('← Mese prima') }}</a>
+  {% if mese_dopo %}<a class="btn small secondary" href="{{ url_for('crediti_report', mese=mese_dopo) }}">{{ _('Mese dopo →') }}</a>{% endif %}
+  <a class="btn small secondary" href="{{ url_for('crediti') }}">{{ _('Torna ai Crediti') }}</a>
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">{{ _('Da fatturare presto') }}</h2>
+  {% for x in rep.da_fatturare %}
+    <p style="margin:4px 0"><strong>{{ x.cliente }}</strong>: {{ _('{rimasti} crediti rimasti').format(rimasti=x.rimasti) }}</p>
+  {% else %}
+    <p class="muted">{{ _('Nessuno: tutti hanno ancora più di 2 crediti.') }}</p>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">{{ _('Anomalie') }}</h2>
+  {% for frase in anomalie %}
+    <p style="margin:4px 0">{% if date_anomalie[loop.index0] %}<span class="muted">{{ date_anomalie[loop.index0] | dateit }}</span> {% endif %}{{ frase }}</p>
+  {% else %}
+    <p class="muted">{{ _('Nessuna: tutto torna.') }}</p>
+  {% endfor %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">{{ _('Tutti i clienti') }}</h2>
+  {% if rep.righe %}
+  <table>
+    <thead><tr><th>{{ _('Cliente') }}</th><th>{{ _('Sedute nel mese') }}</th>
+      <th>{{ _('Crediti rimasti') }}</th><th>{{ _('Ultima seduta') }}</th></tr></thead>
+    <tbody>
+    {% for x in rep.righe %}
+      <tr><td>{{ x.cliente }}</td><td>{{ x.sedute_mese }}</td><td>{{ x.rimasti }}</td>
+        <td class="muted">{{ x.ultima_seduta | dateit if x.ultima_seduta else '—' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">{{ _('Nessun cliente con un pacchetto.') }}</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">{{ _('Ogni mese') }}</h2>
+  <form method="post" action="{{ url_for('crediti_report_automatico') }}" style="margin-bottom:10px">
+    <label style="font-weight:400"><input type="checkbox" name="report_mese_auto" value="1"
+      {{ 'checked' if automatico }} style="width:auto">
+      {{ _('Il primo di ogni mese preparami il report del mese scorso') }}</label>
+    <button class="btn small secondary">{{ _('Salva') }}</button>
+  </form>
+  <p class="muted" style="font-size:13px">{{ _("Parte la prima volta che apri l'app nel mese nuovo: se il primo è spenta, arriva il giorno in cui la riapri.") }}</p>
+
+  <h3>{{ _('Per email') }}</h3>
+  {% if posta_pronta %}
+    <p>{{ _('Arriva a {indirizzo}.').format(indirizzo=destinatario) }}</p>
+    <form method="post" action="{{ url_for('crediti_report_manda') }}">
+      <input type="hidden" name="mese" value="{{ rep.mese }}">
+      <button class="btn small">{{ _('Mandamelo adesso') }}</button>
+    </form>
+  {% else %}
+    <p>{{ _('Per ricevere il report per email serve la posta: si configura in Impostazioni.') }}</p>
+    <a class="btn small" href="{{ url_for('impostazioni') }}">{{ _('Vai alle Impostazioni') }}</a>
+  {% endif %}
+
+  <h3>{{ _('In una cartella') }}</h3>
+  <p class="muted" style="font-size:13px">{{ _('Una nota Markdown al mese, per esempio nel tuo vault di Obsidian. Lascia vuoto per non salvarla.') }}</p>
+  <form method="post" action="{{ url_for('crediti_report_cartella') }}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <label for="report_cartella">{{ _('Cartella') }}</label>
+    <input id="report_cartella" name="report_cartella" value="{{ cartella }}" style="flex:1;min-width:220px">
+    <button class="btn small secondary">{{ _('Salva') }}</button>
+  </form>
+  {% if cartella %}
+  <form method="post" action="{{ url_for('crediti_report_salva') }}" style="margin-top:8px">
+    <input type="hidden" name="mese" value="{{ rep.mese }}">
+    <button class="btn small">{{ _('Salvalo adesso nella cartella') }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
