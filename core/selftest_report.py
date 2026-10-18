@@ -116,6 +116,12 @@ def _conteggi(r, S, _check, _senza_scoppiare):
 
 def _quando_si_manda(r, _check):
     from . import report_mese as R
+    # il percorso incollato dal Mac arriva spesso fra apici o con «\ » al
+    # posto degli spazi: e' la stessa cartella
+    for incollato in ("'/Users/io/Second Brain/Inbox'", '"/Users/io/Second Brain/Inbox"',
+                      '/Users/io/Second\\ Brain/Inbox', '  /Users/io/Second Brain/Inbox  '):
+        _check(r, 'Report del mese', 'il percorso incollato %s si pulisce' % incollato,
+               R.percorso_pulito(incollato), '/Users/io/Second Brain/Inbox')
     acceso = {'report_mese_auto': '1', 'report_mese_ultimo': '2026-08'}
     _check(r, 'Report del mese', 'il primo del mese tocca al mese scorso',
            R.da_mandare(acceso, D(2026, 10, 1)), '2026-09')
@@ -221,8 +227,8 @@ def _pagina_e_invio(r, _check, _senza_scoppiare):
         _check(r, 'Report del mese', 'una cartella che non esiste non si salva',
                impostazione('report_cartella'), None)
         os.makedirs(cartella)
-        cliente.post('/crediti/report/cartella', data={'report_cartella': cartella})
-        _check(r, 'Report del mese', 'una cartella vera si salva',
+        cliente.post('/crediti/report/cartella', data={'report_cartella': "'%s'" % cartella})
+        _check(r, 'Report del mese', 'una cartella vera si salva, anche incollata fra apici',
                impostazione('report_cartella'), cartella)
 
         c = sqlite3.connect(Db.DB_PATH)

@@ -1891,7 +1891,7 @@ def crediti_report_manda():
 def crediti_report_cartella():
     """Dove salvare anche la nota del mese: per esempio il proprio vault di
     Obsidian. Vuota = da nessuna parte."""
-    testo = (request.form.get('report_cartella') or '').strip()
+    testo = report_mese.percorso_pulito(request.form.get('report_cartella'))
     if testo and not os.path.isdir(os.path.expanduser(testo)):
         avvisa('Questa cartella non esiste: {cartella}', 'error', cartella=testo)
         return redirect(url_for('crediti_report'))
@@ -1947,7 +1947,7 @@ def _manda_report(mese, oggi, manda=None):
 
 def _salva_report(mese, oggi, settings):
     """La nota del mese nella cartella scelta. Ritorna (esito, dettaglio)."""
-    cartella = os.path.expanduser((settings.get('report_cartella') or '').strip())
+    cartella = os.path.expanduser(report_mese.percorso_pulito(settings.get('report_cartella')))
     if not os.path.isdir(cartella):
         return 'errore', lng.t('la cartella {cartella} non esiste più.',
                                lng.normalizza(settings.get('lingua'))).format(cartella=cartella)
