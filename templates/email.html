@@ -86,8 +86,48 @@
     })();
   </script>
 
-  <label for="c-body">{{ _('Testo — quello che il cliente leggerà, riscrivilo pure') }}</label>
-  <textarea id="c-body" name="body" rows="18" style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{ msg.body }}</textarea>
+  <span class="etichetta" id="c-body-label">{{ _('Testo — quello che il cliente leggerà, riscrivilo pure') }}</span>
+  <div class="barra-testo" role="toolbar" aria-label="{{ _('Formattazione') }}">
+    <button type="button" class="btn small secondary" data-comando="bold" title="{{ _('Grassetto') }}"><b>B</b></button>
+    <button type="button" class="btn small secondary" data-comando="italic" title="{{ _('Corsivo') }}"><i>I</i></button>
+    <button type="button" class="btn small secondary" data-comando="underline" title="{{ _('Sottolineato') }}"><u>U</u></button>
+    <button type="button" class="btn small secondary" data-comando="insertUnorderedList" title="{{ _('Elenco puntato') }}">• —</button>
+    <button type="button" class="btn small secondary" data-comando="insertOrderedList" title="{{ _('Elenco numerato') }}">1. —</button>
+    <button type="button" class="btn small secondary" data-comando="removeFormat" title="{{ _('Togli formattazione') }}">{{ _('Togli formattazione') }}</button>
+  </div>
+  {# il testo da mandare: l'HTML che si vede qui e' gia' pulito (o il modello
+     in solo testo trasformato), e il server lo ripulisce comunque all'invio #}
+  <div id="c-body" class="editor-testo" contenteditable="true" role="textbox" aria-multiline="true"
+       aria-labelledby="c-body-label">{{ testo_html | safe }}</div>
+  <input type="hidden" name="body_html" id="c-body-html">
+  <p class="muted" style="font-size:12px;margin:4px 0 0">
+    {{ _('Seleziona una parola e premi un pulsante. Il testo incollato da altri programmi arriva senza formattazione. Chi legge la posta senza formattazione riceve lo stesso testo, semplice.') }}</p>
+  <script>
+    /* la barra lavora sul testo selezionato; all'invio l'HTML va nel campo
+       nascosto. mousedown si ferma, se no il clic toglie la selezione */
+    (function () {
+      var ed = document.getElementById('c-body');
+      var campo = document.getElementById('c-body-html');
+      try { document.execCommand('styleWithCSS', false, false); } catch (e) {}
+      document.querySelectorAll('.barra-testo [data-comando]').forEach(function (b) {
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        b.addEventListener('click', function () {
+          ed.focus();
+          document.execCommand(b.dataset.comando, false, null);
+        });
+      });
+      /* incollare porta con se' colori e caratteri che non partirebbero:
+         meglio entrare come testo semplice e formattare qui */
+      ed.addEventListener('paste', function (e) {
+        var t = (e.clipboardData || window.clipboardData).getData('text/plain');
+        e.preventDefault();
+        document.execCommand('insertText', false, t);
+      });
+      ed.closest('form').addEventListener('submit', function () {
+        campo.value = ed.innerHTML;
+      });
+    })();
+  </script>
 
   {% if settings.email_copia_a_me == '1' %}
   <p class="muted" style="font-size:12px;margin:6px 0 0">

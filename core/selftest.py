@@ -492,6 +492,45 @@ def _test_email(r):
     _check(r, 'Email', 'il cliente NON vede che ti sei mandato una copia',
            'Bcc:' in spedito, False)
 
+    # --- il testo formattato ---
+    sporco = ('<div style="color:red">Ciao <b onclick="x()">Anna</b>,</div>'
+              '<div><br></div><div><i>grazie</i> e <u>a presto</u></div>'
+              '<script>alert(1)</script><img src="http://spia.esempio/x.png">'
+              '<a href="javascript:x()">qui</a><ul><li>uno<li>due</ul><b>aperto')
+    pulito = mailer.pulisci_html(sporco)
+    _check(r, 'Email formattata', 'grassetto, corsivo e sottolineato restano',
+           all(t in pulito for t in ('<b>Anna</b>', '<i>grazie</i>', '<u>a presto</u>')), True)
+    _check(r, 'Email formattata', 'niente script, immagini, link o attributi',
+           any(t in pulito.lower() for t in ('script', 'alert', '<img', 'spia', '<a',
+                                              'javascript', 'onclick', 'style')), False)
+    _check(r, 'Email formattata', 'il testo dentro un link buttato resta', 'qui' in pulito, True)
+    _check(r, 'Email formattata', 'quello lasciato aperto si chiude',
+           pulito.endswith('<b>aperto</b>'), True)
+    _check(r, 'Email formattata', 'un < scritto nel testo resta testo',
+           mailer.pulisci_html('3 &lt; 5 &amp; <b>ok</b>'), '3 &lt; 5 &amp; <b>ok</b>')
+    _check(r, 'Email formattata', 'il solo testo di riserva va a capo dove serve',
+           mailer.testo_da_html(pulito),
+           'Ciao Anna,\n\ngrazie e a presto\nqui\n- uno\n- due\naperto')
+    modello = 'Ciao Anna,\n\nIn allegato la Sua fattura.\n  Rientro\n\nSaluti\nTizio'
+    _check(r, 'Email formattata', 'senza toccare niente, il testo torna identico',
+           mailer.testo_da_html(mailer.pulisci_html(mailer.html_da_testo(modello))), modello)
+    _check(r, 'Email formattata', 'un testo senza formattazione non conta come formattato',
+           mailer.ha_formato(mailer.pulisci_html(mailer.html_da_testo(modello))), False)
+    _check(r, 'Email formattata', 'il grassetto conta come formattato',
+           mailer.ha_formato(pulito), True)
+    doppia = mailer.costruisci_messaggio({'to': 'c@esempio.ch', 'subject': 'x',
+                                          'body': 'Ciao Anna', 'html': 'Ciao <b>Anna</b>',
+                                          'allegati': []}, dict(S, smtp_user='io@esempio.ch'))
+    _check(r, 'Email formattata', 'parte con le due versioni, testo e formattata',
+           (doppia.get_body(('plain',)).get_content().strip(),
+            '<b>Anna</b>' in doppia.get_body(('html',)).get_content()),
+           ('Ciao Anna', True))
+    semplice = mailer.costruisci_messaggio({'to': 'c@esempio.ch', 'subject': 'x',
+                                            'body': 'Ciao Anna', 'allegati': []},
+                                           dict(S, smtp_user='io@esempio.ch'))
+    _check(r, 'Email formattata', 'senza formattazione parte solo testo, come prima',
+           semplice.get_body(('html',)) is None, True)
+
     _check(r, 'Email', 'la password non finisce nei messaggi d\'errore',
            'segreta' in mailer._nascondi('errore con segreta dentro',
                                          {'smtp_pass': 'segreta'}), False)

@@ -1096,9 +1096,17 @@ def fattura_email(inv_id):
                                '(sono fatture vecchie salvate solo in Word): non posso allegarle.')
 
     # il testo mostrato: quello ricalcolato, oppure quello che sta ritoccando
-    if azione in ('prova', 'invia') and f.get('body'):
+    if azione in ('prova', 'invia') and (f.get('body') or f.get('body_html')):
         msg['subject'] = f.get('subject', msg['subject'])
-        msg['body'] = f['body']
+        if f.get('body_html'):
+            # il testo formattato arriva dal browser: si pulisce sempre, e il
+            # solo testo di riserva si ricava da quello, cosi' le due versioni
+            # dicono la stessa cosa. Senza formattazione parte solo testo.
+            pulito = mailer.pulisci_html(f['body_html'])
+            msg['body'] = mailer.testo_da_html(pulito)
+            msg['html'] = pulito if mailer.ha_formato(pulito) else ''
+        else:
+            msg['body'] = f['body']
 
     def pagina():
         return render_template('email.html', inv=inv, cli=cli, msg=msg, settings=settings,
@@ -1106,6 +1114,7 @@ def fattura_email(inv_id):
                                posta_pronta=posta_pronta,
                                scelte=scelte, modelli=mailer.MODELLI,
                                oggetti=oggetti, segnaposto_mese=mailer.SEGNAPOSTO_MESE,
+                               testo_html=msg.get('html') or mailer.html_da_testo(msg['body']),
                                corpo=corpo if corpo is not None
                                else mailer.testo_modello(settings, msg['modello'],
                                                          msg['lingua']))
