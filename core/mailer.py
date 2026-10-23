@@ -23,6 +23,8 @@ import time
 import socket
 import smtplib
 import mimetypes
+from html import escape
+from html.parser import HTMLParser
 from email.message import EmailMessage
 
 from .money import fmt_chf
@@ -305,6 +307,140 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
             'mese_mancante': '{mese}' in oggetto_grezzo and not mese}
 
 
+# --- il testo formattato ----------------------------------------------------
+# Nella pagina dell'email il testo si puo' mettere in grassetto, corsivo,
+# sottolineato o a elenco, come in un programma di posta. Quello che arriva dal
+# browser pero' e' HTML scritto da chiunque (anche incollato da Word o da una
+# pagina web), quindi prima di spedirlo si tiene SOLO un elenco corto di
+# marcatori, senza nessun attributo: niente script, niente link, niente stili,
+# niente immagini caricate da fuori. Il resto si butta, ma il testo dentro resta.
+# La mail parte poi in due versioni: quella formattata e quella in solo testo,
+# per i programmi che la formattazione non la mostrano.
+
+MARCATORI_PERMESSI = {'b', 'strong', 'i', 'em', 'u', 'br', 'p', 'div', 'ul', 'ol', 'li'}
+# quelli che vanno a capo: nel solo testo diventano una riga nuova
+MARCATORI_BLOCCO = {'p', 'div', 'ul', 'ol', 'li'}
+# questi si buttano col loro contenuto: non e' testo che il cliente debba leggere
+MARCATORI_DA_BUTTARE = {'script', 'style', 'head', 'title', 'template', 'iframe',
+                        'object', 'embed', 'noscript', 'svg', 'math', 'textarea',
+                        'select', 'button'}
+# la formattazione vera: se non ce n'e', la mail parte in solo testo come prima
+MARCATORI_FORMATO = {'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li'}
+
+
+class _Pulitore(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.fuori = []
+        self.aperti = []
+        self.buttando = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in MARCATORI_DA_BUTTARE:
+            self.buttando += 1
+        elif self.buttando:
+            return
+        elif tag == 'br':
+            self.fuori.append('<br>')
+        elif tag in MARCATORI_PERMESSI:
+            self.fuori.append('<%s>' % tag)
+            self.aperti.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        if tag == 'br' and not self.buttando:
+            self.fuori.append('<br>')
+
+    def handle_endtag(self, tag):
+        if tag in MARCATORI_DA_BUTTARE:
+            self.buttando = max(0, self.buttando - 1)
+        elif not self.buttando and tag in self.aperti:
+            # si chiude anche quello che e' rimasto aperto dentro: l'HTML che
+            # parte e' sempre ben formato, anche se quello arrivato non lo era
+            while self.aperti:
+                aperto = self.aperti.pop()
+                self.fuori.append('</%s>' % aperto)
+                if aperto == tag:
+                    break
+
+    def handle_data(self, data):
+        if not self.buttando:
+            self.fuori.append(escape(data, quote=False))
+
+    def risultato(self):
+        self.close()
+        while self.aperti:
+            self.fuori.append('</%s>' % self.aperti.pop())
+        return ''.join(self.fuori)
+
+
+def pulisci_html(html):
+    """L'HTML del testo, ridotto ai marcatori permessi e senza attributi."""
+    p = _Pulitore()
+    p.feed(html or '')
+    return p.risultato()
+
+
+def ha_formato(html):
+    """Vero se nel testo c'e' davvero della formattazione (grassetto, elenchi...)."""
+    return bool(re.search(r'<(%s)>' % '|'.join(MARCATORI_FORMATO), html or ''))
+
+
+class _Testo(HTMLParser):
+    """Da HTML gia' pulito a solo testo, con gli a capo al posto giusto."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.fuori = []
+
+    def _a_capo(self):
+        testo = ''.join(self.fuori)
+        if testo and not testo.endswith('\n'):
+            self.fuori.append('\n')
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'br':
+            self.fuori.append('\n')
+        elif tag in MARCATORI_BLOCCO:
+            self._a_capo()
+            if tag == 'li':
+                self.fuori.append('- ')
+
+    def handle_endtag(self, tag):
+        if tag in MARCATORI_BLOCCO:
+            self._a_capo()
+
+    def handle_data(self, data):
+        # come fa il browser: gli spazi e gli a capo del sorgente contano come
+        # uno spazio solo; il non-breaking space che mette lui e' uno spazio
+        self.fuori.append(re.sub(r'[ \t\r\n]+', ' ', data))
+
+
+def testo_da_html(html):
+    """Il solo testo che corrisponde all'HTML: e' la versione di riserva."""
+    p = _Testo()
+    p.feed(html or '')
+    p.close()
+    # gli spazi normali a inizio e fine riga li lascia il sorgente; quelli
+    # duri (\xa0) li ha messi chi scrive, e restano
+    righe = [r.strip(' ').replace('\xa0', ' ') for r in ''.join(p.fuori).split('\n')]
+    return '\n'.join(righe).strip('\n')
+
+
+def html_da_testo(testo):
+    """Il testo dei modelli (solo testo) come HTML, per aprirlo nell'editor."""
+    # gli spazi in fila e quelli a inizio riga l'HTML li mangerebbe: diventano
+    # spazi duri, cosi' un rientro resta un rientro
+    righe = [re.sub(r'^ |(?<= ) ', '&nbsp;', escape(r, quote=False))
+             for r in (testo or '').split('\n')]
+    return '<br>'.join(righe)
+
+
+def pagina_html(html):
+    """Il corpo HTML della mail: il testo pulito dentro una pagina minima."""
+    return ('<!DOCTYPE html>\n<html><head><meta charset="utf-8"></head>'
+            '<body>' + html + '</body></html>\n')
+
+
 def costruisci_messaggio(msg, settings, destinatario=None, copia_a_me=False):
     """Da dizionario a email vera e propria, con il PDF allegato."""
     m = EmailMessage()
@@ -317,6 +453,10 @@ def costruisci_messaggio(msg, settings, destinatario=None, copia_a_me=False):
         m['Bcc'] = settings.get('smtp_user', '')
     m['Subject'] = msg['subject']
     m.set_content(msg['body'])
+    if msg.get('html'):
+        # la versione formattata si aggiunge accanto al solo testo: ogni
+        # programma di posta sceglie quella che sa mostrare
+        m.add_alternative(pagina_html(msg['html']), subtype='html')
     for percorso in msg.get('allegati') or ([msg['allegato']] if msg.get('allegato') else []):
         tipo, _ = mimetypes.guess_type(percorso)
         maggiore, minore = (tipo or 'application/pdf').split('/', 1)

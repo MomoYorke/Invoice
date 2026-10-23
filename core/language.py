@@ -1180,6 +1180,15 @@ TESTI = {
         'Ne arriva una copia anche a te, in <strong>{dove}</strong>, in copia nascosta: il cliente non la vede. Si disattiva in Impostazioni.':
             'A copy reaches you too, at <strong>{dove}</strong>, as a blind copy: the client does not see it. You can switch this off in Settings.',
         'Allegati:': 'Attachments:',
+        'Formattazione': 'Formatting',
+        'Grassetto': 'Bold',
+        'Corsivo': 'Italic',
+        'Sottolineato': 'Underline',
+        'Elenco puntato': 'Bulleted list',
+        'Elenco numerato': 'Numbered list',
+        'Togli formattazione': 'Clear formatting',
+        'Seleziona una parola e premi un pulsante. Il testo incollato da altri programmi arriva senza formattazione. Chi legge la posta senza formattazione riceve lo stesso testo, semplice.':
+            'Select a word and press a button. Text pasted from other programs comes in without formatting. Anyone whose email program does not show formatting gets the same text, plain.',
         'nessuno': 'none',
         'Nella stessa mail vuoi allegare anche un’altra fattura recente?':
             'Do you want to attach another recent invoice to the same email?',
@@ -1505,6 +1514,7 @@ TESTI = {
             'Every month {sedute}; unused ones carry over to the next month, but no more than {massimo} can be held in a month.',
         'Ogni mese {sedute}; quelle non usate si perdono.': 'Every month {sedute}; unused ones are lost.',
         'Oggetto email': 'Email subject',
+        'Email formattata': 'Formatted email',
         'Intestazione fattura': 'Invoice heading',
         'Marchio': 'Logo',
         'Servizi': 'Services',
@@ -2816,6 +2826,15 @@ TESTI = {
         'Ne arriva una copia anche a te, in <strong>{dove}</strong>, in copia nascosta: il cliente non la vede. Si disattiva in Impostazioni.':
             'Eine Kopie geht auch an dich, an <strong>{dove}</strong>, als Blindkopie: der Kunde sieht sie nicht. Abschalten kannst du das in den Einstellungen.',
         'Allegati:': 'Anhänge:',
+        'Formattazione': 'Formatierung',
+        'Grassetto': 'Fett',
+        'Corsivo': 'Kursiv',
+        'Sottolineato': 'Unterstrichen',
+        'Elenco puntato': 'Aufzählung',
+        'Elenco numerato': 'Nummerierte Liste',
+        'Togli formattazione': 'Formatierung entfernen',
+        'Seleziona una parola e premi un pulsante. Il testo incollato da altri programmi arriva senza formattazione. Chi legge la posta senza formattazione riceve lo stesso testo, semplice.':
+            'Markiere ein Wort und drück einen Knopf. Aus anderen Programmen eingefügter Text kommt ohne Formatierung. Wer E-Mails ohne Formatierung liest, bekommt denselben Text, schlicht.',
         'nessuno': 'keine',
         'Nella stessa mail vuoi allegare anche un’altra fattura recente?':
             'Willst du derselben E-Mail noch eine andere aktuelle Rechnung anhängen?',
@@ -3141,6 +3160,7 @@ TESTI = {
             'Jeden Monat {sedute}; nicht genutzte gehen in den nächsten Monat über, aber mehr als {massimo} kann man in einem Monat nicht haben.',
         'Ogni mese {sedute}; quelle non usate si perdono.': 'Jeden Monat {sedute}; nicht genutzte verfallen.',
         'Oggetto email': 'E-Mail-Betreff',
+        'Email formattata': 'Formatierte E-Mail',
         'Intestazione fattura': 'Rechnungskopf',
         'Marchio': 'Logo',
         'Servizi': 'Dienstleistungen',
