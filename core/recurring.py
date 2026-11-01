@@ -267,3 +267,67 @@ def riprendi(con, ricorrente_id, periodo):
     con.execute('DELETE FROM ricorrenti_saltati WHERE ricorrente_id=? AND periodo=?',
                 (ricorrente_id, periodo))
     con.commit()
+
+
+# ---------------------------------------------------------- quando paga
+# Una domanda vera: il cliente che paga a fine mese, paga il mese passato o
+# quello in corso? La risposta e' gia' negli estratti conto, che la Banca ha
+# letto: ogni fattura riconosciuta ha la data in cui i soldi sono arrivati
+# (paid_at). Qui la si mette accanto al periodo che la fattura copre. Non si
+# cambia niente: si legge e si dice.
+
+def momento_del_pagamento(data_fattura, pagata_il):
+    """('prima'|'durante'|'dopo', giorni dalla fattura) per una fattura pagata.
+
+    Il periodo coperto e' quello scritto sulle fatture d'abbonamento: dal giorno
+    della fattura al giorno prima dello stesso giorno del mese dopo (fattura del
+    13.10 → dal 13.10 al 12.11)."""
+    mese = mese_di(data_fattura)
+    fine = (giorno_di_emissione(mese_succ(mese), data_fattura.day)
+            - datetime.timedelta(days=1))
+    giorni = (pagata_il - data_fattura).days
+    if pagata_il < data_fattura:
+        return 'prima', giorni
+    return ('durante' if pagata_il <= fine else 'dopo'), giorni
+
+
+def riassunto_pagamenti(momenti):
+    """Quante prima, durante e dopo, e i giorni di solito (quelli di mezzo)."""
+    if not momenti:
+        return None
+    giorni = sorted(g for _m, g in momenti)
+    fuori = {'pagate': len(momenti), 'prima': 0, 'durante': 0, 'dopo': 0,
+             'giorni': giorni[(len(giorni) - 1) // 2]}
+    for m, _g in momenti:
+        fuori[m] += 1
+    return fuori
+
+
+def _data(testo):
+    try:
+        return datetime.date.fromisoformat(str(testo or '')[:10])
+    except ValueError:
+        return None
+
+
+def quando_paga(con, regola, quante=12):
+    """Il riassunto delle ultime fatture pagate di quell'abbonamento, o None.
+
+    Contano anche le fatture fatte a mano con lo stesso servizio prima che
+    l'abbonamento esistesse: sono gli stessi mesi dello stesso cliente. Quelle
+    nel Cestino e quelle non ancora pagate no."""
+    righe = con.execute(
+        'SELECT i.date, i.paid_at FROM invoices i '
+        'WHERE i.client_id = ? AND i.deleted_at IS NULL '
+        "AND i.paid_at IS NOT NULL AND i.paid_at <> '' "
+        'AND (i.ricorrente_id = ? OR (? IS NOT NULL AND EXISTS ('
+        '     SELECT 1 FROM items t WHERE t.invoice_id = i.id AND t.servizio_id = ?))) '
+        'ORDER BY i.date DESC LIMIT ?',
+        (_campo(regola, 'client_id'), _campo(regola, 'id'),
+         _campo(regola, 'servizio_id'), _campo(regola, 'servizio_id'), quante)).fetchall()
+    momenti = []
+    for riga in righe:
+        fattura, pagata = _data(riga['date']), _data(riga['paid_at'])
+        if fattura and pagata:
+            momenti.append(momento_del_pagamento(fattura, pagata))
+    return riassunto_pagamenti(momenti)

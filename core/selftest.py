@@ -115,6 +115,7 @@ def run_all():
         _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
         _test_gemelli_fra_file, _test_qr_fattura, _test_qr_iban,
         _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
+        _test_quando_paga,
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
         _test_pagine_vuote, _test_qr_di_serie, _test_copie_dal_registro,
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
@@ -6866,6 +6867,58 @@ def _test_modelli_si_compilano(r):
     # una guardia che non trova le pagine sarebbe verde per sbaglio
     _check(r, 'Modelli', 'e le pagine controllate sono davvero tutte (%d)' % len(nomi),
            len(nomi) >= 20, True)
+
+
+def _test_quando_paga(r):
+    """Quando paga un cliente d'abbonamento, rispetto al periodo che la fattura copre.
+
+    La fattura del 13 copre dal 13 al 12 del mese dopo. Un pagamento il 31 e'
+    dentro quel periodo: paga il mese in corso, non quello passato. Le date
+    sono inventate."""
+    import datetime
+    import sqlite3
+    from . import recurring as A
+    d = datetime.date
+    _check(r, 'Quando paga', 'fattura del 13.10, pagata il 31.10: durante il periodo',
+           A.momento_del_pagamento(d(2026, 10, 13), d(2026, 10, 31)), ('durante', 18))
+    _check(r, 'Quando paga', 'pagata il 12.11, ultimo giorno coperto: ancora durante',
+           A.momento_del_pagamento(d(2026, 10, 13), d(2026, 11, 12)), ('durante', 30))
+    _check(r, 'Quando paga', 'pagata il 13.11: dopo la fine del periodo',
+           A.momento_del_pagamento(d(2026, 10, 13), d(2026, 11, 13)), ('dopo', 31))
+    _check(r, 'Quando paga', 'pagata prima della data della fattura: in anticipo',
+           A.momento_del_pagamento(d(2026, 10, 13), d(2026, 10, 10)), ('prima', -3))
+    _check(r, 'Quando paga', 'il 31.01 copre fino al 27.02, non salta febbraio',
+           A.momento_del_pagamento(d(2026, 1, 31), d(2026, 2, 28)), ('dopo', 28))
+    _check(r, 'Quando paga', 'nessuna fattura pagata: niente da dire',
+           A.riassunto_pagamenti([]), None)
+    _check(r, 'Quando paga', 'il riassunto conta e prende i giorni del mezzo',
+           A.riassunto_pagamenti([('durante', 18), ('durante', 17), ('dopo', 35)]),
+           {'pagate': 3, 'prima': 0, 'durante': 2, 'dopo': 1, 'giorni': 18})
+
+    # dal database: solo fatture pagate, non nel Cestino, di quell'abbonamento
+    # (o fatte a mano con lo stesso servizio prima che l'abbonamento esistesse)
+    con = sqlite3.connect(':memory:')
+    con.row_factory = sqlite3.Row
+    con.executescript(
+        'CREATE TABLE invoices(id INTEGER PRIMARY KEY, client_id INT, date TEXT, '
+        'paid_at TEXT, deleted_at TEXT, ricorrente_id INT);'
+        'CREATE TABLE items(id INTEGER PRIMARY KEY, invoice_id INT, servizio_id INT);')
+    fatture = [
+        (1, 7, '2026-08-13', '2026-08-31', None, 3),   # dall'abbonamento
+        (2, 7, '2026-09-13', '2026-09-30', None, None),  # a mano, stesso servizio
+        (3, 7, '2026-10-13', '', None, 3),              # non ancora pagata
+        (4, 7, '2026-07-13', '2026-07-20', '2026-07-21', 3),  # nel Cestino
+        (5, 7, '2026-06-13', '2026-06-14', None, None),  # a mano, altro servizio
+        (6, 8, '2026-08-13', '2026-09-30', None, None),  # altro cliente
+    ]
+    con.executemany('INSERT INTO invoices VALUES (?,?,?,?,?,?)', fatture)
+    con.executemany('INSERT INTO items(invoice_id, servizio_id) VALUES (?,?)',
+                    [(1, 11), (2, 11), (3, 11), (4, 11), (5, 12), (6, 11)])
+    regola = {'id': 3, 'client_id': 7, 'servizio_id': 11}
+    _check(r, 'Quando paga', 'conta solo le fatture pagate giuste di quel cliente',
+           A.quando_paga(con, regola),
+           {'pagate': 2, 'prima': 0, 'durante': 2, 'dopo': 0, 'giorni': 17})
+    con.close()
 
 
 def _test_abbonamenti(r):

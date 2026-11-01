@@ -57,6 +57,14 @@
       <td class="muted" style="font-size:13px">
         {{ _('il {g} di ogni mese').format(g=r.giorno) }}
         <div style="font-size:11.5px">{{ _('dal {mese}').format(mese=mesi[r.dal[5:7] | int - 1] ~ ' ' ~ r.dal[:4]) if r.dal else '' }}</div>
+        {% set pg = pagamenti.get(r.id) %}
+        {% if pg %}
+        <div style="font-size:11.5px">{{ _('Ultime {n} pagate: di solito {g} giorni dopo la fattura.').format(n=pg.pagate, g=pg.giorni) }}
+          {% if pg.durante == pg.pagate %}{{ _('Sempre durante il periodo che la fattura copre: paga il mese in corso, non quello passato.') }}
+          {% elif pg.dopo == pg.pagate %}{{ _('Sempre dopo la fine del periodo che la fattura copre: paga il mese passato.') }}
+          {% else %}{{ _('{durante} durante il periodo coperto, {dopo} dopo la fine, {prima} prima della fattura.').format(durante=pg.durante, dopo=pg.dopo, prima=pg.prima) }}{% endif %}
+        </div>
+        {% endif %}
         {% if saltati.get(r.id) %}
         <div style="font-size:11.5px">{{ _('saltati:') }}
           {% for p in saltati[r.id] %}
