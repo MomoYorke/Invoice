@@ -1292,7 +1292,7 @@ def abbonamenti():
     coda = ric.da_fare(con, mesi_per_lingua=lng.MESI_DOC)
     regole = ric.regole(con)
     questo_mese = ric.mese_di(datetime.date.today())
-    saltati, anteprima = {}, {}
+    saltati, anteprima, pagamenti = {}, {}, {}
     for reg in regole:
         righe = con.execute('SELECT periodo FROM ricorrenti_saltati WHERE ricorrente_id=? '
                             'ORDER BY periodo DESC LIMIT 6', (reg['id'],)).fetchall()
@@ -1301,6 +1301,8 @@ def abbonamenti():
         # la riga come la scriverebbe oggi: il servizio puo' aver cambiato nome
         nomi = lng.MESI_DOC.get(reg['lingua_cliente'] or 'en', lng.MESI_DOC['en'])
         anteprima[reg['id']] = ric.riga_per(con, reg, questo_mese, nomi)
+        # quando paga, rispetto al periodo coperto: lo dicono gli estratti conto
+        pagamenti[reg['id']] = ric.quando_paga(con, reg)
     clienti = con.execute('SELECT id, name FROM clients WHERE archived=0 '
                           'ORDER BY name').fetchall()
     servizi_mese = [s for s in srv.tutti(con, solo_attivi=True) if s['ogni_mese']]
@@ -1310,6 +1312,7 @@ def abbonamenti():
     return render_template('subscriptions.html', coda=coda, regole=regole,
                            clienti=clienti, saltati=saltati, mesi=mesi,
                            anteprima=anteprima, servizi_mese=servizi_mese,
+                           pagamenti=pagamenti,
                            esempio_date=ric.descrizione_per('{dal} – {al}', prossimo, mesi, 1),
                            esempio_mese=mesi[int(prossimo[5:7]) - 1],
                            mese_corrente=questo_mese)

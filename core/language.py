@@ -612,6 +612,14 @@ TESTI = {
         'Metti un mese passato solo se vuoi recuperare degli arretrati: te li chiederò tutti, uno per uno.':
             'Put a past month only if you want to catch up on a backlog: I will ask you for all of them, one by one.',
         'Niente da fatturare adesso.': 'Nothing to invoice right now.',
+        'Ultime {n} pagate: di solito {g} giorni dopo la fattura.':
+            'Last {n} paid: usually {g} days after the invoice.',
+        'Sempre durante il periodo che la fattura copre: paga il mese in corso, non quello passato.':
+            'Always within the period the invoice covers: they pay for the current month, not the past one.',
+        'Sempre dopo la fine del periodo che la fattura copre: paga il mese passato.':
+            'Always after the period the invoice covers has ended: they pay for the past month.',
+        '{durante} durante il periodo coperto, {dopo} dopo la fine, {prima} prima della fattura.':
+            '{durante} within the covered period, {dopo} after it ended, {prima} before the invoice.',
         'Per un abbonamento servono il cliente, la riga della fattura e un importo maggiore di zero.':
             'A subscription needs the client, the invoice line and an amount greater than zero.',
         'Personal training – {mese} {anno}':
@@ -2252,6 +2260,14 @@ TESTI = {
             'Setze einen vergangenen Monat nur, wenn du Rückstände nachholen willst: ich frage dich dann nach allen, einen nach dem anderen.',
         'Niente da fatturare adesso.':
             'Im Moment nichts zu verrechnen.',
+        'Ultime {n} pagate: di solito {g} giorni dopo la fattura.':
+            'Letzte {n} bezahlt: meist {g} Tage nach der Rechnung.',
+        'Sempre durante il periodo che la fattura copre: paga il mese in corso, non quello passato.':
+            'Immer innerhalb des Zeitraums der Rechnung: bezahlt den laufenden Monat, nicht den vergangenen.',
+        'Sempre dopo la fine del periodo che la fattura copre: paga il mese passato.':
+            'Immer nach Ende des Zeitraums der Rechnung: bezahlt den vergangenen Monat.',
+        '{durante} durante il periodo coperto, {dopo} dopo la fine, {prima} prima della fattura.':
+            '{durante} innerhalb des Zeitraums, {dopo} nach dessen Ende, {prima} vor der Rechnung.',
         'Per un abbonamento servono il cliente, la riga della fattura e un importo maggiore di zero.':
             'Für ein Abo braucht es den Kunden, die Rechnungszeile und einen Betrag über null.',
         'Personal training – {mese} {anno}':
