@@ -2649,6 +2649,34 @@ def impostazioni():
                            logo_suo=branding.personalizzato())
 
 
+@app.route('/impostazioni/anteprima-email', methods=['POST'])
+def impostazioni_anteprima_email():
+    """La mail intera come la vedrebbe un cliente inventato, coi modelli
+    scritti nel modulo e non ancora salvati. Non salva niente."""
+    con = get_con()
+    settings = dict(db.get_settings(con))
+    con.close()
+    chiavi = [c for c in db.DEFAULT_SETTINGS
+              if c == 'email_firma' or c.startswith(db.MODELLI_EMAIL)]
+    for k in chiavi:
+        if k in request.form:
+            settings[k] = request.form[k].replace('\r\n', '\n')
+    f = request.form
+    lingua = f.get('anteprima_lingua') or None
+    fuori = mailer.anteprima(settings, f.get('anteprima_modello', 'pt'), lingua,
+                             f.get('anteprima_tono', 'informale'),
+                             abbonato=f.get('anteprima_abbonato') == '1',
+                             con_qr=True)
+    codice = _lingua_app()
+    if fuori['sconosciuti']:
+        fuori['avviso'] = lng.t('L’app non conosce questi segnaposti: {elenco}. Usa i pulsanti qui sotto per inserirne uno giusto.',
+                                codice).format(elenco=', '.join('{%s}' % s for s in fuori['sconosciuti']))
+    elif fuori['rotto']:
+        fuori['avviso'] = lng.t('Nel modello c’è una graffa { o } senza la sua compagna: così la mail non si può montare.',
+                                codice)
+    return jsonify(fuori)
+
+
 @app.route('/impostazioni/logo', methods=['POST'])
 def impostazioni_logo():
     file = request.files.get('logo')

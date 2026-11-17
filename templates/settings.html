@@ -141,7 +141,7 @@
        dominio='<code>' + _('tuodominio.ch') + '</code>',
        sotto='<code>' + _('mail.tuodominio.ch') + '</code>') | safe }}</p>
 
-  <form method="post">
+  <form method="post" id="form-posta">
     <div class="form-grid">
       <div>
         <label for="c-smtp_host">{{ _('Server SMTP') }}</label><input id="c-smtp_host" type="text" name="smtp_host" value="{{ settings.smtp_host }}">
@@ -175,39 +175,68 @@
     <label style="font-weight:400"><input type="checkbox" name="email_copia_a_me" value="1"
       {{ 'checked' if settings.email_copia_a_me == '1' }} style="width:auto">
       {{ _('Mandane una copia nascosta anche a me (arriva nella posta in arrivo, il cliente non la vede)') }}</label>
-    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+    <div class="modelli-mail" style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <p class="etichetta" style="margin-bottom:2px">{{ _('I modelli della mail') }}</p>
-      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Il testo delle mail lo scrivi tu, quindi l’app non può tradurlo: sono parole tue. Puoi però scriverne una versione per lingua, e l’app userà quella della lingua del cliente — è lui che la legge. Dove non scrivi niente vale quella «per tutti».') }}</p>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Qui scrivi le parti della mail che sono tue. Il riquadro qui sotto ti mostra subito la mail intera, con un cliente inventato, mentre scrivi.') }}</p>
       <div class="linguette">
         <button type="button" class="linguetta attiva" data-suff="">{{ _('Per tutti') }}</button>
         {% for cod, nome in lingue %}
         <button type="button" class="linguetta" data-suff="_{{ cod }}">{{ nome }}</button>
         {% endfor %}
       </div>
+      <p class="muted" style="font-size:12px;margin:2px 0 0">{{ _('Puoi scrivere una versione per lingua: l’app usa quella della lingua del cliente. Dove non scrivi niente vale quella «Per tutti».') }}</p>
+
+      {# L'anteprima: la stessa mail che partirebbe davvero, rifatta dal server
+         a ogni modifica con i testi non ancora salvati. Non salva niente. #}
+      <div class="anteprima-mail" id="anteprima-mail" data-url="{{ url_for('impostazioni_anteprima_email') }}">
+        <div class="am-testa">
+          <strong>{{ _('Così la riceve il cliente') }}</strong>
+          <div class="am-prove">
+            <div class="linguette" role="group" aria-label="{{ _('Tipo di fattura') }}">
+              <button type="button" class="linguetta attiva" data-am="modello" data-val="pt">{{ _('Pacchetto di sedute') }}</button>
+              <button type="button" class="linguetta" data-am="modello" data-val="coaching">{{ _('Abbonamento') }}</button>
+            </div>
+            <div class="linguette" role="group" aria-label="{{ _('Come chiudi la mail') }}">
+              <button type="button" class="linguetta attiva" data-am="tono" data-val="informale">{{ _('Del tu') }}</button>
+              <button type="button" class="linguetta" data-am="tono" data-val="formale">{{ _('Del Lei') }}</button>
+            </div>
+            <label class="am-scelta">{{ _('Lingua del cliente') }}
+              <select id="am-lingua">
+                {% for cod, nome in lingue %}
+                <option value="{{ cod }}"{{ ' selected' if cod == 'en' }}>{{ nome }}</option>
+                {% endfor %}
+              </select></label>
+            <label class="am-scelta"><input type="checkbox" id="am-abbonato" style="width:auto">
+              {{ _('paga con ordine permanente') }}</label>
+          </div>
+        </div>
+        <div class="am-oggetto"><span class="muted">{{ _('Oggetto:') }}</span> <span id="am-oggetto"></span></div>
+        <div class="am-testo" id="am-testo" aria-live="polite"></div>
+        <p class="am-avviso" id="am-avviso" hidden></p>
+        <p class="muted am-legenda"><mark>{{ _('Evidenziate') }}</mark> {{ _('le frasi che scrive l’app da sola, già tradotte nella lingua del cliente: l’apertura e quella sul pagamento (codice QR, oppure ordine permanente per chi ha la spunta «Abbonamento mensile» nella sua scheda).') }}</p>
+      </div>
     </div>
 
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
-      <p class="etichetta" style="margin-bottom:2px">{{ _('I due oggetti') }}</p>
-      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('Uno per modello, scelto insieme al testo. Nell’abbonamento {mese} diventa il mese coperto dall’abbonamento ({a} se il periodo sta a cavallo di due mesi, {b} se no): l’app lo legge dal periodo scritto sulla fattura, e se manca riparte dall’ultima mail mandata a quella persona avanzando di un mese.').format(
-           mese='<code>{mese}</code>', a='<code>Aug/Sept</code>', b='<code>Aug</code>') | safe }}</p>
+      <p class="etichetta" style="margin-bottom:2px">{{ _('1. L’oggetto') }}</p>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('La riga che il cliente vede nella sua casella di posta. Nell’abbonamento {mese} diventa il mese della fattura (per esempio {a}, oppure {b} se il periodo sta a cavallo di due mesi).').format(
+           mese='<code>{mese}</code>', a='<code>Aug</code>', b='<code>Aug/Sept</code>') | safe }}</p>
       <label for="c-email_oggetto_coaching" style="font-size:13px">{{ _('Abbonamento') }}</label>
       {{ modello(settings, lingue, 'email_oggetto_coaching', titolo=_('Abbonamento')) }}
       <label for="c-email_oggetto_pt" style="font-size:13px">{{ _('Pacchetto di sedute') }}</label>
       {{ modello(settings, lingue, 'email_oggetto_pt', titolo=_('Pacchetto di sedute')) }}
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
-      <p class="etichetta" style="margin-bottom:2px">{{ _('I due modelli della frase centrale') }}</p>
-      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _("L'app sceglie da sola quale usare guardando le righe della fattura, e nell'anteprima puoi passare all'altro con un click. Il resto della mail (apertura, frase sull'ordine permanente, firma) resta automatico.") }}
-        <br>{{ _('La frase sull’ordine permanente la scrive l’app da sé, già tradotta, ai clienti con la spunta «Abbonamento mensile» nella loro scheda: se la riscrivi anche qui, la mail la dirà due volte.') }}</p>
+      <p class="etichetta" style="margin-bottom:2px">{{ _('2. La tua frase') }}</p>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('Quello che vuoi dire al cliente, dopo le frasi che scrive l’app. L’app sceglie da sola quale delle due usare guardando la fattura; prima di mandare la mail puoi comunque cambiarla.') }}</p>
       <label for="c-email_corpo_coaching" style="font-size:13px">{{ _('Abbonamento — si rinnova ogni mese') }}</label>
       {{ modello(settings, lingue, 'email_corpo_coaching', 3, titolo=_('Abbonamento — si rinnova ogni mese')) }}
       <label for="c-email_corpo_pt" style="font-size:13px">{{ _('Pacchetto di sedute — si compra una volta') }}</label>
       {{ modello(settings, lingue, 'email_corpo_pt', 3, titolo=_('Pacchetto di sedute — si compra una volta')) }}
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
-      <p class="etichetta" style="margin-bottom:2px">{{ _('Come chiudi la mail') }}</p>
-      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('Due versioni: nella scheda di ogni cliente scegli quale usare. Vanno al posto di {saluto} nel modello qui sotto. Gli a capo contano.').format(
-           saluto='<code>{saluto}</code>') | safe }}</p>
+      <p class="etichetta" style="margin-bottom:2px">{{ _('3. Il saluto') }}</p>
+      <p class="muted" style="font-size:12px;margin:0 0 10px">{{ _('Nella scheda di ogni cliente scegli se gli dai del tu o del Lei. Gli a capo contano: una riga vuota in fondo lascia spazio prima della firma.') }}</p>
       <div class="form-grid">
         <div>
           <label for="c-email_saluto_informale" style="font-size:13px">{{ _('Con chi ci si dà del tu') }}</label>
@@ -220,25 +249,31 @@
       </div>
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
-      <label for="c-email_body" style="margin-bottom:2px">{{ _('Modello del testo') }}</label>
-      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Come è fatta la mail. {firma} è il posto della tua firma, che si scrive una volta sola qui sotto e non cambia mai lingua.').format(
-           firma='<code>{firma}</code>') | safe }}</p>
-      {{ modello(settings, lingue, 'email_body', 12, titolo=_('Modello del testo')) }}
-    </div>
-    <p class="muted" style="font-size:12px">{{ _('Segnaposti:') }} <code>{mese}</code> <code>{nome}</code> <code>{numero}</code>
-       <code>{totale}</code> <code>{servizio}</code> <code>{apertura}</code>
-       <code>{riga_abbonamento}</code> <code>{riga_qr}</code>
-       <code>{corpo}</code> <code>{saluto}</code> <code>{firma}</code></p>
-    <p class="muted" style="font-size:12px;margin-top:2px">{{ _('Le due righe si alternano da sole: a chi paga con ordine permanente va {riga_abbonamento}, a tutti gli altri la richiesta di pagare col codice QR — ma solo sulle fatture che il codice ce l’hanno davvero.').format(
-       riga_abbonamento='<code>{riga_abbonamento}</code>') | safe }}</p>
-
-    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
-      <label for="c-email_firma" style="margin-bottom:2px">{{ _('Come ti firmi') }}</label>
-      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Nome, titolo, recapiti: va in fondo a ogni mail, al posto di {firma}. Sta fuori dai modelli e non si traduce, così un numero di telefono resta uno solo anche se un giorno scrivi i modelli in tre lingue.').format(
-           firma='<code>{firma}</code>') | safe }}</p>
+      <label for="c-email_firma" style="margin-bottom:2px">{{ _('4. La firma') }}</label>
+      <p class="muted" style="font-size:12px;margin:0 0 8px">{{ _('Nome, titolo, recapiti: va in fondo a ogni mail. È una sola per tutte le lingue, così se cambi numero di telefono lo cambi una volta.') }}</p>
       <textarea id="c-email_firma" name="email_firma" rows="7"
                 style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:12.5px">{{ settings.email_firma }}</textarea>
     </div>
+
+    {# Il modello con le graffe resta, per chi vuole spostare i pezzi, ma non
+       e' la prima cosa che uno vede: a quasi tutti basta quello sopra. #}
+    <details class="avanzate">
+      <summary>{{ _('Avanzate: come sono messi in fila i pezzi della mail') }}</summary>
+      <p class="muted" style="font-size:12px;margin:8px 0">{{ _('Di solito non serve toccarlo. Le parole tra graffe sono i posti dove l’app mette i pezzi qui sopra: per aggiungerne uno, metti il cursore nel testo e premi un pulsante.') }}</p>
+      <div class="segnaposti" id="segnaposti">
+        {% for chiave, etichetta in [
+             ('nome', _('nome del cliente')), ('apertura', _('frase d’apertura')),
+             ('riga_abbonamento', _('frase sull’ordine permanente')),
+             ('riga_qr', _('frase sul codice QR')), ('corpo', _('la tua frase')),
+             ('saluto', _('saluto')), ('firma', _('firma')), ('numero', _('numero della fattura')),
+             ('totale', _('totale')), ('servizio', _('nome del servizio')), ('mese', _('mese'))] %}
+        <button type="button" class="btn secondary small" data-segnaposto="{{ '{' ~ chiave ~ '}' }}"
+                title="{{ '{' ~ chiave ~ '}' }}">+ {{ etichetta }}</button>
+        {% endfor %}
+      </div>
+      <label for="c-email_body" class="vh">{{ _('Modello del testo') }}</label>
+      {{ modello(settings, lingue, 'email_body', 10, titolo=_('Modello del testo')) }}
+    </details>
     <button class="btn mt">{{ _('Salva') }}</button>
   </form>
 </div>
@@ -333,14 +368,109 @@
 // Le linguette non mandano niente al server: mostrano e nascondono i campi
 // che stanno gia' tutti nel modulo, cosi' «Salva» salva tutte le lingue
 // insieme e non si perde quello scritto in una linguetta non aperta.
-document.querySelectorAll('.linguetta').forEach(function (b) {
+document.querySelectorAll('.linguetta[data-suff]').forEach(function (b) {
   b.addEventListener('click', function () {
-    document.querySelectorAll('.linguetta').forEach(function (x) {
+    document.querySelectorAll('.linguetta[data-suff]').forEach(function (x) {
       x.classList.toggle('attiva', x === b);
     });
     document.querySelectorAll('.per-lingua').forEach(function (c) {
       c.hidden = c.dataset.suff !== b.dataset.suff;
     });
+    // scrivendo il modello tedesco si vuole vedere la mail di un cliente
+    // tedesco: l'anteprima segue la linguetta («Per tutti» la lascia com'e')
+    var cod = b.dataset.suff.replace('_', '');
+    var sel = document.getElementById('am-lingua');
+    if (cod && sel) { sel.value = cod; aggiornaAnteprima(); }
+  });
+});
+
+// --- L'anteprima della mail -------------------------------------------------
+// Il testo lo monta il server con lo stesso calcolo della mail vera, usando
+// quello che c'e' scritto nel modulo anche se non e' ancora salvato.
+var am = document.getElementById('anteprima-mail');
+var amScelte = {modello: 'pt', tono: 'informale'};
+var amTimer = null, amUltima = 0;
+
+function amEscape(t) {
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function amScegli(chiave, val) {
+  amScelte[chiave] = val;
+  am.querySelectorAll('[data-am="' + chiave + '"]').forEach(function (x) {
+    x.classList.toggle('attiva', x.dataset.val === val);
+  });
+}
+
+function aggiornaAnteprima() {
+  if (!am) return;
+  clearTimeout(amTimer);
+  amTimer = setTimeout(function () {
+    var dati = new FormData(document.getElementById('form-posta'));
+    dati.delete('smtp_pass');   // la password non serve all'anteprima
+    dati.set('anteprima_modello', amScelte.modello);
+    dati.set('anteprima_tono', amScelte.tono);
+    dati.set('anteprima_lingua', document.getElementById('am-lingua').value);
+    dati.set('anteprima_abbonato', document.getElementById('am-abbonato').checked ? '1' : '0');
+    var questa = ++amUltima;
+    fetch(am.dataset.url, {method: 'POST', body: dati})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (questa !== amUltima) return;   // ne e' gia' partita una piu' nuova
+        document.getElementById('am-oggetto').textContent = d.oggetto || '—';
+        var html = amEscape(d.testo || '');
+        (d.automatiche || []).forEach(function (f) {
+          var e = amEscape(f);
+          if (e) html = html.split(e).join('<mark>' + e + '</mark>');
+        });
+        document.getElementById('am-testo').innerHTML = html;
+        var avv = document.getElementById('am-avviso');
+        avv.hidden = !d.avviso;
+        avv.textContent = d.avviso || '';
+      })
+      .catch(function () {});
+  }, 200);
+}
+
+if (am) {
+  am.querySelectorAll('[data-am]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      amScegli(b.dataset.am, b.dataset.val);
+      aggiornaAnteprima();
+    });
+  });
+  document.getElementById('am-lingua').addEventListener('change', aggiornaAnteprima);
+  document.getElementById('am-abbonato').addEventListener('change', aggiornaAnteprima);
+  var modulo = document.getElementById('form-posta');
+  modulo.addEventListener('input', aggiornaAnteprima);
+  // chi scrive nei campi dell'abbonamento vuole vedere la mail
+  // dell'abbonamento, e chi scrive il saluto formale quella col Lei
+  modulo.addEventListener('focusin', function (e) {
+    var n = (e.target && e.target.name) || '';
+    if (n.indexOf('_coaching') > 0) { amScegli('modello', 'coaching'); aggiornaAnteprima(); }
+    else if (n.indexOf('_pt') > 0) { amScegli('modello', 'pt'); aggiornaAnteprima(); }
+    else if (n.indexOf('saluto_formale') > 0) { amScegli('tono', 'formale'); aggiornaAnteprima(); }
+    else if (n.indexOf('saluto_informale') > 0) { amScegli('tono', 'informale'); aggiornaAnteprima(); }
+  });
+  aggiornaAnteprima();
+}
+
+// --- I pulsanti dei segnaposti ------------------------------------------------
+// Scrivono il segnaposto dove sta il cursore, nel modello della linguetta
+// aperta: cosi' non lo si sbaglia a mano.
+document.querySelectorAll('[data-segnaposto]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var campo = Array.prototype.find.call(
+      document.querySelectorAll('textarea[name^="email_body"]'),
+      function (c) { return !c.hidden; });
+    if (!campo) return;
+    var testo = b.dataset.segnaposto;
+    var da = campo.selectionStart, a = campo.selectionEnd;
+    if (typeof da !== 'number') { da = a = campo.value.length; }
+    campo.value = campo.value.slice(0, da) + testo + campo.value.slice(a);
+    campo.focus();
+    campo.selectionStart = campo.selectionEnd = da + testo.length;
+    aggiornaAnteprima();
   });
 });
 </script>
