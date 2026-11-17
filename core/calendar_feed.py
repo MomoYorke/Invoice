@@ -136,18 +136,24 @@ def _ora(v):
 def _eventi_grezzi(testo):
     """Spezza il file nei suoi VEVENT, ognuno come dizionario di campi."""
     eventi, corrente = [], None
+    promemoria = False                # dentro un VALARM: non e' roba dell'evento
     for riga in _srotola(testo):
         if riga.startswith('BEGIN:VEVENT'):
-            corrente = {'exdate': []}
+            corrente, promemoria = {'exdate': []}, False
         elif riga.startswith('END:VEVENT'):
             if corrente is not None:
                 eventi.append(corrente)
             corrente = None
-        elif corrente is not None:
+        elif corrente is not None and riga.upper().startswith('BEGIN:VALARM'):
+            promemoria = True
+        elif corrente is not None and riga.upper().startswith('END:VALARM'):
+            promemoria = False
+        elif corrente is not None and not promemoria:
             nome, valore = _valore(riga)
             capo = nome.split(';')[0].upper()
             if capo == 'EXDATE':
-                corrente['exdate'].extend(d for d in (_data(x) for x in valore.split(',')) if d)
+                corrente['exdate'].extend(d for d in (_giorno_locale(x)
+                                                      for x in valore.split(',')) if d)
             elif capo in ('UID', 'SUMMARY', 'DTSTART', 'RRULE', 'STATUS',
                           'RECURRENCE-ID'):
                 corrente[capo.lower().replace('-', '_')] = valore
@@ -171,6 +177,12 @@ def _giorno_locale(v):
     return _data(v)
 
 
+def _tutto_il_giorno(ev):
+    """Un evento senza ora (ferie, compleanno, «cliente in vacanza») non e' una seduta."""
+    inizio = ev.get('dtstart') or ''
+    return bool(inizio) and 'T' not in inizio.upper()
+
+
 def _fine_serie(regola):
     """La fine di una serie (UNTIL) riscritta come fine di quel giorno, senza fuso.
 
@@ -189,7 +201,7 @@ def _fine_serie(regola):
 
 def _ripetizioni(ev, da, a):
     """Le date in cui questo evento cade dentro la finestra."""
-    inizio = _data(ev.get('dtstart'))
+    inizio = _giorno_locale(ev.get('dtstart'))
     if not inizio:
         return []
     if not ev.get('rrule'):
@@ -213,6 +225,9 @@ def leggi(url_o_testo, da, a, e_testo=False):
     """Gli eventi del calendario fra due date, ripetizioni comprese.
 
     Ogni voce: {'id': 'UID::AAAA-MM-GG', 'titolo', 'data', 'ora', 'stato_google'}.
+    Gli eventi di tutto il giorno non sono sedute e non compaiono; i promemoria
+    (VALARM) dentro un evento non toccano il suo titolo né il suo identificativo;
+    le ore in UTC contano nel giorno svizzero.
     """
     testo = url_o_testo if e_testo else scarica(url_o_testo)
     grezzi = _eventi_grezzi(testo)
@@ -223,7 +238,7 @@ def leggi(url_o_testo, da, a, e_testo=False):
     serie = []
     for ev in grezzi:
         if ev.get('recurrence_id'):
-            d = _data(ev['recurrence_id'])
+            d = _giorno_locale(ev['recurrence_id'])
             if d:
                 eccezioni[(ev.get('uid', ''), d)] = ev
         else:
@@ -231,7 +246,7 @@ def leggi(url_o_testo, da, a, e_testo=False):
 
     fuori = {}
     for (uid, d), ev in eccezioni.items():
-        nuova = _data(ev.get('dtstart')) or d
+        nuova = _giorno_locale(ev.get('dtstart')) or d
         if nuova != d:
             fuori[(uid, d)] = True      # spostata altrove: nel giorno originale non c'e'
 
@@ -249,6 +264,8 @@ def leggi(url_o_testo, da, a, e_testo=False):
         }
 
     for ev in serie:
+        if _tutto_il_giorno(ev):
+            continue
         uid = ev.get('uid', '')
         titolo = _testo(ev.get('summary', ''))
         stato = (ev.get('status') or 'CONFIRMED').strip().lower()
@@ -266,7 +283,9 @@ def leggi(url_o_testo, da, a, e_testo=False):
                      ora)
 
     for (uid, originale), ev in eccezioni.items():
-        giorno = _data(ev.get('dtstart')) or originale
+        if _tutto_il_giorno(ev):
+            continue
+        giorno = _giorno_locale(ev.get('dtstart')) or originale
         stato = (ev.get('status') or 'CONFIRMED').strip().lower()
         aggiungi(uid, giorno, _testo(ev.get('summary', '')),
                  'cancelled' if stato == 'cancelled' else 'confirmed',
