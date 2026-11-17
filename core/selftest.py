@@ -5166,6 +5166,42 @@ def _test_modelli_lingua(r):
            (tedesca.count('Anna Muster'), inglese.count('Anna Muster')), (1, 1))
     con.close()
 
+    # --- una graffa sola nel modello non fa cadere la pagina dell'email ---
+    # Trovato il 17.11.2026 facendo l'anteprima dal vivo: mentre si scrive
+    # «{nome}» c'e' un momento in cui c'e' solo «{», e format() non solleva
+    # KeyError ma ValueError, che nessuno prendeva. Lo stesso modello salvato
+    # faceva cadere la pagina «Manda la fattura» con un errore del server.
+    rotto = dict(imp, email_body='Dear {nome,\n{corpo}', email_body_de='')
+    try:
+        uscita = M.componi(inv, cliente, rotto)
+        esito = (uscita['body'], bool(uscita['problemi']))
+    except Exception as e:
+        esito = 'cade: %s' % type(e).__name__
+    _check(r, 'Modelli della mail', 'una graffa senza compagna si dice, non fa cadere niente',
+           esito, ('', True))
+
+    # --- l'anteprima in Impostazioni: la stessa mail che parte davvero ---
+    imp_ant = dict(_db.DEFAULT_SETTINGS, email_firma='Mario Esempio',
+                   email_corpo_pt='Grazie mille.', email_saluto_formale='Kind regards,\n')
+    a = M.anteprima(imp_ant, 'pt', 'en', 'formale', abbonato=False, con_qr=True)
+    _check(r, 'Modelli della mail', 'l’anteprima mostra la mail intera, frasi automatiche comprese',
+           all(f in a['testo'] for f in a['automatiche'])
+           and 'Grazie mille.' in a['testo'] and a['testo'].endswith('Kind regards,\nMario Esempio')
+           and len(a['automatiche']) == 2, True)
+    a = M.anteprima(imp_ant, 'coaching', 'en', abbonato=True, mese_esempio='Aug')
+    _check(r, 'Modelli della mail', 'con l’ordine permanente non chiede il codice QR',
+           (_chiede_qr(a['testo']), 'Aug' in a['oggetto']), (False, True))
+    a = M.anteprima(dict(imp_ant, email_body='Hi {nme}, {corpo}'), 'pt', 'en')
+    _check(r, 'Modelli della mail', 'un segnaposto scritto male si segnala per nome',
+           (a['sconosciuti'], a['rotto']), (['nme'], True))
+
+
+def _chiede_qr(testo):
+    """La richiesta del codice QR c'e' in questo testo, in qualunque lingua?"""
+    from . import mailer as M
+    from . import language as L
+    return any(L.t_doc(M.FRASE_QR, c).strip() in testo for c in L.CODICI)
+
 
 def _test_cartelle(r):
     """Le cartelle dei dati cambiano nome senza che si perda niente.

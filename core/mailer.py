@@ -295,6 +295,12 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
         problemi.append(f'Nel modello dell\'email c\'e\' un segnaposto sconosciuto: {e}. '
                         'Correggilo in Impostazioni.')
         oggetto, testo = '', ''
+    except (IndexError, ValueError):
+        # una graffa sola ({ senza }) o un {0}: format() non sa cosa farne e
+        # senza questo la pagina dell'email cadeva con un errore del server
+        problemi.append('Nel modello dell\'email c\'e\' una graffa { o } senza la sua '
+                        'compagna. Correggila in Impostazioni.')
+        oggetto, testo = '', ''
 
     return {'to': destinatario, 'subject': oggetto, 'body': testo,
             'allegato': allegato, 'allegati': allegati, 'problemi': problemi,
@@ -305,6 +311,67 @@ def componi(inv, cliente, settings, descrizioni=(), corpo=None, allegati_extra=(
             # l'oggetto vuole un mese e l'app non e' riuscita a dedurlo:
             # non e' un errore, ma va detto perche' lo scriva lui
             'mese_mancante': '{mese}' in oggetto_grezzo and not mese}
+
+
+# --- l'anteprima in Impostazioni --------------------------------------------
+# In Impostazioni la mail e' spezzata in tanti campi, e due frasi (l'apertura e
+# quella sul pagamento) le scrive l'app da sola: senza un'anteprima nessuno
+# vede la mail intera finche' non la manda. L'anteprima passa da componi(),
+# cioe' dallo stesso calcolo della mail vera, con un cliente e una fattura
+# inventati: cosi' quello che si vede e' quello che parte, non una copia
+# rifatta a mano che col tempo smette di somigliarle.
+
+CLIENTE_ESEMPIO = 'Laura Esempio'
+SERVIZIO_ESEMPIO = {'coaching': 'Online Coaching', 'pt': 'Personal Training'}
+SEGNAPOSTI = ('mese', 'nome', 'numero', 'totale', 'servizio', 'apertura',
+              'riga_abbonamento', 'riga_qr', 'corpo', 'saluto', 'firma')
+RX_SEGNAPOSTO = re.compile(r'\{([^{}]*)\}')
+
+
+def segnaposti_sconosciuti(*testi):
+    """I segnaposti scritti nei modelli che l'app non sa riempire."""
+    visti = []
+    for testo in testi:
+        for nome in RX_SEGNAPOSTO.findall(testo or ''):
+            if nome not in SEGNAPOSTI and nome not in visti:
+                visti.append(nome)
+    return visti
+
+
+def anteprima(settings, modello='pt', lingua=None, tono='informale',
+              abbonato=False, con_qr=True, mese_esempio=None):
+    """La mail come la riceverebbe un cliente inventato, coi modelli dati.
+
+    Ritorna oggetto, testo, le frasi che l'app scrive da sola (per farle
+    vedere diverse) e i segnaposti sconosciuti, se ce ne sono."""
+    if modello not in NOMI_MODELLO:
+        modello = 'pt'
+    lingua = L.normalizza_doc(lingua)
+    mensile = modello == 'coaching'
+    inv = {'number': '2026-042', 'total_cents': 48000, 'pdf_path': '',
+           'source_file': '', 'qr_ref': '210000000003139471430009017' if con_qr else '',
+           'client_name': CLIENTE_ESEMPIO}
+    cliente = {'name': CLIENTE_ESEMPIO, 'email': 'laura@example.com',
+               'lingua': lingua, 'abbonamento': 1 if abbonato else 0,
+               'tono': 'formale' if tono == 'formale' else 'informale'}
+    servizio = {'nome': SERVIZIO_ESEMPIO[modello], 'ogni_mese': 1 if mensile else 0}
+    mese = mese_esempio or ABBREVIAZIONI[time.localtime().tm_mon]
+    msg = componi(inv, cliente, settings, modello=modello,
+                  mese=mese if mensile else '', servizio=servizio)
+    apertura = L.t_doc(APERTURA_MENSILE if mensile else APERTURA_SEMPLICE,
+                       lingua).format(servizio=servizio['nome'])
+    automatiche = [apertura]
+    if abbonato:
+        automatiche.append(L.t_doc(FRASE_ABBONAMENTO, lingua).strip())
+    elif con_qr:
+        automatiche.append(L.t_doc(FRASE_QR, lingua).strip())
+    sconosciuti = segnaposti_sconosciuti(
+        oggetto_modello(settings, modello, lingua),
+        db.modello_email(settings, 'email_body', lingua))
+    return {'oggetto': msg['subject'], 'testo': msg['body'], 'lingua': lingua,
+            'automatiche': automatiche, 'sconosciuti': sconosciuti,
+            # il modello non si riesce a montare: segnaposto o graffa storta
+            'rotto': not msg['body']}
 
 
 # --- il testo formattato ----------------------------------------------------

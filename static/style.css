@@ -518,3 +518,27 @@ h2.sezione { font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
 }
 .editor-testo:focus { outline: 2px solid var(--accent-2); border-color: transparent; }
 .editor-testo ul, .editor-testo ol { margin: 4px 0; padding-left: 24px; }
+
+/* --- L'anteprima dei modelli della mail, in Impostazioni: la mail intera come
+       la riceve il cliente, mentre la si scrive. --- */
+.anteprima-mail { margin: 12px 0 4px; border: 1px solid var(--line); border-radius: 10px;
+                  background: #f8fafc; padding: 12px 14px; }
+.am-testa { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+            justify-content: space-between; margin-bottom: 10px; }
+.am-prove { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; }
+.am-scelta { font-size: 12px; font-weight: 400; color: var(--muted); margin: 0;
+             display: inline-flex; gap: 6px; align-items: center; }
+.am-scelta select { width: auto; padding: 3px 6px; font-size: 12px; margin: 0; }
+.am-oggetto { font-size: 13px; padding: 8px 10px; background: var(--card);
+              border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; }
+.am-testo { white-space: pre-wrap; font-size: 13px; line-height: 1.5; background: var(--card);
+            border: 1px solid var(--line); border-radius: 0 0 8px 8px; padding: 10px 12px;
+            min-height: 120px; overflow-wrap: anywhere; }
+.anteprima-mail mark { background: #dcf3e7; color: inherit; border-radius: 3px; padding: 0 2px; }
+.am-legenda { font-size: 11.5px; margin: 8px 0 0; }
+.am-avviso { font-size: 12.5px; color: #92400e; background: #fef3c7; border-radius: 6px;
+             padding: 6px 10px; margin: 8px 0 0; }
+details.avanzate { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+details.avanzate summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
+.segnaposti { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

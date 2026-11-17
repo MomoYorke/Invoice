@@ -74,6 +74,72 @@ def mancanti(lingua):
 
 TESTI = {
     'en': {
+        '1. L’oggetto':
+            '1. The subject',
+        '2. La tua frase':
+            '2. Your sentence',
+        '3. Il saluto':
+            '3. The sign-off',
+        '4. La firma':
+            '4. The signature',
+        'Avanzate: come sono messi in fila i pezzi della mail':
+            'Advanced: the order of the pieces of the email',
+        'Così la riceve il cliente':
+            'What the client receives',
+        'Del Lei':
+            'Formal',
+        'Del tu':
+            'Informal',
+        'Di solito non serve toccarlo. Le parole tra graffe sono i posti dove l’app mette i pezzi qui sopra: per aggiungerne uno, metti il cursore nel testo e premi un pulsante.':
+            'Usually there is no need to touch this. The words in braces are where the app puts the pieces above: to add one, place the cursor in the text and press a button.',
+        'Evidenziate':
+            'Highlighted:',
+        'La riga che il cliente vede nella sua casella di posta. Nell’abbonamento {mese} diventa il mese della fattura (per esempio {a}, oppure {b} se il periodo sta a cavallo di due mesi).':
+            'The line the client sees in their inbox. In the subscription, {mese} becomes the month of the invoice (for example {a}, or {b} if the period spans two months).',
+        'Lingua del cliente':
+            'Client language',
+        'Nella scheda di ogni cliente scegli se gli dai del tu o del Lei. Gli a capo contano: una riga vuota in fondo lascia spazio prima della firma.':
+            'In each client’s card you choose whether you address them formally or informally. Line breaks count: an empty line at the end leaves space before the signature.',
+        'Nome, titolo, recapiti: va in fondo a ogni mail. È una sola per tutte le lingue, così se cambi numero di telefono lo cambi una volta.':
+            'Name, title, contact details: it goes at the bottom of every email. There is only one for all languages, so if you change your phone number you change it once.',
+        'Oggetto:':
+            'Subject:',
+        'Puoi scrivere una versione per lingua: l’app usa quella della lingua del cliente. Dove non scrivi niente vale quella «Per tutti».':
+            'You can write one version per language: the app uses the one in the client’s language. Where you write nothing, the “For everyone” one applies.',
+        'Quello che vuoi dire al cliente, dopo le frasi che scrive l’app. L’app sceglie da sola quale delle due usare guardando la fattura; prima di mandare la mail puoi comunque cambiarla.':
+            'What you want to tell the client, after the sentences the app writes. The app picks which of the two to use by looking at the invoice; you can still change it before sending the email.',
+        'Qui scrivi le parti della mail che sono tue. Il riquadro qui sotto ti mostra subito la mail intera, con un cliente inventato, mentre scrivi.':
+            'Here you write the parts of the email that are yours. The box below shows you the whole email, with a made-up client, while you type.',
+        'Tipo di fattura':
+            'Type of invoice',
+        'firma':
+            'signature',
+        'frase d’apertura':
+            'opening sentence',
+        'frase sul codice QR':
+            'QR code sentence',
+        'frase sull’ordine permanente':
+            'standing order sentence',
+        'la tua frase':
+            'your sentence',
+        'le frasi che scrive l’app da sola, già tradotte nella lingua del cliente: l’apertura e quella sul pagamento (codice QR, oppure ordine permanente per chi ha la spunta «Abbonamento mensile» nella sua scheda).':
+            'the sentences the app writes by itself, already translated into the client’s language: the opening and the one about payment (QR code, or standing order for clients with “Monthly subscription” ticked in their card).',
+        'mese':
+            'month',
+        'nome del cliente':
+            'client name',
+        'nome del servizio':
+            'service name',
+        'numero della fattura':
+            'invoice number',
+        'paga con ordine permanente':
+            'pays by standing order',
+        'saluto':
+            'sign-off',
+        'L’app non conosce questi segnaposti: {elenco}. Usa i pulsanti qui sotto per inserirne uno giusto.':
+            'The app does not know these placeholders: {elenco}. Use the buttons below to insert a correct one.',
+        'Nel modello c’è una graffa { o } senza la sua compagna: così la mail non si può montare.':
+            'The template has a { or } brace without its partner: the email cannot be put together like this.',
         'Il bollettino QR':
             'The QR payment slip',
         'Accendi il bollettino QR':
@@ -1716,6 +1782,72 @@ TESTI = {
             "«{testo}»: no client recognised in the title. Fix the name in the calendar or on the client's card.",
     },
     'de': {
+        '1. L’oggetto':
+            '1. Der Betreff',
+        '2. La tua frase':
+            '2. Dein Satz',
+        '3. Il saluto':
+            '3. Die Grussformel',
+        '4. La firma':
+            '4. Die Signatur',
+        'Avanzate: come sono messi in fila i pezzi della mail':
+            'Erweitert: die Reihenfolge der Teile der E-Mail',
+        'Così la riceve il cliente':
+            'So erhält sie der Kunde',
+        'Del Lei':
+            'Siezen',
+        'Del tu':
+            'Duzen',
+        'Di solito non serve toccarlo. Le parole tra graffe sono i posti dove l’app mette i pezzi qui sopra: per aggiungerne uno, metti il cursore nel testo e premi un pulsante.':
+            'Normalerweise musst du das nicht anfassen. Die Wörter in geschweiften Klammern sind die Stellen, an denen die App die Teile oben einsetzt: Um eines hinzuzufügen, setz den Cursor in den Text und drück eine Schaltfläche.',
+        'Evidenziate':
+            'Hervorgehoben:',
+        'La riga che il cliente vede nella sua casella di posta. Nell’abbonamento {mese} diventa il mese della fattura (per esempio {a}, oppure {b} se il periodo sta a cavallo di due mesi).':
+            'Die Zeile, die der Kunde in seinem Posteingang sieht. Beim Abo wird {mese} zum Monat der Rechnung (zum Beispiel {a}, oder {b}, wenn der Zeitraum zwei Monate umfasst).',
+        'Lingua del cliente':
+            'Sprache des Kunden',
+        'Nella scheda di ogni cliente scegli se gli dai del tu o del Lei. Gli a capo contano: una riga vuota in fondo lascia spazio prima della firma.':
+            'In der Karte jedes Kunden wählst du, ob du ihn duzt oder siezt. Zeilenumbrüche zählen: Eine leere Zeile am Ende lässt Platz vor der Signatur.',
+        'Nome, titolo, recapiti: va in fondo a ogni mail. È una sola per tutte le lingue, così se cambi numero di telefono lo cambi una volta.':
+            'Name, Titel, Kontaktdaten: Die Signatur steht am Ende jeder E-Mail. Es gibt nur eine für alle Sprachen, so änderst du eine neue Telefonnummer nur einmal.',
+        'Oggetto:':
+            'Betreff:',
+        'Puoi scrivere una versione per lingua: l’app usa quella della lingua del cliente. Dove non scrivi niente vale quella «Per tutti».':
+            'Du kannst eine Version pro Sprache schreiben: Die App verwendet die in der Sprache des Kunden. Wo du nichts schreibst, gilt «Für alle».',
+        'Quello che vuoi dire al cliente, dopo le frasi che scrive l’app. L’app sceglie da sola quale delle due usare guardando la fattura; prima di mandare la mail puoi comunque cambiarla.':
+            'Was du dem Kunden sagen möchtest, nach den Sätzen, die die App schreibt. Die App wählt anhand der Rechnung selbst, welchen der beiden sie verwendet; vor dem Versand kannst du ihn trotzdem ändern.',
+        'Qui scrivi le parti della mail che sono tue. Il riquadro qui sotto ti mostra subito la mail intera, con un cliente inventato, mentre scrivi.':
+            'Hier schreibst du die Teile der E-Mail, die von dir stammen. Das Feld unten zeigt dir die ganze E-Mail mit einem erfundenen Kunden, während du schreibst.',
+        'Tipo di fattura':
+            'Art der Rechnung',
+        'firma':
+            'Signatur',
+        'frase d’apertura':
+            'Einleitungssatz',
+        'frase sul codice QR':
+            'Satz zum QR-Code',
+        'frase sull’ordine permanente':
+            'Satz zum Dauerauftrag',
+        'la tua frase':
+            'dein Satz',
+        'le frasi che scrive l’app da sola, già tradotte nella lingua del cliente: l’apertura e quella sul pagamento (codice QR, oppure ordine permanente per chi ha la spunta «Abbonamento mensile» nella sua scheda).':
+            'die Sätze, die die App selbst schreibt, bereits in die Sprache des Kunden übersetzt: die Einleitung und der Satz zur Zahlung (QR-Code, oder Dauerauftrag für Kunden mit dem Häkchen «Monatsabo» in ihrer Karte).',
+        'mese':
+            'Monat',
+        'nome del cliente':
+            'Name des Kunden',
+        'nome del servizio':
+            'Name der Leistung',
+        'numero della fattura':
+            'Rechnungsnummer',
+        'paga con ordine permanente':
+            'zahlt per Dauerauftrag',
+        'saluto':
+            'Grussformel',
+        'L’app non conosce questi segnaposti: {elenco}. Usa i pulsanti qui sotto per inserirne uno giusto.':
+            'Die App kennt diese Platzhalter nicht: {elenco}. Nimm die Schaltflächen unten, um einen richtigen einzufügen.',
+        'Nel modello c’è una graffa { o } senza la sua compagna: così la mail non si può montare.':
+            'In der Vorlage steht eine Klammer { oder } ohne ihr Gegenstück: So lässt sich die E-Mail nicht zusammensetzen.',
         'Il bollettino QR':
             'Der QR-Einzahlungsschein',
         'Accendi il bollettino QR':
