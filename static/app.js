@@ -113,7 +113,25 @@
     if (totalBox) totalBox.hidden = (sum === 0);
   }
 
-  document.getElementById('add-row').onclick = () => addRow();
+  // ---- quale riga riempie un pulsante dei servizi ----
+  // Quella dove hai cliccato per ultimo, o quella appena aggiunta. Prima era
+  // sempre la prima riga: con un abbonamento gia' scritto, il pulsante
+  // dell'add-on cancellava la riga dell'abbonamento.
+  let rigaScelta = null;
+  itemsBox.addEventListener('focusin', e => {
+    const riga = e.target.closest('.item-row');
+    if (riga) rigaScelta = riga;
+  });
+  function rigaPerIlPulsante() {
+    if (rigaScelta && rigaScelta.isConnected) return rigaScelta;
+    // nessuna scelta: la prima riga vuota, o una nuova. Mai sopra una riga
+    // gia' scritta senza che tu l'abbia indicata.
+    const vuota = [...itemsBox.querySelectorAll('.item-row')]
+      .find(div => !div.querySelectorAll('input')[1].value.trim());
+    return vuota || addRow();
+  }
+
+  document.getElementById('add-row').onclick = () => { rigaScelta = addRow(); };
   // arrivando da un abbonamento la prima riga e' gia' scritta: cliente,
   // servizio e importo. Non si crea niente finche' non si preme Crea.
   const PRE = window.PRECOMPILATO || null;
@@ -133,8 +151,9 @@
   // il periodo del mese dopo.
   document.querySelectorAll('.preset').forEach(btn => {
     btn.onclick = async () => {
-      const firstRow = itemsBox.querySelector('.item-row') || addRow();
-      const inputs = firstRow.querySelectorAll('input');
+      const riga = rigaPerIlPulsante();
+      rigaScelta = riga;
+      const inputs = riga.querySelectorAll('input');
       const r = await fetch('/api/periodo-successivo?servizio_id=' + btn.dataset.id +
                             '&client_id=' + (clientSel.value || '')).then(x => x.json());
       if (!r.servizio_id) return;
