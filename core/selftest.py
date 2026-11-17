@@ -4753,6 +4753,7 @@ def _test_banca(r):
     _test_pacchetto(r)
     _test_pacchetto_lingua(r)
     _test_modelli_lingua(r)
+    _test_aggiornamenti(r)
     _test_cartelle(r)
     _test_avviatore(r)
     _test_avviatore_windows(r)
@@ -5201,6 +5202,99 @@ def _chiede_qr(testo):
     from . import mailer as M
     from . import language as L
     return any(L.t_doc(M.FRASE_QR, c).strip() in testo for c in L.CODICI)
+
+
+def _test_aggiornamenti(r):
+    """Il pulsante «Installa adesso» cambia il programma e mai i dati.
+
+    Nato il 17.11.2026: aggiornare un Mac dall'avviatore e' costato un'ora.
+    Si prova su repository finti in una cartella temporanea: uno «pubblicato»
+    e una copia, come quella di chi usa l'app. Senza git sul computer le
+    prove con i repository non si possono fare, e si prova solo il resto.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+    from . import updater as U
+
+    base = tempfile.mkdtemp(prefix='prova-aggiornamenti-')
+    try:
+        senza = os.path.join(base, 'senza')
+        os.makedirs(senza)
+        _check(r, 'Aggiornamenti', 'una copia senza .git lo dice, invece di stare zitta',
+               U.stato(senza)['stato'], 'senza_git')
+        if not U._git(base, '--version')[0]:
+            return
+
+        def git(cartella, *a):
+            subprocess.run(('git', '-c', 'user.name=Prova', '-c', 'user.email=prova@example.com',
+                            '-c', 'init.defaultBranch=main') + a, cwd=cartella,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+
+        def scrivi(cartella, nome, testo):
+            perc = os.path.join(cartella, nome)
+            os.makedirs(os.path.dirname(perc), exist_ok=True)
+            with open(perc, 'w') as f:
+                f.write(testo)
+
+        pubblicato = os.path.join(base, 'pubblicato.git')
+        lavoro = os.path.join(base, 'lavoro')
+        copia = os.path.join(base, 'copia')
+        git(base, 'init', '--bare', pubblicato)
+        git(base, 'clone', pubblicato, lavoro)
+        scrivi(lavoro, '.gitignore', 'data/\n')
+        scrivi(lavoro, 'app.py', 'versione = 1\n')
+        git(lavoro, 'add', '-A')
+        git(lavoro, 'commit', '-m', 'Prima versione')
+        git(lavoro, 'push', 'origin', 'HEAD:main')
+        git(base, 'clone', pubblicato, copia)
+        # i dati di chi usa l'app: fuori dal repository, come nella realta'
+        scrivi(copia, os.path.join('data', 'fatture.db'), 'dati veri di Laura')
+
+        _check(r, 'Aggiornamenti', 'appena installata è già aggiornata',
+               U.stato(copia)['stato'], 'aggiornata')
+
+        scrivi(lavoro, 'app.py', 'versione = 2\n')
+        git(lavoro, 'commit', '-am', 'Seconda versione')
+        git(lavoro, 'push', 'origin', 'HEAD:main')
+        st = U.stato(copia)
+        _check(r, 'Aggiornamenti', 'una versione nuova si vede subito, con cosa cambia',
+               (st['stato'], st['novita']), ('nuova', ['Seconda versione']))
+        _check(r, 'Aggiornamenti', 'e il controllo resta segnato per l’avviatore',
+               os.path.isfile(os.path.join(copia, U.MARCATORE)), True)
+
+        _check(r, 'Aggiornamenti', 'non installa una versione diversa da quella mostrata',
+               U.installa(copia, 'f' * 40)['motivo'], 'cambiato')
+
+        copie = []
+        esito = U.installa(copia, st['la'], fai_copia=lambda: copie.append(1))
+        with open(os.path.join(copia, 'app.py')) as f:
+            programma = f.read()
+        with open(os.path.join(copia, 'data', 'fatture.db')) as f:
+            dati = f.read()
+        with open(os.path.join(copia, U.PRIMA)) as f:
+            prima = f.read().strip()
+        _check(r, 'Aggiornamenti', 'installa: copia dei dati, programma nuovo, dati intatti',
+               (esito['ok'], copie, programma, dati, prima == st['qui']),
+               (True, [1], 'versione = 2\n', 'dati veri di Laura', True))
+        _check(r, 'Aggiornamenti', 'dopo è aggiornata',
+               U.stato(copia, rete=False)['stato'], 'aggiornata')
+
+        # una copia con lavoro suo non si tocca
+        scrivi(copia, 'app.py', 'versione = 2 con una modifica mia\n')
+        git(copia, 'commit', '-am', 'Modifica locale')
+        _check(r, 'Aggiornamenti', 'una copia con modifiche sue non si aggiorna da sola',
+               U.stato(copia)['stato'], 'avanti')
+
+        # storia riscritta: si offre di rimettersi in pari
+        git(lavoro, 'commit', '--amend', '-m', 'Seconda versione, riscritta')
+        git(lavoro, 'push', '--force', 'origin', 'HEAD:main')
+        _check(r, 'Aggiornamenti', 'con la storia riscritta propone di rimettersi in pari',
+               U.stato(copia)['stato'], 'riallinea')
+    except Exception as e:
+        _check(r, 'Aggiornamenti', 'le prove sui repository finti girano', repr(e), '')
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
 
 
 def _test_cartelle(r):
