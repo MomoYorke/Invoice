@@ -898,17 +898,32 @@ def fattura_file(inv_id, kind):
 def _fatture_allegabili(con, inv):
     """Le altre fatture che potrebbero andare nella stessa mail.
 
-    Il caso vero: a una persona si manda la sua fattura piu' quella del
-    coniuge, fatte lo stesso giorno. Quindi NON si filtra per cliente ma per
-    tempo: le fatture recenti fatte con l'app (le uniche che hanno un PDF) e
-    non ancora spedite.
+    Due casi veri:
+    - a una persona si manda la sua fattura piu' quella del coniuge, fatte lo
+      stesso giorno: qui NON si filtra per cliente ma per tempo, cioe' le
+      fatture recenti non ancora spedite;
+    - allo stesso cliente si rimanda una fattura gia' spedita ma non ancora
+      pagata («quella di settembre risulta ancora aperta, te la riallego»):
+      questa vale solo per lo stesso cliente, e senza limite di tempo, perche'
+      piu' e' vecchia piu' serve ricordarla.
+    Solo fatture fatte con l'app: sono le uniche che hanno un PDF.
     """
     limite = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
-    righe = con.execute(
+    recenti = con.execute(
         "SELECT * FROM invoices WHERE deleted_at IS NULL AND id != ? "
         "AND sent_at IS NULL AND source = 'app' AND date >= ? "
         "ORDER BY COALESCE(number, 0) DESC LIMIT 8", (inv['id'], limite)).fetchall()
-    return [r for r in righe if r['pdf_path'] and os.path.exists(r['pdf_path'])]
+    if inv['client_id']:
+        stesso, chi = 'client_id = ?', inv['client_id']
+    else:
+        stesso, chi = 'client_name = ?', inv['client_name']
+    aperte = con.execute(
+        "SELECT * FROM invoices WHERE deleted_at IS NULL AND id != ? "
+        "AND sent_at IS NOT NULL AND COALESCE(status, '') != 'pagata' "
+        "AND source = 'app' AND " + stesso + " "
+        "ORDER BY COALESCE(number, 0) DESC LIMIT 8", (inv['id'], chi)).fetchall()
+    return [r for r in list(recenti) + list(aperte)
+            if r['pdf_path'] and os.path.exists(r['pdf_path'])]
 
 
 def _oggetti_email(con, inv, cli):

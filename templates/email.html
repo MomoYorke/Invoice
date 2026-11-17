@@ -142,13 +142,13 @@
   <div class="mt" style="border-top:1px solid var(--line);padding-top:12px">
     {% if altre_stesse %}
     <fieldset class="gruppo">
-    <legend class="etichetta" style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?') }}</legend>
+    <legend class="etichetta" style="margin-bottom:6px">{{ _('Nella stessa mail vuoi allegare anche un’altra fattura di questo cliente?') }}</legend>
     {% for a in altre_stesse %}
     <label style="display:block;font-weight:400">
       <input type="checkbox" name="allega" value="{{ a.id }}" style="width:auto"
              {{ 'checked' if a.id in scelte }}>
       #{{ a.number }} — {{ a.client_name }} — <span class="money">{{ a.total_cents | chf(false) }}</span>
-      <span class="muted">({{ a.date | dateit }})</span>
+      <span class="muted">({{ a.date | dateit }}{% if a.sent_at %} · {{ _('già spedita, non ancora pagata') }}{% endif %})</span>
     </label>
     {% endfor %}
     </fieldset>

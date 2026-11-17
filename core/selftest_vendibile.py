@@ -105,6 +105,7 @@ def _scenario_lingua_clienti():
 
 
 def _scenario_email():
+    import datetime
     from html.parser import HTMLParser
     import app as APP
     from core import db as D
@@ -119,11 +120,21 @@ def _scenario_email():
     con.commit()
     con.close()
     c = APP.app.test_client()
-    for n, cid in ((1, 1), (2, 1), (3, 2)):
-        c.post('/nuova', data={'client_id': str(cid), 'data': '2026-10-04', 'numero': str(n),
+    oggi = datetime.date.today()
+    recente = (oggi - datetime.timedelta(days=10)).isoformat()
+    vecchia = (oggi - datetime.timedelta(days=150)).isoformat()
+    # 4: stesso cliente, gia' spedita e non pagata, vecchia di 5 mesi -> si propone
+    # 5: stesso cliente, gia' spedita e pagata -> no
+    # 6: altro cliente, gia' spedita e non pagata -> no (non e' affar suo)
+    for n, cid, giorno in ((1, 1, recente), (2, 1, recente), (3, 2, recente),
+                           (4, 1, vecchia), (5, 1, vecchia), (6, 2, recente)):
+        c.post('/nuova', data={'client_id': str(cid), 'data': giorno, 'numero': str(n),
                                'desc_0': 'Seduta %d' % n, 'tot_0': '100'})
     k = D.connect()
     ids = {r['number']: r['id'] for r in k.execute('SELECT id, number FROM invoices')}
+    k.execute("UPDATE invoices SET sent_at=? WHERE number IN (4, 5, 6)", (recente,))
+    k.execute("UPDATE invoices SET status='pagata', paid_at=? WHERE number=5", (recente,))
+    k.commit()
     k.close()
 
     class Pagina(HTMLParser):
@@ -162,6 +173,10 @@ def _scenario_email():
     scelte = {v: dentro for v, dentro in p.allega}
     fatti['allegati'] = {'stesso_cliente_a_vista': scelte.get(str(ids[2])) is False,
                          'altro_cliente_nel_riquadro': scelte.get(str(ids[3])) is True}
+    fatti['non_pagate'] = {'spedita_non_pagata_proposta': scelte.get(str(ids[4])) is False,
+                           'pagata_esclusa': str(ids[5]) not in scelte,
+                           'altro_cliente_spedita_esclusa': str(ids[6]) not in scelte,
+                           'segnata_non_pagata': 'gi\u00e0 spedita, non ancora pagata' in html}
     print(MARCA + json.dumps(fatti))
 
 
@@ -234,6 +249,10 @@ def _test_vendibile(r):
            (e['registro_email'], e['dice_la_posta']), (0, True))
     _check(r, 'Vendibile', 'allegati: le fatture di altri clienti stanno in un riquadro a parte',
            e['allegati'], {'stesso_cliente_a_vista': True, 'altro_cliente_nel_riquadro': True})
+    _check(r, 'Vendibile', 'allegati: si può riallegare una fattura già spedita e non pagata '
+           'dello stesso cliente, anche vecchia', e['non_pagate'],
+           {'spedita_non_pagata_proposta': True, 'pagata_esclusa': True,
+            'altro_cliente_spedita_esclusa': True, 'segnata_non_pagata': True})
     _check(r, 'Vendibile', 'la copia esterna si fa e si riapre', f['copia_ok'], True)
     _check(r, 'Vendibile', 'un nome di copia che non è nell’elenco non si apre',
            f['nome_falso'], 3)

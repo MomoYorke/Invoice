@@ -843,8 +843,9 @@ TESTI = {
             'The mail is not connected yet, so nothing can be sent from here.',
         'La colleghi in {impostazioni}. Nel frattempo apri il PDF dalla fattura e mandalo col tuo programma di posta.':
             'You connect it in {impostazioni}. Meanwhile open the PDF from the invoice and send it with your own mail program.',
-        'Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?':
-            'Do you want to attach another recent invoice of this client to the same mail?',
+        'Nella stessa mail vuoi allegare anche un’altra fattura di questo cliente?':
+            'Do you want to attach another invoice of this client to the same mail?',
+        'già spedita, non ancora pagata': 'already sent, not paid yet',
         'Fatture di altri clienti (per esempio marito e moglie)':
             'Invoices of other clients (for example husband and wife)',
         'Attenzione: chi riceve la mail vedrebbe la fattura di un’altra persona. Spunta solo se è davvero giusto.':
@@ -2494,8 +2495,9 @@ TESTI = {
             'Die Mail ist noch nicht verbunden, von hier aus kann also nichts verschickt werden.',
         'La colleghi in {impostazioni}. Nel frattempo apri il PDF dalla fattura e mandalo col tuo programma di posta.':
             'Du verbindest sie in den {impostazioni}. Öffne inzwischen das PDF der Rechnung und schick es mit deinem Mailprogramm.',
-        'Nella stessa mail vuoi allegare anche un’altra fattura recente di questo cliente?':
-            'Möchtest du in derselben Mail noch eine weitere aktuelle Rechnung dieses Kunden anhängen?',
+        'Nella stessa mail vuoi allegare anche un’altra fattura di questo cliente?':
+            'Möchtest du in derselben Mail noch eine weitere Rechnung dieses Kunden anhängen?',
+        'già spedita, non ancora pagata': 'schon verschickt, noch nicht bezahlt',
         'Fatture di altri clienti (per esempio marito e moglie)':
             'Rechnungen anderer Kunden (zum Beispiel Ehepaar)',
         'Attenzione: chi riceve la mail vedrebbe la fattura di un’altra persona. Spunta solo se è davvero giusto.':
