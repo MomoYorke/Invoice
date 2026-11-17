@@ -95,6 +95,10 @@
       if (interno && !stessa && history.length > 1) b.hidden = false;
     })();
   </script>
+  {% if versione_nuova and request.endpoint != 'aggiornamenti' %}
+  <div class="flash avviso-versione">{{ _('È uscita una versione nuova dell’app.') }}
+    <a href="{{ url_for('aggiornamenti') }}">{{ _('Guarda cosa cambia e installala') }}</a></div>
+  {% endif %}
   {% with msgs = get_flashed_messages(with_categories=true) %}
     {% for cat, m in msgs %}
       <div class="flash {{ cat }}">{{ m }}</div>

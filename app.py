@@ -47,6 +47,7 @@ from core import welcome as ben
 from core import icons
 from core import menu
 from core import language as lng
+from core import updater
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 # La cartella delle fatture si puo' deviare con INVOICE_DIR: serve per provare
@@ -235,6 +236,7 @@ def inject_globals():
             'lingua': codice, 'lingue': lng.LINGUE,
             'menu_gruppi': menu.gruppi(da_sistemare),
             'primi_passi_restano': restano,
+            'versione_nuova': (_AGGIORNAMENTO or {}).get('stato') in ('nuova', 'riallinea'),
             'calendario_nome': impostazioni.get('calendario_nome') or 'il calendario delle sessioni',
             'calendario_storico_nome': (impostazioni.get('calendario_storico_nome')
                                         or 'il calendario storico')}
@@ -2777,6 +2779,77 @@ def api_client(cid):
                     'intestatario': (c['intestatario'] or '').strip()})
 
 
+# ------------------------------------------------------------ aggiornamenti
+# L'ultima cosa che si sa sulla versione pubblicata: la riempie il controllo
+# fatto all'accensione (dietro, senza far aspettare nessuno) e il pulsante
+# «Cerca adesso». Serve all'avviso in cima alle pagine.
+_AGGIORNAMENTO = None
+# Dopo un aggiornamento l'app si spegne e si riaccende da sola: le pagine
+# restano in memoria, e senza ripartire si vedrebbe ancora la versione vecchia.
+_RIAVVIA = False
+
+
+def _controlla_aggiornamenti_dietro():
+    """All'accensione, dietro: se l'avviatore ha appena chiesto a GitHub
+    (meno di un quarto d'ora fa) si usa quello che ha saputo, se no si chiede."""
+    global _AGGIORNAMENTO
+
+    def lavoro():
+        global _AGGIORNAMENTO
+        recente = launcher.controllato_da_poco(
+            os.path.join(APP_DIR, updater.MARCATORE), 0.25)
+        try:
+            _AGGIORNAMENTO = updater.stato(APP_DIR, rete=not recente)
+        except Exception:                               # pragma: no cover
+            _AGGIORNAMENTO = None
+    threading.Thread(target=lavoro, daemon=True).start()
+
+
+@app.route('/aggiornamenti')
+def aggiornamenti():
+    return render_template('updates.html', st=_AGGIORNAMENTO,
+                           cartella=APP_DIR)
+
+
+@app.route('/aggiornamenti/cerca', methods=['POST'])
+def aggiornamenti_cerca():
+    global _AGGIORNAMENTO
+    _AGGIORNAMENTO = updater.stato(APP_DIR, rete=True)
+    return redirect(url_for('aggiornamenti'))
+
+
+@app.route('/aggiornamenti/installa', methods=['POST'])
+def aggiornamenti_installa():
+    global _AGGIORNAMENTO, _RIAVVIA
+    esito = updater.installa(APP_DIR, request.form.get('la', ''),
+                             fai_copia=lambda: backup.make_backup('prima-aggiornamento'))
+    if not esito['ok']:
+        motivi = {
+            'cambiato': 'Nel frattempo è cambiato qualcosa: ho ricontrollato, guarda di nuovo cosa c’è da installare.',
+            'copia': 'Non sono riuscito a fare la copia dei dati, quindi non ho toccato niente.',
+            'scrittura': 'Non riesco a scrivere nella cartella dell’app, quindi non ho toccato niente.',
+            'git': 'L’aggiornamento non è andato a buon fine: l’app è rimasta com’era.',
+        }
+        avvisa(motivi.get(esito['motivo'], motivi['git']), 'error')
+        _AGGIORNAMENTO = updater.stato(APP_DIR, rete=False)
+        return redirect(url_for('aggiornamenti'))
+    _AGGIORNAMENTO = {'stato': 'aggiornata', 'cartella': APP_DIR, 'novita': []}
+    if esito['librerie']:
+        # librerie nuove: le installa l'avviatore alla prossima accensione
+        return render_template('updates_done.html', riavvio=False)
+    if _SERVER is not None:
+        _RIAVVIA = True
+        threading.Timer(0.8, _SERVER.shutdown).start()
+    return render_template('updates_done.html', riavvio=_SERVER is not None)
+
+
+def _riavvia():
+    """Riaccende l'app dopo un aggiornamento. Il browser non si riapre: la
+    pagina gia' aperta aspetta che l'app risponda e si ricarica da sola."""
+    os.environ.pop('INVOICE_OPEN_BROWSER', None)
+    desktop.riaccendi(os.path.join(APP_DIR, 'app.py'), APP_DIR)
+
+
 @app.route('/spegni', methods=['POST'])
 def spegni():
     """Ferma l'app dal di dentro.
@@ -2861,6 +2934,9 @@ def _avvia(porta):
         server.serve_forever()
     except KeyboardInterrupt:                           # pragma: no cover
         pass
+    # la porta va liberata subito: dopo un aggiornamento l'app si riaccende
+    # e deve poterla riprendere
+    server.server_close()
 
 
 if __name__ == '__main__':
@@ -2901,6 +2977,9 @@ if __name__ == '__main__':
         if os.path.isdir(s['source_folder']):
             importer.import_all(con, s['source_folder'])
     con.close()
+    _controlla_aggiornamenti_dietro()
     # la porta si puo' cambiare con INVOICE_PORT: serve per far girare una
     # copia di prova (per esempio un ripristino da backup) accanto all'app vera
     _avvia(PORTA)
+    if _RIAVVIA:
+        _riavvia()

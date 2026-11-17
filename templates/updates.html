@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}{{ _('Aggiornamenti') }}{% endblock %}
+{% block content %}
+<h1>{{ _('Aggiornamenti') }}</h1>
+<p class="sub">{{ _('Qui vedi se è uscita una versione nuova dell’app e la installi con un click. I tuoi dati non vengono toccati: prima di aggiornare l’app ne fa comunque una copia.') }}</p>
+
+<div class="panel" style="max-width:720px">
+  {% set s = st.stato if st else '' %}
+  {% if not st %}
+    <p style="margin-top:0">{{ _('Non ho ancora controllato. Premi «Cerca adesso»: ci vogliono pochi secondi.') }}</p>
+  {% elif s == 'aggiornata' %}
+    <p class="agg-esito ok" style="margin-top:0">{{ icona('spunta', 'ic-mini') }} {{ _('Hai già la versione più recente.') }}</p>
+  {% elif s in ('nuova', 'riallinea') %}
+    <p class="agg-esito nuova" style="margin-top:0">{{ icona('ricicla', 'ic-mini') }}
+      {{ _('C’è una versione nuova dell’app.') if s == 'nuova' else _('La tua copia va rimessa in pari con quella pubblicata.') }}</p>
+    {% if s == 'riallinea' %}
+      <p class="muted" style="font-size:13px">{{ _('La storia del programma su GitHub è stata riscritta, quindi la tua copia non riconosce più le versioni nuove da sola. Rimetterla in pari sostituisce solo i file del programma.') }}</p>
+    {% endif %}
+    {% if st.novita %}
+      <p class="etichetta" style="margin-bottom:4px">{{ _('Cosa cambia') }}</p>
+      <ul class="agg-novita">
+        {% for n in st.novita %}<li>{{ n }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% if st.modifiche_locali %}
+      <p class="flash error" style="font-size:13px">{{ _('Attenzione: in questa copia qualcuno ha modificato dei file del programma. Aggiornando, quelle modifiche si perdono. I dati non c’entrano.') }}</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('aggiornamenti_installa') }}" class="agg-installa">
+      <input type="hidden" name="la" value="{{ st.la }}">
+      <button class="btn">{{ _('Installa adesso') }}</button>
+      <span class="muted" style="font-size:12.5px">{{ _('Prima fa una copia dei dati, poi aggiorna e si riavvia da sola. Ci vuole meno di un minuto.') }}</span>
+    </form>
+  {% elif s == 'non_raggiungibile' %}
+    <p class="agg-esito avviso" style="margin-top:0">{{ icona('avviso', 'ic-mini') }} {{ _('Non riesco a raggiungere GitHub. Controlla di essere collegato a internet e riprova.') }}</p>
+  {% elif s == 'senza_git' %}
+    <p class="agg-esito avviso" style="margin-top:0">{{ icona('avviso', 'ic-mini') }} {{ _('Questa copia dell’app non può aggiornarsi da sola: è stata copiata senza il collegamento a GitHub (manca la cartella nascosta .git). Per riceverne gli aggiornamenti va installata di nuovo da GitHub; i dati si possono poi riportare dentro.') }}</p>
+  {% elif s == 'git_mancante' %}
+    <p class="agg-esito avviso" style="margin-top:0">{{ icona('avviso', 'ic-mini') }} {{ _('Su questo computer manca git, il programma che scarica gli aggiornamenti: installalo e poi riapri l’app.') }}</p>
+  {% elif s == 'avanti' %}
+    <p class="agg-esito avviso" style="margin-top:0">{{ icona('avviso', 'ic-mini') }} {{ _('Questa copia contiene modifiche che su GitHub non ci sono: per non perderle non la aggiorno da sola.') }}</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('aggiornamenti_cerca') }}" style="margin-top:14px">
+    <button class="btn secondary">{{ _('Cerca adesso') }}</button>
+  </form>
+</div>
+
+<div class="panel mt" style="max-width:720px">
+  <p class="etichetta" style="margin:0 0 4px">{{ _('Da dove gira questa app') }}</p>
+  <p class="muted" style="font-size:13px;margin:0 0 6px">{{ _('È la cartella che contiene il programma e i dati che stai vedendo. Se sullo stesso computer ci sono due cartelle dell’app, ognuna ha i suoi dati: usane sempre una sola.') }}</p>
+  <code class="agg-cartella">{{ cartella }}</code>
+</div>
+{% endblock %}

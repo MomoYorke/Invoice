@@ -542,3 +542,16 @@ details.avanzate { border-top: 1px solid var(--line); margin-top: 14px; padding-
 details.avanzate summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted); }
 .segnaposti { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* --- La pagina degli aggiornamenti --- */
+.agg-esito { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.agg-esito.ok { color: #166534; }
+.agg-esito.nuova { color: var(--ink); }
+.agg-esito.avviso { color: #92400e; font-weight: 500; align-items: flex-start; }
+.agg-novita { margin: 0 0 12px; padding-left: 20px; font-size: 13.5px; }
+.agg-novita li { margin: 2px 0; }
+.agg-installa { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+.agg-cartella { display: block; padding: 8px 10px; background: #f1f5f9; border-radius: 6px;
+                font-size: 12.5px; overflow-wrap: anywhere; }
+.flash.avviso-versione { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.flash.avviso-versione a { font-weight: 600; margin-left: 6px; }

@@ -74,6 +74,66 @@ def mancanti(lingua):
 
 TESTI = {
     'en': {
+        'Guarda cosa cambia e installala':
+            'See what changes and install it',
+        'È uscita una versione nuova dell’app.':
+            'A new version of the app is out.',
+        'Aggiornamenti':
+            'Updates',
+        'cerca e installa la versione nuova dell’app, con un click':
+            'check for and install the new version of the app, in one click',
+        'Attenzione: in questa copia qualcuno ha modificato dei file del programma. Aggiornando, quelle modifiche si perdono. I dati non c’entrano.':
+            'Warning: someone has modified program files in this copy. Updating will lose those changes. Your data is not involved.',
+        'Cerca adesso':
+            'Check now',
+        'Cosa cambia':
+            'What changes',
+        'C’è una versione nuova dell’app.':
+            'There is a new version of the app.',
+        'Da dove gira questa app':
+            'Where this app runs from',
+        'Hai già la versione più recente.':
+            'You already have the latest version.',
+        'Installa adesso':
+            'Install now',
+        'La storia del programma su GitHub è stata riscritta, quindi la tua copia non riconosce più le versioni nuove da sola. Rimetterla in pari sostituisce solo i file del programma.':
+            'The program’s history on GitHub was rewritten, so your copy no longer recognises new versions by itself. Bringing it back in line replaces only the program files.',
+        'La tua copia va rimessa in pari con quella pubblicata.':
+            'Your copy needs to be brought back in line with the published one.',
+        'Non ho ancora controllato. Premi «Cerca adesso»: ci vogliono pochi secondi.':
+            'I have not checked yet. Press “Check now”: it takes a few seconds.',
+        'Non riesco a raggiungere GitHub. Controlla di essere collegato a internet e riprova.':
+            'I cannot reach GitHub. Check that you are connected to the internet and try again.',
+        'Prima fa una copia dei dati, poi aggiorna e si riavvia da sola. Ci vuole meno di un minuto.':
+            'It backs up your data first, then updates and restarts by itself. It takes less than a minute.',
+        'Questa copia contiene modifiche che su GitHub non ci sono: per non perderle non la aggiorno da sola.':
+            'This copy contains changes that are not on GitHub: to avoid losing them, I do not update it by myself.',
+        'Questa copia dell’app non può aggiornarsi da sola: è stata copiata senza il collegamento a GitHub (manca la cartella nascosta .git). Per riceverne gli aggiornamenti va installata di nuovo da GitHub; i dati si possono poi riportare dentro.':
+            'This copy of the app cannot update itself: it was copied without its link to GitHub (the hidden .git folder is missing). To receive updates it must be installed again from GitHub; the data can then be moved back in.',
+        'Qui vedi se è uscita una versione nuova dell’app e la installi con un click. I tuoi dati non vengono toccati: prima di aggiornare l’app ne fa comunque una copia.':
+            'Here you can see whether a new version of the app is out and install it in one click. Your data is not touched: before updating, the app backs it up anyway.',
+        'Su questo computer manca git, il programma che scarica gli aggiornamenti: installalo e poi riapri l’app.':
+            'git, the program that downloads updates, is missing on this computer: install it and then reopen the app.',
+        'È la cartella che contiene il programma e i dati che stai vedendo. Se sullo stesso computer ci sono due cartelle dell’app, ognuna ha i suoi dati: usane sempre una sola.':
+            'This is the folder holding the program and the data you are looking at. If the same computer has two app folders, each has its own data: always use just one.',
+        'Aggiornamento':
+            'Update',
+        'Aggiornamento installato.':
+            'Update installed.',
+        'Ci sta mettendo più del solito. Chiudi l’app e riaprila dall’icona.':
+            'It is taking longer than usual. Close the app and reopen it from the icon.',
+        'L’app si sta riavviando con la versione nuova: questa pagina si ricarica da sola fra pochi secondi.':
+            'The app is restarting with the new version: this page will reload by itself in a few seconds.',
+        'Questa versione ha bisogno di librerie nuove: chiudi l’app con il pulsante di spegnimento in fondo al menu e riaprila dall’icona. Le installa da sola, ci vogliono un paio di minuti.':
+            'This version needs new libraries: close the app with the power button at the foot of the menu and reopen it from the icon. It installs them by itself; it takes a couple of minutes.',
+        'Nel frattempo è cambiato qualcosa: ho ricontrollato, guarda di nuovo cosa c’è da installare.':
+            'Something changed in the meantime: I checked again, have another look at what there is to install.',
+        'Non sono riuscito a fare la copia dei dati, quindi non ho toccato niente.':
+            'I could not back up the data, so I did not touch anything.',
+        'Non riesco a scrivere nella cartella dell’app, quindi non ho toccato niente.':
+            'I cannot write to the app folder, so I did not touch anything.',
+        'L’aggiornamento non è andato a buon fine: l’app è rimasta com’era.':
+            'The update did not go through: the app is as it was.',
         '1. L’oggetto':
             '1. The subject',
         '2. La tua frase':
@@ -1782,6 +1842,66 @@ TESTI = {
             "«{testo}»: no client recognised in the title. Fix the name in the calendar or on the client's card.",
     },
     'de': {
+        'Guarda cosa cambia e installala':
+            'Schau, was sich ändert, und installiere sie',
+        'È uscita una versione nuova dell’app.':
+            'Eine neue Version der App ist da.',
+        'Aggiornamenti':
+            'Updates',
+        'cerca e installa la versione nuova dell’app, con un click':
+            'die neue Version der App suchen und installieren, mit einem Klick',
+        'Attenzione: in questa copia qualcuno ha modificato dei file del programma. Aggiornando, quelle modifiche si perdono. I dati non c’entrano.':
+            'Achtung: In dieser Kopie wurden Programmdateien verändert. Beim Aktualisieren gehen diese Änderungen verloren. Deine Daten sind nicht betroffen.',
+        'Cerca adesso':
+            'Jetzt suchen',
+        'Cosa cambia':
+            'Was sich ändert',
+        'C’è una versione nuova dell’app.':
+            'Es gibt eine neue Version der App.',
+        'Da dove gira questa app':
+            'Von wo diese App läuft',
+        'Hai già la versione più recente.':
+            'Du hast bereits die neueste Version.',
+        'Installa adesso':
+            'Jetzt installieren',
+        'La storia del programma su GitHub è stata riscritta, quindi la tua copia non riconosce più le versioni nuove da sola. Rimetterla in pari sostituisce solo i file del programma.':
+            'Die Geschichte des Programms auf GitHub wurde neu geschrieben, deshalb erkennt deine Kopie neue Versionen nicht mehr von selbst. Beim Angleichen werden nur die Programmdateien ersetzt.',
+        'La tua copia va rimessa in pari con quella pubblicata.':
+            'Deine Kopie muss an die veröffentlichte angeglichen werden.',
+        'Non ho ancora controllato. Premi «Cerca adesso»: ci vogliono pochi secondi.':
+            'Ich habe noch nicht nachgesehen. Drück «Jetzt suchen»: Es dauert nur ein paar Sekunden.',
+        'Non riesco a raggiungere GitHub. Controlla di essere collegato a internet e riprova.':
+            'Ich erreiche GitHub nicht. Prüf, ob du mit dem Internet verbunden bist, und versuch es noch einmal.',
+        'Prima fa una copia dei dati, poi aggiorna e si riavvia da sola. Ci vuole meno di un minuto.':
+            'Zuerst wird eine Kopie deiner Daten gemacht, dann aktualisiert sich die App und startet von selbst neu. Das dauert weniger als eine Minute.',
+        'Questa copia contiene modifiche che su GitHub non ci sono: per non perderle non la aggiorno da sola.':
+            'Diese Kopie enthält Änderungen, die es auf GitHub nicht gibt: Damit sie nicht verloren gehen, aktualisiere ich sie nicht von selbst.',
+        'Questa copia dell’app non può aggiornarsi da sola: è stata copiata senza il collegamento a GitHub (manca la cartella nascosta .git). Per riceverne gli aggiornamenti va installata di nuovo da GitHub; i dati si possono poi riportare dentro.':
+            'Diese Kopie der App kann sich nicht selbst aktualisieren: Sie wurde ohne die Verbindung zu GitHub kopiert (der versteckte Ordner .git fehlt). Um Updates zu bekommen, muss sie neu von GitHub installiert werden; die Daten lassen sich danach wieder hineinlegen.',
+        'Qui vedi se è uscita una versione nuova dell’app e la installi con un click. I tuoi dati non vengono toccati: prima di aggiornare l’app ne fa comunque una copia.':
+            'Hier siehst du, ob eine neue Version der App da ist, und installierst sie mit einem Klick. Deine Daten werden nicht angefasst: Vor dem Aktualisieren macht die App trotzdem eine Kopie davon.',
+        'Su questo computer manca git, il programma che scarica gli aggiornamenti: installalo e poi riapri l’app.':
+            'Auf diesem Computer fehlt git, das Programm, das die Updates herunterlädt: Installiere es und öffne die App danach wieder.',
+        'È la cartella che contiene il programma e i dati che stai vedendo. Se sullo stesso computer ci sono due cartelle dell’app, ognuna ha i suoi dati: usane sempre una sola.':
+            'Das ist der Ordner mit dem Programm und den Daten, die du gerade siehst. Wenn auf demselben Computer zwei Ordner der App liegen, hat jeder seine eigenen Daten: Verwende immer nur einen.',
+        'Aggiornamento':
+            'Update',
+        'Aggiornamento installato.':
+            'Update installiert.',
+        'Ci sta mettendo più del solito. Chiudi l’app e riaprila dall’icona.':
+            'Es dauert länger als sonst. Schliess die App und öffne sie wieder über das Symbol.',
+        'L’app si sta riavviando con la versione nuova: questa pagina si ricarica da sola fra pochi secondi.':
+            'Die App startet mit der neuen Version neu: Diese Seite lädt sich in ein paar Sekunden von selbst neu.',
+        'Questa versione ha bisogno di librerie nuove: chiudi l’app con il pulsante di spegnimento in fondo al menu e riaprila dall’icona. Le installa da sola, ci vogliono un paio di minuti.':
+            'Diese Version braucht neue Bibliotheken: Schliess die App mit dem Ausschaltknopf unten im Menü und öffne sie wieder über das Symbol. Sie installiert sie von selbst, das dauert ein paar Minuten.',
+        'Nel frattempo è cambiato qualcosa: ho ricontrollato, guarda di nuovo cosa c’è da installare.':
+            'In der Zwischenzeit hat sich etwas geändert: Ich habe nochmals nachgesehen, schau dir noch einmal an, was es zu installieren gibt.',
+        'Non sono riuscito a fare la copia dei dati, quindi non ho toccato niente.':
+            'Ich konnte keine Kopie der Daten machen, deshalb habe ich nichts angefasst.',
+        'Non riesco a scrivere nella cartella dell’app, quindi non ho toccato niente.':
+            'Ich kann nicht in den Ordner der App schreiben, deshalb habe ich nichts angefasst.',
+        'L’aggiornamento non è andato a buon fine: l’app è rimasta com’era.':
+            'Das Update hat nicht geklappt: Die App ist geblieben, wie sie war.',
         '1. L’oggetto':
             '1. Der Betreff',
         '2. La tua frase':

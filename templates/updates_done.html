@@ -1,0 +1,42 @@
+{# Dopo l'aggiornamento l'app si spegne e si riaccende: questa pagina non
+   eredita da base.html (il menu porterebbe a un'app che per qualche secondo
+   non risponde) e aspetta da sola che torni, poi si ricarica. #}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ _('Aggiornamento') }}</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center;
+         justify-content: center; background: #f4f6f8; color: #24323d;
+         font: 15px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif; }
+  .foglio { max-width: 480px; margin: 16px; padding: 36px 32px; background: #fff;
+            border: 1px solid #dfe6ec; border-radius: 14px; text-align: center; }
+  h1 { margin: 0 0 12px; font-size: 21px; }
+  p { margin: 0 0 10px; color: #55697a; }
+</style>
+<div class="foglio">
+  <h1>{{ _('Aggiornamento installato.') }}</h1>
+  {% if riavvio %}
+    <p id="attesa">{{ _('L’app si sta riavviando con la versione nuova: questa pagina si ricarica da sola fra pochi secondi.') }}</p>
+    <p id="tardi" hidden>{{ _('Ci sta mettendo più del solito. Chiudi l’app e riaprila dall’icona.') }}</p>
+    <script>
+      (function () {
+        var tentativi = 0;
+        function prova() {
+          tentativi++;
+          fetch('/health', {cache: 'no-store'}).then(function (r) { return r.text(); })
+            .then(function (t) {
+              if (t === 'ok') { window.location.href = '/aggiornamenti'; }
+              else { ancora(); }
+            }).catch(ancora);
+        }
+        function ancora() {
+          if (tentativi > 40) { document.getElementById('tardi').hidden = false; return; }
+          setTimeout(prova, 750);
+        }
+        setTimeout(prova, 2000);
+      })();
+    </script>
+  {% else %}
+    <p>{{ _('Questa versione ha bisogno di librerie nuove: chiudi l’app con il pulsante di spegnimento in fondo al menu e riaprila dall’icona. Le installa da sola, ci vogliono un paio di minuti.') }}</p>
+  {% endif %}
+</div>

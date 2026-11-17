@@ -123,3 +123,40 @@ def nome_file_sicuro(nome):
     punti solo quando stanno proprio in fondo.
     """
     return VIETATI_NEI_NOMI.sub('-', nome or '')
+
+
+def esegui(comando, cartella, ambiente=None, secondi=10, sistema=None):
+    """(esito, uscita) di un comando, senza finestre e senza mai sollevare.
+
+    Serve agli aggiornamenti, che chiedono a git. Su Windows un programma da
+    riga di comando lanciato da pythonw aprirebbe per un attimo una finestra
+    nera a ogni domanda: CREATE_NO_WINDOW la tiene chiusa.
+    """
+    sistema = sistema or sys.platform
+    extra = {}
+    if _windows(sistema):                               # pragma: no cover
+        extra['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    try:
+        p = subprocess.run(comando, cwd=cartella, env=ambiente,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           timeout=secondi, **extra)
+    except (OSError, subprocess.SubprocessError):
+        return False, ''
+    return p.returncode == 0, p.stdout.decode('utf-8', 'replace').strip()
+
+
+def riaccendi(script, cartella, sistema=None):
+    """Riaccende l'app con il programma nuovo, nello stesso posto. Non torna.
+
+    Sul Mac (e su Linux) il processo si sostituisce a se stesso: resta lo
+    stesso, e l'avviatore che lo aspetta non si accorge di niente. Su Windows
+    os.execv spezza i percorsi con gli spazi, quindi si accende un'app nuova e
+    questa si chiude.
+    """
+    sistema = sistema or sys.platform
+    if _windows(sistema):                               # pragma: no cover
+        subprocess.Popen([sys.executable, script], cwd=cartella,
+                         creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        os._exit(0)
+    os.chdir(cartella)
+    os.execv(sys.executable, [sys.executable, script])
