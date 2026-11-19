@@ -537,6 +537,13 @@ def _migrate(con):
     if 'compagno_id' not in cli:
         # con chi si allena: le sue sedute contano solo se c'è anche l'altra persona
         con.execute('ALTER TABLE clients ADD COLUMN compagno_id INTEGER')
+    if 'sconto_tipo' not in cli:
+        # lo sconto del cliente sui pacchetti: '' = nessuno, 'fisso' (valore in
+        # centesimi) o 'percento' (valore in centesimi di punto: 10% = 1000).
+        # Il nome e' il testo della riga in fattura («Loyalty discount»).
+        con.execute("ALTER TABLE clients ADD COLUMN sconto_tipo TEXT DEFAULT ''")
+        con.execute('ALTER TABLE clients ADD COLUMN sconto_valore INTEGER DEFAULT 0')
+        con.execute("ALTER TABLE clients ADD COLUMN sconto_nome TEXT DEFAULT ''")
     righe = {r['name'] for r in con.execute('PRAGMA table_info(items)')}
     if 'servizio_id' not in righe:
         # NULL = non ancora deciso, 0 = nessun servizio, > 0 = il servizio venduto

@@ -801,6 +801,34 @@ TESTI = {
             'Client «{nome}» added, but without a birthday. {motivo}',
         'Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}':
             'Client updated, but the birthday stayed as it was. {motivo}',
+        'Sconto sui pacchetti':
+            'Discount on packages',
+        'Sconto':
+            'Discount',
+        '— nessuno sconto —':
+            '— no discount —',
+        'In percentuale (es. sconto studente 10%)':
+            'Percentage (e.g. student discount 10%)',
+        'Importo fisso in CHF':
+            'Fixed amount in CHF',
+        'Quanto':
+            'How much',
+        '10 per il 10%, oppure 50 per 50 franchi':
+            '10 for 10%, or 50 for 50 francs',
+        'Testo della riga in fattura':
+            'Line text on the invoice',
+        'es. Loyalty discount':
+            'e.g. Loyalty discount',
+        'Quando nella nuova fattura premi il pulsante di un pacchetto per questo cliente, l’app aggiunge da sola una riga con lo sconto col meno. Non tocca le sedute. Se una volta non va, cancella la riga prima di premere Crea.':
+            'When you press a package button on a new invoice for this client, the app adds a line with the discount as a minus on its own. It does not touch the sessions. If it does not apply one time, delete the line before pressing Create.',
+        'sconto {quanto}':
+            'discount {quanto}',
+        'Cliente aggiornato, ma lo sconto è rimasto quello di prima. {motivo}':
+            'Client updated, but the discount stayed as it was. {motivo}',
+        "Scrivi l'importo dello sconto in franchi, per esempio 50.":
+            'Write the discount amount in francs, for example 50.',
+        'Scrivi la percentuale dello sconto fra 1 e 100, per esempio 10.':
+            'Write the discount percentage between 1 and 100, for example 10.',
         'Il compleanno non si capisce: scrivilo come giorno e mese, per esempio 15.03, e aggiungi l’anno solo se lo sai.':
             'The birthday is not clear: write day and month, for example 15.03, and add the year only if you know it.',
         'Quel giorno nel calendario non c’è: controlla giorno e mese.':
@@ -2577,6 +2605,34 @@ TESTI = {
             'Kunde «{nome}» hinzugefügt, aber ohne Geburtstag. {motivo}',
         'Cliente aggiornato, ma il compleanno è rimasto quello di prima. {motivo}':
             'Kunde aktualisiert, aber der Geburtstag ist geblieben, wie er war. {motivo}',
+        'Sconto sui pacchetti':
+            'Rabatt auf Pakete',
+        'Sconto':
+            'Rabatt',
+        '— nessuno sconto —':
+            '— kein Rabatt —',
+        'In percentuale (es. sconto studente 10%)':
+            'In Prozent (z. B. Studentenrabatt 10%)',
+        'Importo fisso in CHF':
+            'Fester Betrag in CHF',
+        'Quanto':
+            'Wie viel',
+        '10 per il 10%, oppure 50 per 50 franchi':
+            '10 für 10%, oder 50 für 50 Franken',
+        'Testo della riga in fattura':
+            'Text der Zeile auf der Rechnung',
+        'es. Loyalty discount':
+            'z. B. Treuerabatt',
+        'Quando nella nuova fattura premi il pulsante di un pacchetto per questo cliente, l’app aggiunge da sola una riga con lo sconto col meno. Non tocca le sedute. Se una volta non va, cancella la riga prima di premere Crea.':
+            'Wenn du auf einer neuen Rechnung für diesen Kunden den Knopf eines Pakets drückst, fügt die App selbst eine Zeile mit dem Rabatt als Minus hinzu. Die Sitzungen bleiben unberührt. Passt es einmal nicht, lösch die Zeile, bevor du auf Erstellen drückst.',
+        'sconto {quanto}':
+            'Rabatt {quanto}',
+        'Cliente aggiornato, ma lo sconto è rimasto quello di prima. {motivo}':
+            'Kunde aktualisiert, aber der Rabatt ist geblieben, wie er war. {motivo}',
+        "Scrivi l'importo dello sconto in franchi, per esempio 50.":
+            'Schreib den Rabattbetrag in Franken, zum Beispiel 50.',
+        'Scrivi la percentuale dello sconto fra 1 e 100, per esempio 10.':
+            'Schreib den Rabatt in Prozent zwischen 1 und 100, zum Beispiel 10.',
         'Il compleanno non si capisce: scrivilo come giorno e mese, per esempio 15.03, e aggiungi l’anno solo se lo sai.':
             'Der Geburtstag ist nicht klar: Schreib Tag und Monat, zum Beispiel 15.03, und das Jahr nur, wenn du es weisst.',
         'Quel giorno nel calendario non c’è: controlla giorno e mese.':
@@ -3639,6 +3695,7 @@ DOCUMENTI = {
         'PREZZO UNITARIO': 'UNIT PRICE',
         'TOTALE': 'TOTAL',
         'TOTALE DA PAGARE': 'TOTAL DUE',
+        'Sconto': 'Discount',
         'Condizioni': 'Terms',
         'Grazie per aver scelto {nome}!': 'Thanks for choosing {nome}!',
         'Pagabile entro 30 giorni netti a:': 'Payable within 30 days net to:',
@@ -3669,6 +3726,7 @@ DOCUMENTI = {
         'cinque': 'five', 'sei': 'six',
     },
     'de': {
+        'Sconto': 'Rabatt',
         # --- die Rechnung ---
         'QUANTITÀ': 'MENGE',
         'DESCRIZIONE': 'BESCHREIBUNG',
