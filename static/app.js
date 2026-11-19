@@ -145,6 +145,55 @@
     addRow(); // prima riga
   }
 
+  // ---- lo sconto del cliente ----
+  // Se nella scheda del cliente c'e' uno sconto, il pulsante di un pacchetto
+  // aggiunge sotto una riga a parte col meno, senza servizio: toglie soldi,
+  // non tocca le sedute. Ripremere il pulsante non la raddoppia. In
+  // percentuale si rifa' il conto se cambi il prezzo del pacchetto, finche'
+  // non tocchi tu la riga dello sconto.
+  function fmtDash(c) {
+    const fr = Math.floor(Math.abs(c) / 100), ct = Math.abs(c) % 100;
+    return (c < 0 ? '-' : '') + fr.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") +
+           (ct ? '.' + String(ct).padStart(2, '0') : '.-');
+  }
+  function ricalcolaSconto(riga) {
+    const sc = riga._sconto;
+    if (!sc || !sc.isConnected || !sc.dataset.percento || sc.dataset.amano) return;
+    const base = rowTotal(riga);
+    if (base === null || base <= 0) return;
+    const cents = Math.min(Math.floor((base * Number(sc.dataset.percento) + 5000) / 10000), base);
+    sc.querySelectorAll('input')[2].value = fmtDash(-cents);
+    updateTotal();
+  }
+  function rigaDelloSconto(riga, sconto) {
+    let sc = riga._sconto && riga._sconto.isConnected ? riga._sconto : null;
+    if (!sconto) {
+      if (sc && !sc.dataset.amano) { sc.remove(); updateTotal(); }
+      riga._sconto = null;
+      return;
+    }
+    if (!sc) {
+      sc = addRow(sconto.description, sconto.qty, sconto.unit, '', '');
+      itemsBox.insertBefore(sc, riga.nextSibling);
+      sc.querySelectorAll('input').forEach(el =>
+        el.addEventListener('input', () => { sc.dataset.amano = '1'; }));
+      riga._sconto = sc;
+      if (!riga._ascoltaSconto) {
+        riga._ascoltaSconto = true;
+        riga.querySelectorAll('input').forEach(el =>
+          el.addEventListener('input', () => ricalcolaSconto(riga)));
+      }
+    } else {
+      const inp = sc.querySelectorAll('input');
+      inp[0].value = sconto.qty; inp[1].value = sconto.description;
+      inp[2].value = sconto.unit; inp[3].value = '';
+      delete sc.dataset.amano;
+    }
+    if (sconto.percento) sc.dataset.percento = String(sconto.percento);
+    else delete sc.dataset.percento;
+    updateTotal();
+  }
+
   // ---- pulsanti dei servizi ----
   // Il server sa cosa scrivere: l'ultima riga di questo servizio per questo
   // cliente (o il prezzo del servizio), e per un abbonamento gia' fatturato
@@ -162,6 +211,7 @@
       inputs[2].value = r.unit || '';
       inputs[3].value = r.total || '';
       inputs[4].value = r.servizio_id;
+      rigaDelloSconto(riga, r.sconto || null);
       if (r.advanced) {
         sugBox.style.display = 'block';
         sugTesto.innerHTML = riempi(alSicuro(T.periodo),

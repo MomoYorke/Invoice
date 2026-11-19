@@ -17,7 +17,8 @@
       <td class="muted no-blur" style="font-size:13px">{{ c.email or '—' }}
         <div style="font-size:11px">{{ (c.lingua or 'en') | upper }}</div>
         {% if c.abbonamento %}<div style="font-size:11px">{{ _('ordine permanente') }}</div>{% endif %}
-        {% if c.intestatario %}<div style="font-size:11px">{{ _('fattura a {chi}').format(chi=c.intestatario) }}</div>{% endif %}</td>
+        {% if c.intestatario %}<div style="font-size:11px">{{ _('fattura a {chi}').format(chi=c.intestatario) }}</div>{% endif %}
+        {% if c.sconto_tipo %}<div style="font-size:11px">{{ _('sconto {quanto}').format(quanto=(c.sconto_valore | sconto_valore(c.sconto_tipo, true))) }}</div>{% endif %}</td>
       <td class="muted" style="font-size:13px">{{ c.address1 }}{% if c.address2 %}, {{ c.address2.replace('\n', ', ') }}{% endif %}</td>
       <td class="num">{{ s.t | chf(false) if s and s.t else '—' }}</td>
       <td class="num no-blur">{{ s.n if s else 0 }}</td>
@@ -57,6 +58,21 @@
             <label for="cl-compleanno-{{ c.id }}">{{ _('Compleanno') }}</label>
             <input type="text" name="compleanno" id="cl-compleanno-{{ c.id }}" value="{{ c.compleanno | compleanno }}"
                    placeholder="{{ _('gg.mm — l’anno solo se lo sai') }}" inputmode="numeric" autocomplete="off">
+            <p class="etichetta mt" style="margin-bottom:2px">{{ _('Sconto sui pacchetti') }}</p>
+            <label for="cl-sconto_tipo-{{ c.id }}">{{ _('Sconto') }}</label>
+            <select name="sconto_tipo" id="cl-sconto_tipo-{{ c.id }}">
+              <option value="" {{ 'selected' if not c.sconto_tipo }}>{{ _('— nessuno sconto —') }}</option>
+              <option value="percento" {{ 'selected' if c.sconto_tipo == 'percento' }}>{{ _('In percentuale (es. sconto studente 10%)') }}</option>
+              <option value="fisso" {{ 'selected' if c.sconto_tipo == 'fisso' }}>{{ _('Importo fisso in CHF') }}</option>
+            </select>
+            <label for="cl-sconto_valore-{{ c.id }}">{{ _('Quanto') }}</label>
+            <input type="text" name="sconto_valore" id="cl-sconto_valore-{{ c.id }}" inputmode="decimal" autocomplete="off"
+                   value="{{ (c.sconto_valore | sconto_valore(c.sconto_tipo)) if c.sconto_tipo else '' }}"
+                   placeholder="{{ _('10 per il 10%, oppure 50 per 50 franchi') }}">
+            <label for="cl-sconto_nome-{{ c.id }}">{{ _('Testo della riga in fattura') }}</label>
+            <input type="text" name="sconto_nome" id="cl-sconto_nome-{{ c.id }}" value="{{ c.sconto_nome or '' }}"
+                   placeholder="{{ _('es. Loyalty discount') }}">
+            <span class="muted" style="font-size:11.5px">{{ _('Quando nella nuova fattura premi il pulsante di un pacchetto per questo cliente, l’app aggiunge da sola una riga con lo sconto col meno. Non tocca le sedute. Se una volta non va, cancella la riga prima di premere Crea.') }}</span>
             <label for="cl-notes-{{ c.id }}">{{ _('Note') }}</label><input type="text" name="notes" id="cl-notes-{{ c.id }}" value="{{ c.notes }}">
             <p class="etichetta mt" style="margin-bottom:2px">{{ _('Sedute') }}</p>
             <label for="cl-nome_calendario-{{ c.id }}">{{ _('Nel calendario si chiama') }}</label>

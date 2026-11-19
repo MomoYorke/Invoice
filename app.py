@@ -42,6 +42,7 @@ from core import docgen, pdfgen
 from core import branding
 from core import desktop
 from core import services as srv
+from core import sconti
 from core import righe_servizio
 from core import welcome as ben
 from core import icons
@@ -200,6 +201,7 @@ def fmt_giorno_settimana(iso):
 app.jinja_env.filters['dateit'] = fmt_date_it
 app.jinja_env.filters['giorno_settimana'] = fmt_giorno_settimana
 app.jinja_env.filters['compleanno'] = birthdays.da_mostrare
+app.jinja_env.filters['sconto_valore'] = sconti.da_mostrare
 
 
 @app.context_processor
@@ -1474,6 +1476,15 @@ def cliente_salva(cid):
                  f.get('intestatario', '').strip(),
                  1 if f.get('abbonamento') else 0,
                  1 if f.get('archived') else 0, compleanno, nome_cal, compagno_id, cid))
+    # Lo sconto: uno che non si capisce non si salva, resta quello di prima.
+    # Se il modulo il campo non ce l'ha, lo sconto non si tocca.
+    perche_sconto = ''
+    if 'sconto_tipo' in f:
+        tipo, valore, perche_sconto = sconti.leggi(f.get('sconto_tipo'),
+                                                    f.get('sconto_valore', ''))
+        if not perche_sconto:
+            con.execute('UPDATE clients SET sconto_tipo=?, sconto_valore=?, sconto_nome=? '
+                        'WHERE id=?', (tipo, valore, f.get('sconto_nome', '').strip(), cid))
     if vecchio is not None and compagno_id and not vecchio['chiave_sedute']:
         # chi si allena con un altro entra nel conto delle sedute anche senza
         # fatture sue: il pacchetto lo paga l'altro
@@ -1492,7 +1503,10 @@ def cliente_salva(cid):
         avvisa('Cliente aggiornato, ma la parte «Sedute» è rimasta com’era: nel calendario '
                'avrebbe lo stesso nome di {altro}. Scrivi un nome che li distingua.',
                'error', altro=doppio[0])
-    if not perche and not doppio:
+    if perche_sconto:
+        avvisa('Cliente aggiornato, ma lo sconto è rimasto quello di prima. {motivo}',
+               'error', motivo=lng.t(perche_sconto, _lingua_app()))
+    if not perche and not doppio and not perche_sconto:
         avvisa('Cliente aggiornato.', 'ok')
     return redirect(url_for('clienti'))
 
@@ -2764,6 +2778,13 @@ def api_periodo_successivo():
     con = get_con()
     servizio = _servizio_scelto(con, servizio_id)
     fuori = srv.proposta(con, client_id, servizio) if servizio else {'found': False}
+    # lo sconto del cliente, sotto il pacchetto, come riga a parte
+    cliente = (con.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+               if client_id and servizio else None)
+    if cliente is not None:
+        sconto = sconti.riga(cliente, servizio, parse_amount(fuori.get('unit')))
+        if sconto:
+            fuori['sconto'] = sconto
     con.close()
     return jsonify(fuori)
 
