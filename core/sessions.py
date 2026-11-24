@@ -16,6 +16,9 @@ import re
 import json
 import shutil
 import datetime
+import tempfile
+import threading
+import contextlib
 
 from dateutil.relativedelta import relativedelta
 
@@ -224,11 +227,50 @@ def salva(reg, path=None):
         os.makedirs(bdir, exist_ok=True)
         stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         shutil.copy2(path, os.path.join(bdir, f'sessions-{stamp}.json'))
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as f:
-        json.dump(reg, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    # un file temporaneo col suo nome per ogni salvataggio, scritto fino in
+    # fondo sul disco prima di prendere il posto del registro: con un nome
+    # fisso due salvataggi si pestavano i piedi, e senza fsync un'interruzione
+    # di corrente poteva lasciare un registro vuoto
+    fd, tmp = tempfile.mkstemp(prefix='.sessions-', suffix='.tmp',
+                               dir=os.path.dirname(os.path.abspath(path)))
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(reg, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
     return path
+
+
+# Un solo scrittore alla volta. Prima ognuno leggeva il registro, lo cambiava
+# e lo riscriveva per conto suo: se due lo facevano insieme (la
+# sincronizzazione del calendario e una fattura salvata in quei secondi), vinceva
+# l'ultimo e il pacchetto aperto dall'altro spariva senza un avviso.
+# RLock: chi ha gia' il blocco puo' riprenderlo senza bloccarsi da solo.
+_BLOCCO = threading.RLock()
+
+
+@contextlib.contextmanager
+def modifica(path=None):
+    """Legge il registro, lo lascia cambiare e lo salva, tutto sotto blocco.
+
+        with sessions.modifica() as reg:
+            ...cambia reg...
+
+    Si salva solo se qualcosa e' cambiato davvero (niente copie di sicurezza
+    inutili) e solo se il blocco finisce senza guasti: una modifica a meta' non
+    arriva mai sul disco. Dentro non si fanno cose lente (scaricare il
+    calendario): gli altri aspetterebbero."""
+    with _BLOCCO:
+        reg = carica(path)
+        prima = json.dumps(reg, sort_keys=True)
+        yield reg
+        if json.dumps(reg, sort_keys=True) != prima:
+            salva(reg, path)
 
 
 def pacchetti_aperti(reg):

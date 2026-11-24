@@ -2602,8 +2602,12 @@ def _test_sedute_dai_servizi(r):
     finally:
         S._CONFIG = prima
 
+    # dal 24.11 la lettura salva attraverso sessions.modifica(), che scrive
+    # qualunque cambiamento del registro: anche una seduta finita fra gli esclusi
     _check(r, cat, 'la lettura del calendario salva anche quando una seduta va fra gli esclusi',
-           "rap.get('esclusi_nuovi')" in sorgente, True)
+           'with sess.modifica() as reg' in sorgente[
+               sorgente.index('def _sincronizza_calendario'):
+               sorgente.index("@app.route('/crediti/sincronizza'")], True)
 
     # --- guardia: tanti mesi che si riportano non devono raddoppiare il conto ---
     # riportate() chiamava disponibili(reg, p) e poi usate(reg, p), che richiama
