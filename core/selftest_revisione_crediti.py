@@ -47,6 +47,7 @@ def _test_revisione_crediti(r):
     finally:
         S.ricarica()
     _togli_dalla_pagina(r, _check, _senza_scoppiare)
+    _registro_bloccato(r, _check, _senza_scoppiare)
 
 
 def _spostata_e_calendario(r, S, C, F, SY, _check, _senza_scoppiare):
@@ -301,6 +302,99 @@ def _togli_dalla_pagina(r, _check, _senza_scoppiare):
         _check(r, 'Revisione crediti', 'ripristinando la fattura, avvisa che il suo pacchetto era stato tolto',
                _senza_scoppiare(ripristina), (302, True))
     finally:
+        D.DB_PATH, S.REGISTRY = vero_db, vero_registro
+        S.ricarica()
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _registro_bloccato(r, _check, _senza_scoppiare):
+    # --- revisione del 24.11: nessuna modifica al registro va persa ----------
+    # La sincronizzazione legge il registro, scarica il calendario (fino a 20
+    # secondi) e poi lo riscriveva con la sua copia: una fattura salvata in
+    # quei secondi perdeva il suo pacchetto, senza un avviso.
+    import json
+    import threading
+    import time
+    from . import db as D, sessions as S
+    import app as APP
+    vero_db, vero_registro, vero_scarica = D.DB_PATH, S.REGISTRY, APP.calendar_feed.scarica
+    tmp = tempfile.mkdtemp(prefix='prova-registro-')
+    try:
+        D.DB_PATH = os.path.join(tmp, 'fatture.db')
+        S.REGISTRY = os.path.join(tmp, 'sessions.json')
+        con = D.init()
+        con.execute("INSERT INTO clients(id, key, name, chiave_sedute) VALUES(1, 'giulia', 'Giulia Ferrari', 'giulia')")
+        con.execute("INSERT INTO clients(id, name, key, chiave_sedute) VALUES(2, 'Marco', 'marco', 'marco')")
+        D.set_setting(con, 'calendario_ics', 'https://esempio.invalid/calendario.ics')
+        con.commit()
+        con.close()
+        S.ricarica()
+        reg = _vuoto()
+        S.aggancia_pacchetto(reg, 'giulia', 1, '2026-09-01', 10, PACK10)
+        S.salva(reg)
+        ieri = datetime.date.today() - datetime.timedelta(days=1)
+        calendario = ('BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:prova-blocco@g\r\n'
+                      'DTSTART;TZID=Europe/Zurich:%s\r\nSUMMARY:Giulia pt\r\n'
+                      'END:VEVENT\r\nEND:VCALENDAR\r\n') % ieri.strftime('%Y%m%dT080000')
+
+        def scarica_mentre_si_fattura(url, *a, **k):
+            # mentre il calendario «scarica», una fattura apre il pacchetto di Marco
+            nuovo = S.carica()
+            S.aggancia_pacchetto(nuovo, 'marco', 2, '2026-11-01', 10, PACK10)
+            S.salva(nuovo)
+            return calendario
+
+        APP.calendar_feed.scarica = scarica_mentre_si_fattura
+
+        def sincronizza():
+            with APP.app.app_context():
+                esito = APP._sincronizza_calendario(forzata=True)
+            with open(S.REGISTRY, encoding='utf-8') as f:
+                dopo = json.load(f)
+            giulia = next(q for q in dopo['pacchetti'] if q['id'] == 'GIU-01')
+            return (esito[0], sorted(q['id'] for q in dopo['pacchetti']),
+                    len(S.contate(giulia)))
+
+        _check(r, 'Revisione crediti',
+               'una fattura salvata mentre si legge il calendario tiene il suo pacchetto',
+               _senza_scoppiare(sincronizza), ('fatto', ['GIU-01', 'MAR-01'], 1))
+
+        # --- due modifiche nello stesso momento: restano tutte e due ---------
+        reg = _vuoto()
+        S.salva(reg)
+
+        def aggiungi(chiave, numero, pausa):
+            with S.modifica() as registro:
+                S.aggancia_pacchetto(registro, chiave, numero, '2026-11-01', 10, PACK10)
+                time.sleep(pausa)
+
+        def insieme():
+            lenta = threading.Thread(target=aggiungi, args=('giulia', 1, 0.3))
+            lenta.start()
+            time.sleep(0.1)
+            aggiungi('marco', 2, 0)
+            lenta.join()
+            with open(S.REGISTRY, encoding='utf-8') as f:
+                return sorted(q['id'] for q in json.load(f)['pacchetti'])
+
+        _check(r, 'Revisione crediti', 'due modifiche al registro nello stesso momento restano tutte e due',
+               _senza_scoppiare(insieme), ['GIU-01', 'MAR-01'])
+
+        # --- un guasto a meta' non salva una modifica a meta' ----------------
+        def guasto():
+            try:
+                with S.modifica() as registro:
+                    registro['pacchetti'] = []
+                    raise RuntimeError('guasto di prova')
+            except RuntimeError:
+                pass
+            with open(S.REGISTRY, encoding='utf-8') as f:
+                return len(json.load(f)['pacchetti'])
+
+        _check(r, 'Revisione crediti', 'un guasto durante una modifica lascia il registro com\'era',
+               _senza_scoppiare(guasto), 2)
+    finally:
+        APP.calendar_feed.scarica = vero_scarica
         D.DB_PATH, S.REGISTRY = vero_db, vero_registro
         S.ricarica()
         shutil.rmtree(tmp, ignore_errors=True)

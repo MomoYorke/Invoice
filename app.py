@@ -734,11 +734,10 @@ def _crea_fattura(con):
     if righe_sedute:
         try:
             sess.ricarica()             # la chiave del cliente puo' essere appena nata
-            reg = sess.carica()
-            frasi = sess.sedute_dalla_fattura(reg, chiave_sedute, number, date_iso,
-                                              righe_sedute, periodo, giorno_rinnovo,
-                                              sostituisce=cestinate)
-            sess.salva(reg)
+            with sess.modifica() as reg:
+                frasi = sess.sedute_dalla_fattura(reg, chiave_sedute, number, date_iso,
+                                                  righe_sedute, periodo, giorno_rinnovo,
+                                                  sostituisce=cestinate)
             for frase, valori in frasi:
                 msg += ' ' + lng.t(frase, lg).format(**valori)
             if doppione:
@@ -1731,13 +1730,15 @@ def _sincronizza_calendario(forzata=False):
         err_logger.error('Lettura calendario fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
     try:
-        # prima il confronto (una seduta spostata e' la stessa, non una nuova),
-        # poi le sedute nuove; se il confronto cade, la lettura vale lo stesso
-        rap, mosse, domande = sync_sessions.aggiorna_dal_calendario(reg, eventi)
+        # Il registro si rilegge DOPO lo scarico, sotto blocco: in quei secondi
+        # una fattura puo' aver aperto un pacchetto, e la copia letta prima non
+        # lo conosce. Riscriverla lo cancellava.
+        # Prima il confronto (una seduta spostata e' la stessa, non una nuova),
+        # poi le sedute nuove; se il confronto cade, la lettura vale lo stesso.
+        with sess.modifica() as reg:
+            rap, mosse, domande = sync_sessions.aggiorna_dal_calendario(reg, eventi)
         if rap.get('errore_confronto'):
             err_logger.error('Confronto con il calendario fallito: %s', rap['errore_confronto'])
-        if rap['aggiunte'] or rap.get('esclusi_nuovi') or mosse or domande:
-            sess.salva(reg)
     except Exception as e:
         err_logger.error('Sincronizzazione crediti fallita: %s', e)
         return 'errore', f'{type(e).__name__}: {e}'
@@ -1772,9 +1773,8 @@ def crediti_sincronizza():
 def _risposta_sulle_sedute(come, messaggio):
     """Le due risposte alle domande del calendario: cambia solo il segno."""
     ids = request.form.getlist('event_id')
-    reg = sess.carica()
-    quante = conferme.segna(reg, ids, come, datetime.date.today())
-    sess.salva(reg)
+    with sess.modifica() as reg:
+        quante = conferme.segna(reg, ids, come, datetime.date.today())
     if quante:
         avvisa(messaggio, 'ok', quante=quante)
     elif ids:
@@ -2353,13 +2353,12 @@ def crediti_collega():
     if not inv:
         avvisa('Non esiste una fattura #{n}.', 'error', n=numero)
         return redirect(url_for('crediti'))
-    reg = sess.carica()
     try:
-        p, _ = sess.collega_fattura(reg, pid, numero)
+        with sess.modifica() as reg:
+            p, _ = sess.collega_fattura(reg, pid, numero)
     except KeyError:
         avvisa('Pacchetto inesistente.', 'error')
         return redirect(url_for('crediti'))
-    sess.salva(reg)
     avvisa('Pacchetto {pid} collegato alla fattura #{n} ({cliente}): {quante} sessioni '
            'marcate. Il prossimo pacchetto si apre da solo alla prima sessione nuova.',
            'ok', pid=pid, n=numero, cliente=inv['client_name'],
@@ -2385,8 +2384,8 @@ def crediti_togli():
     if stato != 'cestinata':
         avvisa('Si può togliere solo il pacchetto di una fattura nel Cestino.', 'error')
         return redirect(url_for('crediti'))
-    _, quante = sess.togli_pacchetto(reg, pid)
-    sess.salva(reg)
+    with sess.modifica() as reg:            # riletto sotto blocco: e' quello che si salva
+        _, quante = sess.togli_pacchetto(reg, pid)
     avvisa('Pacchetto {pid} tolto: non conta più crediti. Sedute già fatte, che restano registrate: {n}.', 'ok', pid=pid, n=quante)
     return redirect(url_for('crediti'))
 
