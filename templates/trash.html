@@ -13,7 +13,7 @@
     <tr>
       <td><strong>#{{ r.number or '—' }}</strong></td>
       <td>{{ r.client_name }}
-        {% if r.deleted_reason %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ r.deleted_reason }}</div>{% endif %}
+        {% if r.deleted_reason %}<div class="muted" style="font-size:12px">{{ icona('nota', 'ic-mini') }} {{ _(r.deleted_reason) }}</div>{% endif %}
       </td>
       <td class="muted">{{ r.date | dateit }}</td>
       <td class="num">{{ r.total_cents | chf(false) if r.total_cents is not none else '—' }}</td>

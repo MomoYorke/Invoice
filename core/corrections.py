@@ -2,10 +2,10 @@
 """
 Correzioni manuali e archiviazione delle anomalie storiche.
 
-Problema che risolve: le fatture importate vengono cancellate e ricreate a ogni
-"Reimporta", quindi il loro id cambia. Le correzioni sono quindi indicizzate su
-una chiave STABILE (il percorso del file di origine), e vengono ri-applicate
-automaticamente dopo ogni import.
+Problema che risolve: a ogni "Reimporta" i dati delle fatture importate
+vengono riletti dal loro file, e un valore corretto a mano tornerebbe com'era.
+Le correzioni sono quindi indicizzate su una chiave STABILE (il percorso del
+file di origine), e vengono ri-applicate automaticamente dopo ogni import.
 """
 from . import db
 

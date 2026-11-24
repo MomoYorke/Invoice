@@ -23,6 +23,10 @@ YEAR_RE = re.compile(r'^(19|20)\d{2}$')
 DATE_RE = re.compile(r'^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$')
 # I numeri fattura reali finora sono < 200; oltre 400 e' quasi certamente un errore di nome file
 MAX_SANE_NUMBER = 400
+# Il motivo scritto sulle fatture importate il cui file non c'e' piu' nello
+# storico: vanno nel Cestino (mai cancellate) e ne escono da sole se il file
+# torna. Le altre fatture nel Cestino, buttate via da te, restano li'.
+FILE_SPARITO = 'Il file non è più nella cartella dello storico'
 
 
 def pettinato(testo):
@@ -129,7 +133,8 @@ def _dedupe_key(path):
 
 
 def import_all(con, root, log=None):
-    """Import completo. Idempotente: cancella e ricrea i record con source='import'."""
+    """Import completo. Idempotente: le fatture gia' importate si ritrovano dal
+    loro file e si aggiornano (stesso id, pagamento e invio compresi)."""
     msgs = []
 
     def say(m):
@@ -158,10 +163,16 @@ def import_all(con, root, log=None):
             n += 1
         say(f'Clienti importati dal registro: {n}')
 
-    # --- pulizia import precedente (idempotenza) ---
-    con.execute("DELETE FROM items WHERE invoice_id IN "
-                "(SELECT id FROM invoices WHERE source='import')")
-    con.execute("DELETE FROM invoices WHERE source='import'")
+    # --- le fatture gia' importate si aggiornano, non si rifanno ---
+    # Prima si cancellavano tutte e si ricreavano con identificativi nuovi: una
+    # fattura pagata tornava «emessa» e il versamento collegato finiva sulla
+    # fattura di un altro cliente. Adesso ognuna si ritrova dal suo file e
+    # tiene quello che le e' successo nell'app (pagamento, invio, Cestino).
+    esistenti = {}
+    for row in con.execute("SELECT id, source_file, deleted_at, deleted_reason FROM invoices "
+                           "WHERE source='import' ORDER BY id"):
+        esistenti.setdefault(row['source_file'], row)
+    ritrovate = set()
     con.execute('DELETE FROM legacy_year_totals')
 
     clients = {r['id']: r for r in con.execute('SELECT * FROM clients')}
@@ -194,18 +205,10 @@ def import_all(con, root, log=None):
             if key in seen:
                 continue
             seen.add(key)
-            status = 'pagata' if int(y) < this_year else 'emessa'
-            cur = con.execute(
-                'INSERT INTO invoices(number, client_id, client_name, client_address, date, '
-                'year, total_cents, status, source, source_file, created_at) '
-                "VALUES(?,?,?,?,?,?,?,?, 'import', ?, ?)",
-                (number, match_client_id(client), client, address,
-                 date_iso, int(y), total, status,
-                 os.path.relpath(path, root), db.now_iso()))
-            inv_id = cur.lastrowid
-            for pos, (qty, desc, unit_c, tot_c) in enumerate(items):
-                con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,total_cents) '
-                            'VALUES(?,?,?,?,?,?)', (inv_id, pos, qty, desc, unit_c, tot_c))
+            _salva(con, esistenti, ritrovate, os.path.relpath(path, root), dict(
+                number=number, client_id=match_client_id(client), client_name=client,
+                client_address=address, date=date_iso, year=int(y), total_cents=total),
+                items, 'pagata' if int(y) < this_year else 'emessa', '')
             count += 1
         # PDF senza docx corrispondente (solo dal 2024: per il 2022/23 fanno fede gli Excel)
         if int(y) < 2024:
@@ -222,15 +225,19 @@ def import_all(con, root, log=None):
             if number is not None and number in (int(y), int(y) % 100):
                 number = None
             client = client_from_filename(path)
-            status = 'pagata' if int(y) < this_year else 'emessa'
-            con.execute(
-                'INSERT INTO invoices(number, client_id, client_name, date, year, total_cents, '
-                "status, source, source_file, notes, created_at) "
-                "VALUES(?,?,?,?,?,?,?, 'import', ?, 'Solo PDF: importo da verificare', ?)",
-                (number, match_client_id(client), client, None, int(y), None,
-                 status, os.path.relpath(path, root), db.now_iso()))
+            _salva(con, esistenti, ritrovate, os.path.relpath(path, root), dict(
+                number=number, client_id=match_client_id(client), client_name=client,
+                client_address='', date=None, year=int(y), total_cents=None),
+                None, 'pagata' if int(y) < this_year else 'emessa',
+                'Solo PDF: importo da verificare')
             count += 1
     say(f'Fatture importate dalle cartelle anno: {count}')
+
+    # --- file spariti dallo storico: nel Cestino, mai cancellati ---
+    for source_file, row in esistenti.items():
+        if source_file not in ritrovate and not row['deleted_at']:
+            con.execute('UPDATE invoices SET deleted_at=?, deleted_reason=? WHERE id=?',
+                        (db.now_iso(), FILE_SPARITO, row['id']))
 
     # --- Excel storici 2022/2023: totali per cliente (fonte autorevole per quegli anni) ---
     for y in (2022, 2023):
@@ -258,6 +265,53 @@ def import_all(con, root, log=None):
 
     con.commit()
     return msgs
+
+
+def _salva(con, esistenti, ritrovate, source_file, campi, items, stato_nuova, nota_nuova):
+    """Una fattura dello storico: aggiorna quella gia' importata, o la crea.
+
+    Dal file si riprendono solo i dati scritti nel file (numero, cliente, data,
+    importo, righe). Stato, pagamento, invio e Cestino sono cose successe
+    nell'app e restano come sono. `items` None = file senza righe leggibili
+    (solo PDF): le righe non si toccano."""
+    ritrovate.add(source_file)
+    row = esistenti.get(source_file)
+    if row is None:
+        cur = con.execute(
+            'INSERT INTO invoices(number, client_id, client_name, client_address, date, '
+            'year, total_cents, status, source, source_file, notes, created_at) '
+            "VALUES(?,?,?,?,?,?,?,?, 'import', ?, ?, ?)",
+            (campi['number'], campi['client_id'], campi['client_name'],
+             campi['client_address'], campi['date'], campi['year'], campi['total_cents'],
+             stato_nuova, source_file, nota_nuova, db.now_iso()))
+        _scrivi_righe(con, cur.lastrowid, items or [])
+        return
+    inv_id = row['id']
+    con.execute('UPDATE invoices SET number=?, client_id=?, client_name=?, client_address=?, '
+                'date=?, year=?, total_cents=? WHERE id=?',
+                (campi['number'], campi['client_id'], campi['client_name'],
+                 campi['client_address'], campi['date'], campi['year'],
+                 campi['total_cents'], inv_id))
+    # era nel Cestino solo perche' il file mancava: il file e' tornato
+    if row['deleted_at'] and row['deleted_reason'] == FILE_SPARITO:
+        con.execute("UPDATE invoices SET deleted_at=NULL, deleted_reason='' WHERE id=?",
+                    (inv_id,))
+    if items is None:
+        return
+    # le righe si rifanno solo se il file e' cambiato: cosi' il servizio
+    # scelto per ogni riga resta quello che era
+    prima = [(x['qty'], x['description'], x['unit_cents'], x['total_cents'])
+             for x in con.execute('SELECT qty, description, unit_cents, total_cents '
+                                  'FROM items WHERE invoice_id=? ORDER BY pos, id', (inv_id,))]
+    if prima != [tuple(x) for x in items]:
+        con.execute('DELETE FROM items WHERE invoice_id=?', (inv_id,))
+        _scrivi_righe(con, inv_id, items)
+
+
+def _scrivi_righe(con, inv_id, items):
+    for pos, (qty, desc, unit_c, tot_c) in enumerate(items):
+        con.execute('INSERT INTO items(invoice_id,pos,qty,description,unit_cents,total_cents) '
+                    'VALUES(?,?,?,?,?,?)', (inv_id, pos, qty, desc, unit_c, tot_c))
 
 
 def _parse_legacy_xlsx(path, mio_nome=''):
