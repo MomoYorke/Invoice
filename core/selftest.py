@@ -121,6 +121,7 @@ def run_all():
         _test_registro_avvio, _test_batteria_regge, _test_revisione,
         _test_revisione_crediti, _test_revisione_documento, _test_vendibile,
         _test_sconti, _test_numeri, _test_controlla_copia, _test_report,
+        _test_reimporta,
     ))
 
     all_ok = all(x[2] for x in r)
@@ -190,6 +191,11 @@ def _test_controlla_copia(r):
 def _test_report(r):
     from . import selftest_report
     selftest_report._test_report(r)
+
+
+def _test_reimporta(r):
+    from . import selftest_reimporta
+    selftest_reimporta._test_reimporta(r)
 
 
 def _test_registro_avvio(r):

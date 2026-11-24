@@ -1255,6 +1255,7 @@ TESTI = {
         'Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.':
             'Nothing is ever really destroyed. Deleted invoices stay here and come back with one click; the database is copied automatically before every risky operation.',
         'Fatture nel Cestino': 'Invoices in the Trash',
+        'Il file non è più nella cartella dello storico': 'The file is no longer in the history folder',
         'Eliminata il': 'Deleted on',
         'Motivo': 'Reason',
         'Ripristina': 'Restore',
@@ -3063,6 +3064,7 @@ TESTI = {
         'Niente viene mai distrutto davvero. Le fatture eliminate restano qui e si ripristinano con un click; il database viene copiato in automatico prima di ogni operazione rischiosa.':
             'Nichts wird je wirklich zerstört. Gelöschte Rechnungen bleiben hier und kommen mit einem Klick zurück; die Datenbank wird vor jedem riskanten Schritt automatisch kopiert.',
         'Fatture nel Cestino': 'Rechnungen im Papierkorb',
+        'Il file non è più nella cartella dello storico': 'Die Datei ist nicht mehr im Archivordner',
         'Eliminata il': 'Gelöscht am',
         'Motivo': 'Grund',
         'Ripristina': 'Wiederherstellen',
