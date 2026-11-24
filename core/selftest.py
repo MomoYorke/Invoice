@@ -113,7 +113,7 @@ def run_all():
         _test_da_fare, _test_lingua, _test_primi_passi, _test_icone, _test_menu,
         _test_etichette, _test_finestra_stretta, _test_calendario,
         _test_storico_al_buio, _test_riferimento_qr, _test_camt_vero,
-        _test_gemelli_fra_file, _test_qr_fattura, _test_qr_iban,
+        _test_gemelli_fra_file, _test_versamenti_uguali, _test_qr_fattura, _test_qr_iban,
         _test_compleanni, _test_modelli_si_compilano, _test_abbonamenti,
         _test_quando_paga,
         _test_lavoro, _test_nomi_accentati, _test_una_cartella_sola,
@@ -6540,6 +6540,95 @@ def _test_gemelli_fra_file(r):
     _check(r, 'Gemelli', 'un versamento davvero nuovo non viene inghiottito',
            da_decidere(con, [petra_pdf, petra_xml, nuovo]), ['estratto.xml'])
     con.close()
+
+
+CAMT_DUE_UGUALI = """<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt><Stmt>
+ <Ntry><Amt Ccy="CHF">110.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-10-07</Dt></BookgDt>
+  <NtryDtls><TxDtls>
+   <RltdPties><Dbtr><Nm>Bruno Keller</Nm></Dbtr></RltdPties>
+   <RmtInf><Strd><CdtrRefInf><Ref>RF471010</Ref></CdtrRefInf></Strd></RmtInf>
+  </TxDtls></NtryDtls>
+ </Ntry>
+ <Ntry><Amt Ccy="CHF">110.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+  <BookgDt><Dt>2026-10-07</Dt></BookgDt>
+  <NtryDtls><TxDtls>
+   <RltdPties><Dbtr><Nm>Bruno Keller</Nm></Dbtr></RltdPties>
+   <RmtInf><Strd><CdtrRefInf><Ref>RF741020</Ref></CdtrRefInf></Strd></RmtInf>
+  </TxDtls></NtryDtls>
+ </Ntry>
+</Stmt></BkToCstmrStmt></Document>
+"""
+
+CSV_DUE_UGUALI = """Data contabile;Data valuta;Descrizione;Accredito;Addebito
+07.10.2026;07.10.2026;Accredito Bruno Keller;110.00;
+07.10.2026;07.10.2026;Accredito Bruno Keller;110.00;
+"""
+
+
+def _test_versamenti_uguali(r):
+    """Due versamenti uguali lo stesso giorno sono due incassi, non uno.
+
+    Caso tipico: la stessa persona paga due fatture da 110 CHF lo stesso
+    giorno (dati inventati). L'impronta era data + importo + causale: uguale
+    per tutti e due, e il secondo spariva — non si poteva collegare nemmeno a
+    mano, e la sua fattura restava da sollecitare.
+
+    Chi ha gia' smistato il primo non deve ritrovarselo da smistare: il primo
+    dei due tiene l'impronta di sempre.
+    """
+    import shutil, sqlite3, tempfile
+    from . import bank as B
+    from . import db as _db
+    from .db import SCHEMA
+
+    cartella = tempfile.mkdtemp(prefix='invoice-uguali-')
+    try:
+        with io.open(os.path.join(cartella, 'ottobre.xml'), 'w', encoding='utf-8') as h:
+            h.write(CAMT_DUE_UGUALI)
+        mov, problemi = B.leggi_cartella(cartella)
+        _check(r, 'Versamenti uguali', 'camt: due pagamenti uguali lo stesso giorno restano due',
+               (problemi, sorted(m['riferimento'] for m in mov)),
+               ([], ['RF471010', 'RF741020']))
+        _check(r, 'Versamenti uguali', 'e hanno due impronte diverse',
+               len({m['impronta'] for m in mov}), 2)
+
+        # il mese riscaricato: stessi due pagamenti, non quattro
+        shutil.copy(os.path.join(cartella, 'ottobre.xml'),
+                    os.path.join(cartella, 'ottobre (1).xml'))
+        _check(r, 'Versamenti uguali', 'lo stesso estratto scaricato due volte non li raddoppia',
+               len(B.leggi_cartella(cartella)[0]), 2)
+
+        # chi ha gia' importato: il primo tiene l'impronta di prima
+        vecchia = B._movimento('2026-10-07', 11000, 'Bruno Keller', 'ottobre.xml',
+                               'Bruno Keller', 'RF471010')['impronta']
+        primo = next(m for m in mov if m['riferimento'] == 'RF471010')
+        _check(r, 'Versamenti uguali', "il primo dei due tiene l'impronta di sempre",
+               primo['impronta'], vecchia)
+
+        con = sqlite3.connect(':memory:')
+        con.row_factory = sqlite3.Row
+        con.executescript(SCHEMA)
+        _db._migrate(con)
+        con.execute('INSERT INTO movimenti(impronta, data, importo_cents, descrizione, '
+                    "file, stato) VALUES(?,?,?,?,?,'collegato')",
+                    (vecchia, '2026-10-07', 11000, 'Bruno Keller', 'ottobre.xml'))
+        da_fare = [p['m']['riferimento'] for p in B.proposte(con, mov) if not p['deciso']]
+        _check(r, 'Versamenti uguali',
+               'già smistato il primo, resta da smistare solo il secondo (non un doppione)',
+               da_fare, ['RF741020'])
+        con.close()
+
+        # lo stesso nel CSV, dove non c'e' nessun riferimento a distinguerli
+        os.remove(os.path.join(cartella, 'ottobre.xml'))
+        os.remove(os.path.join(cartella, 'ottobre (1).xml'))
+        with io.open(os.path.join(cartella, 'ottobre.csv'), 'w', encoding='utf-8') as h:
+            h.write(CSV_DUE_UGUALI)
+        _check(r, 'Versamenti uguali', 'CSV: due righe identiche lo stesso giorno restano due',
+               len(B.leggi_cartella(cartella)[0]), 2)
+    finally:
+        shutil.rmtree(cartella, ignore_errors=True)
 
 
 def _test_qr_fattura(r):

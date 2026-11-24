@@ -403,6 +403,28 @@ def collega_automatico(con, movimenti, quando=None):
     return fatti
 
 
+def _numera_uguali(voci):
+    """Due versamenti identici nello STESSO file sono due incassi veri.
+
+    Stessa data, stesso importo, stessa causale (es. la stessa persona paga
+    due fatture da 110 CHF lo stesso giorno) davano la stessa impronta, e il
+    secondo spariva: non si poteva collegare nemmeno a mano. Qui il secondo
+    prende «|2» nell'impronta, il terzo «|3», e cosi' via.
+
+    Il primo tiene l'impronta di sempre: chi l'ha gia' smistato non se lo
+    ritrova da smistare. E lo stesso mese riscaricato in un altro file da'
+    gli stessi numeri, quindi i doppioni fra file si riconoscono come prima.
+    """
+    contati = collections.Counter()
+    for m in voci:
+        contati[m['impronta']] += 1
+        n = contati[m['impronta']]
+        if n > 1:
+            m['impronta'] = hashlib.md5(
+                f"{m['impronta']}|{n}".encode('utf-8')).hexdigest()
+    return voci
+
+
 def leggi_cartella(cartella=None):
     """Tutti gli accrediti dei file presenti. Ritorna (movimenti, problemi)."""
     cartella = cartella or CARTELLA
@@ -429,7 +451,7 @@ def leggi_cartella(cartella=None):
             voci, errore = [], f'{type(e).__name__}: {e}'
         if errore:
             problemi.append((os.path.basename(percorso), errore))
-        movimenti.extend(voci)
+        movimenti.extend(_numera_uguali(voci))
     # stesso versamento in due file scaricati due volte: si tiene una volta sola
     viste, uniche = set(), []
     for m in sorted(movimenti, key=lambda x: x['data'] or ''):
